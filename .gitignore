@@ -1,0 +1,49 @@
+# ═══════════════════════════════════════════════════════════════════
+# Wat NIET naar GitHub gaat.
+#
+# Belangrijk: alles hieronder blijft alleen op deze computer staan.
+# Voeg nooit een bestand met wachtwoorden of sleutels toe zonder het
+# hier eerst uit te sluiten — eenmaal geüpload blijft het in de
+# geschiedenis staan, ook als je het daarna weghaalt.
+# ═══════════════════════════════════════════════════════════════════
+
+# ─── Geheimen ─────────────────────────────────────────────────────
+# app/.env bevat de Supabase-sleutels en de Netlify-token. Wie die
+# token heeft kan publiceren op drankvoorraad-nbc.netlify.app.
+.env
+.env.*
+!.env.example
+
+# ─── Door de computer aangemaakt ──────────────────────────────────
+# Deze mappen worden opnieuw gemaakt met `npm install` en `npm run
+# build`. Ze meenemen zou de repository honderden megabytes groot
+# maken zonder dat het iets toevoegt.
+node_modules/
+dist/
+.vite/
+
+# ─── Netlify ──────────────────────────────────────────────────────
+.netlify
+
+# ─── Uitgepakt design system ──────────────────────────────────────
+# Het uitgepakte handoff-pakket; de daadwerkelijk gebruikte bestanden
+# staan in app/src/design-system. De zip blijft wel bewaard.
+_design-system-extracted/
+
+# ─── Werkbestanden van de editor en het systeem ───────────────────
+.DS_Store
+Thumbs.db
+*.log
+.vscode/
+.idea/
+
+# ─── Persoonlijke instellingen ────────────────────────────────────
+# Per computer verschillend; hoort niet gedeeld te worden.
+.claude/settings.local.json
+
+# ─── Design system-handoff ────────────────────────────────────────
+# 18 MB aan foto's, PDF's en schermafbeeldingen uit het Claude Design-
+# project. Wat de app ervan gebruikt staat uitgepakt in
+# app/src/design-system; de zip hoort thuis in je bestandsopslag,
+# niet in de repository.
+NBC Design System-handoff.zip

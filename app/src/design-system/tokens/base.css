@@ -1,0 +1,231 @@
+/* ──────────────────────────────────────────────────────────────────
+   NBC Design System — Base element & utility styles
+   Semantic defaults + the reusable global classes (.btn, .badge,
+   .link, .icon-btn, .eyebrow, .card, .input…) that the React
+   components apply via className. Depends on the token files.
+   ────────────────────────────────────────────────────────────────── */
+
+*, *::before, *::after { box-sizing: border-box; }
+html { font-family: var(--font-body); color: var(--fg-primary); -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0;
+  font: var(--t-paragraph);
+  color: var(--fg-primary);
+  background: var(--bg-page);
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+}
+img { display: block; max-width: 100%; }
+button { font-family: inherit; cursor: pointer; }
+
+/* ─── Headings ──────────────────────────────────────────────────── */
+h1, .h1 { font: var(--t-display-md); color: var(--nbc-stone-900); letter-spacing: var(--track-display); margin: 0 0 0.4em; }
+h2, .h2 { font: var(--t-title-md); margin: 0 0 0.4em; }
+h3, .h3 { font: var(--t-headline); margin: 0 0 0.4em; }
+h4, .h4 { font: var(--t-subhead); margin: 0 0 0.4em; }
+h5, .h5 { font: var(--t-label); margin: 0 0 0.4em; text-transform: uppercase; letter-spacing: var(--track-overline); }
+
+p { font: var(--t-paragraph); margin: 0 0 1em; }
+.lead { font: var(--t-paragraph-lg); color: var(--fg-primary); }
+small { font: var(--t-paragraph-sm); color: var(--fg-secondary); }
+
+a { color: var(--fg-accent); text-decoration: underline; text-underline-offset: 3px; }
+a:hover { color: var(--nbc-blue); }
+
+/* ─── Display headings — Pockota, optional swashes ──────────────── */
+.display      { font: var(--t-display-md); letter-spacing: var(--track-display); margin: 0; font-feature-settings: var(--feat-swash); }
+.display--lg  { font: var(--t-display-lg); letter-spacing: var(--track-display); }
+.display--xl  { font: var(--t-display-xl); letter-spacing: var(--track-display); }
+.display--light { font-weight: 300; }
+.title        { font: var(--t-title-md); margin: 0; }
+.title--lg    { font: var(--t-title-lg); }
+
+/* ─── Overline / eyebrow ────────────────────────────────────────── */
+.overline, .eyebrow {
+  font: var(--t-overline);
+  letter-spacing: var(--track-overline);
+  text-transform: uppercase;
+  color: var(--nbc-stone-800);
+}
+.eyebrow { display: inline-flex; align-items: center; gap: 12px; }
+.eyebrow::before { content: ""; width: 28px; height: 1px; background: currentColor; }
+.eyebrow--bare::before { display: none; }
+.eyebrow--light { color: var(--nbc-paper); }
+
+/* ─── Buttons ───────────────────────────────────────────────────── */
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 12px;
+  font: var(--t-btn-md); border-radius: var(--r-pill);
+  padding: 18px 28px; border: 1px solid transparent;
+  text-decoration: none; white-space: nowrap;
+  transition: transform var(--dur-fast) var(--ease), background var(--dur-fast) var(--ease),
+              color var(--dur-fast) var(--ease), border-color var(--dur-fast) var(--ease);
+}
+.btn:active { transform: scale(.98); }
+.btn--sm { font: var(--t-btn-sm); padding: 12px 22px; }
+.btn--lg { font: var(--t-btn-lg); padding: 20px 44px; }
+.btn--primary     { background: var(--nbc-ink); color: var(--nbc-paper); }
+.btn--primary:hover { background: var(--nbc-stone-700); color: var(--nbc-paper); }
+.btn--ghost-dark  { background: transparent; color: var(--nbc-ink); border-color: var(--nbc-ink); }
+.btn--ghost-dark:hover { background: var(--nbc-ink); color: var(--nbc-paper); }
+.btn--ghost-light { background: transparent; color: var(--nbc-paper); border-color: var(--nbc-paper); }
+.btn--ghost-light:hover { background: var(--nbc-paper); color: var(--nbc-ink); }
+.btn[disabled] { opacity: .45; pointer-events: none; }
+.btn .arrow { width: 18px; height: 18px; }
+
+/* ─── Icon button (circular) ────────────────────────────────────── */
+.icon-btn {
+  width: 64px; height: 64px; border-radius: var(--r-pill);
+  display: inline-flex; align-items: center; justify-content: center;
+  background: transparent; border: 1px solid currentColor; color: inherit;
+  transition: background var(--dur-fast) var(--ease), color var(--dur-fast) var(--ease),
+              border-color var(--dur-fast) var(--ease), transform var(--dur-fast) var(--ease);
+}
+.icon-btn:active { transform: scale(.96); }
+.icon-btn:hover { background: currentColor; }
+.icon-btn:hover svg { color: var(--nbc-paper); }
+.icon-btn--filled { background: var(--nbc-ink); color: var(--nbc-paper); border-color: var(--nbc-ink); }
+.icon-btn--filled:hover { background: var(--nbc-stone-700); border-color: var(--nbc-stone-700); }
+.icon-btn--filled:hover svg { color: var(--nbc-paper); }
+.icon-btn--sm { width: 44px; height: 44px; }
+.icon-btn--lg { width: 96px; height: 96px; }
+.icon-btn svg { width: 22px; height: 22px; color: currentColor; }
+.icon-btn--sm svg { width: 18px; height: 18px; }
+.icon-btn--lg svg { width: 28px; height: 28px; }
+
+/* ─── Text link ─────────────────────────────────────────────────── */
+.link {
+  display: inline-flex; align-items: center; gap: 10px;
+  font: var(--t-label); color: inherit;
+  text-decoration: underline; text-underline-offset: 4px;
+  background: none; border: none; cursor: pointer; padding: 0;
+  transition: opacity var(--dur-fast) var(--ease);
+}
+.link:hover { opacity: .65; }
+.link svg { width: 16px; height: 16px; }
+
+/* ─── Badge ─────────────────────────────────────────────────────── */
+.badge {
+  display: inline-flex; align-items: center; gap: 8px;
+  font: var(--t-label-sm); padding: 7px 14px; border-radius: var(--r-pill);
+  background: var(--nbc-blue-tint); color: var(--nbc-blue-dark);
+  border: 1px solid transparent; white-space: nowrap;
+}
+.badge--outline { background: transparent; border-color: currentColor; }
+.badge--gold    { background: color-mix(in srgb, var(--nbc-gold) 22%, white); color: #6b4700; }
+.badge--success { background: var(--nbc-success-bg); color: var(--nbc-success); }
+.badge--neutral { background: var(--nbc-stone-100); color: var(--nbc-stone-700); }
+.badge svg { width: 14px; height: 14px; }
+
+/* ─── Input ─────────────────────────────────────────────────────── */
+.input {
+  width: 100%; font: var(--t-paragraph); color: var(--fg-primary);
+  background: var(--nbc-white); border: 1px solid var(--nbc-stone-300);
+  border-radius: var(--r-sm); padding: 14px 18px; outline: none;
+  transition: border-color var(--dur-fast) var(--ease), box-shadow var(--dur-fast) var(--ease);
+}
+.input::placeholder { color: var(--nbc-stone-500); }
+.input:focus { border-color: var(--nbc-blue); box-shadow: 0 0 0 3px var(--nbc-blue-soft); }
+.input--pill { border-radius: var(--r-pill); padding: 16px 24px; }
+
+/* ─── Card ──────────────────────────────────────────────────────── */
+.card {
+  background: var(--nbc-white); border: 1px solid var(--nbc-stone-200);
+  border-radius: var(--r-md); box-shadow: var(--shadow-md);
+  overflow: hidden;
+  transition: transform var(--dur-mid) var(--ease), box-shadow var(--dur-mid) var(--ease);
+}
+.card--hover:hover { transform: translateY(-2px); box-shadow: var(--shadow-lg); }
+.card__body { padding: var(--s-6); }
+.card__body--feature { padding: var(--s-9); }
+
+/* Note: the .bg-brand-photo utility (full-bleed cinematic hero background)
+   from the source design system was intentionally dropped here — its
+   photography asset (brand-bg-dark.jpg) is marketing-homepage imagery,
+   out of scope for this data-dense internal dashboard. */
+
+/* ─── Document tables (offerte, programma, financieel) ──────────
+   Zebra-striped rows on warm cream, teal body text, bold black
+   headers, tabular right-aligned amount columns. Use inside printed
+   documents. Add .doc-table--dense for tighter row padding, and the
+   row classes .is-total / .is-italic for summary & suggestion rows. */
+.doc-table { width: 100%; border-collapse: collapse; font: var(--t-paragraph-sm); color: var(--nbc-blue); }
+.doc-table thead th {
+  font-family: var(--font-body); font-weight: 800; font-size: 13px;
+  color: var(--nbc-stone-900); text-align: left;
+  padding: 4px 12px 8px; border-bottom: 1px solid var(--nbc-stone-300);
+}
+.doc-table tbody td { padding: 8px 12px; vertical-align: top; color: var(--nbc-blue); }
+.doc-table tbody tr:nth-child(odd) td { background: #faf2e8; }
+.doc-table--dense { font-size: 12px; }
+.doc-table--dense thead th { padding: 3px 10px 6px; font-size: 12px; }
+.doc-table--dense tbody td { padding: 4px 10px; }
+.doc-table .num { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.doc-table .note { color: var(--nbc-blue); }
+.doc-table tr.is-italic td { font-style: italic; }
+.doc-table tr.is-total td {
+  font-weight: 800; color: var(--nbc-stone-900); background: transparent;
+  border-top: 1px solid var(--nbc-stone-300);
+}
+.doc-table--summary tbody td { color: var(--nbc-stone-800); }
+.doc-table--summary tbody td.label { color: var(--nbc-blue); font-weight: 400; }
+
+/* ─── Brand decorations for print documents ─────────────────────
+   Organic gradient flourishes (teal→green→gold) — position them with
+   inline top/left/width/height on an element that also carries the
+   class. The left edge bar, bottom wave, and soft corner blobs give
+   NBC documents their signature look; .photo-organic masks a photo
+   into the hand-drawn almond shape. All sit behind text (z-index 0/1). */
+.doc-edge-left {
+  position: absolute; left: 0; top: 0; bottom: 0; width: 26px; z-index: 1;
+  background: linear-gradient(180deg, var(--nbc-blue) 0%, #5aa877 52%, var(--nbc-gold) 100%);
+  border-radius: 0 60px 60px 0 / 0 180px 180px 0;
+}
+.doc-wave-bottom {
+  position: absolute; left: 0; right: 0; bottom: 0; height: 70px; z-index: 1;
+  background: linear-gradient(90deg, var(--nbc-blue) 0%, #5aa877 50%, var(--nbc-gold) 100%);
+  clip-path: ellipse(150% 100% at 50% 100%);
+}
+.doc-blob { position: absolute; border-radius: 50%; z-index: 0; }
+.doc-blob--teal { background: var(--nbc-blue); }
+.doc-blob--gold { background: var(--nbc-gold); }
+.doc-blob--grad { background: linear-gradient(135deg, var(--nbc-blue) 0%, #5aa877 55%, var(--nbc-gold) 100%); }
+.photo-organic { border-radius: 62% 38% 46% 54% / 55% 46% 54% 45%; overflow: hidden; }
+.photo-organic > * { width: 100%; height: 100%; display: block; }
+
+/* ─── Brand shapes — vector motif from the logo ─────────────────
+   Three organic silhouettes traced from the NBC mark artwork, delivered
+   as flat black SVGs (assets/brand-shape-1/2/3.svg) and recoloured here
+   via CSS mask so any fill — solid ink or the signature gradient — can
+   be dropped on top. Use as edge/corner decoration on covers, section
+   dividers, and print documents; the same shapes the mark is built from,
+   just at a different scale. Mirror/rotate freely; avoid stretching.
+     shape-1  tall sliver   → left/right page edge (viewBox 68×842)
+     shape-2  wide sweep    → header/footer band, wide corners (441×283)
+     shape-3  compact leaf  → small corner accents (199×235)          */
+.brand-shape {
+  display: block;
+  -webkit-mask-repeat: no-repeat; mask-repeat: no-repeat;
+  -webkit-mask-position: center; mask-position: center;
+  -webkit-mask-size: contain; mask-size: contain;
+  background: var(--grad-mark);
+}
+.brand-shape--1 { -webkit-mask-image: url(../assets/brand-shape-1.svg); mask-image: url(../assets/brand-shape-1.svg); aspect-ratio: 68.49 / 841.89; }
+.brand-shape--2 { -webkit-mask-image: url(../assets/brand-shape-2.svg); mask-image: url(../assets/brand-shape-2.svg); aspect-ratio: 441.14 / 283.12; }
+.brand-shape--3 { -webkit-mask-image: url(../assets/brand-shape-3.svg); mask-image: url(../assets/brand-shape-3.svg); aspect-ratio: 199.18 / 235.09; }
+.brand-shape--solid  { background: var(--nbc-ink); }
+.brand-shape--white  { background: var(--nbc-paper); }
+.brand-shape--teal   { background: var(--nbc-blue); }
+.brand-shape--gold   { background: var(--nbc-gold); }
+.brand-shape--flip-x { transform: scaleX(-1); }
+.brand-shape--flip-y { transform: scaleY(-1); }
+.brand-shape--rotate-90  { transform: rotate(90deg); }
+.brand-shape--rotate-180 { transform: rotate(180deg); }
+.brand-shape--rotate-270 { transform: rotate(270deg); }
+
+/* ─── Section helpers (layout) ──────────────────────────────────── */
+.section { padding: clamp(80px, 11vw, 160px) clamp(24px, 4vw, 64px); }
+.section--dark     { background: var(--nbc-black); color: var(--fg-on-dark); }
+.section--cream    { background: var(--nbc-cream-soft); }
+.section--gradient { background: var(--grad-brand); }
+.container { max-width: var(--container-max); margin: 0 auto; }

@@ -1,0 +1,9 @@
+node_modules
+dist
+.DS_Store
+*.local
+
+# Bevat projectsleutels — nooit committen. Zie .env.example.
+.env
+.env.*
+!.env.example

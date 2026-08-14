@@ -1,0 +1,24 @@
+/* ──────────────────────────────────────────────────────────────────
+   NBC Design System — Fonts
+   Pockota (display, with swash ligatures) + Area Normal (body).
+   Weight rule for Pockota: lighter as size grows (Light → Regular).
+   ────────────────────────────────────────────────────────────────── */
+
+/* ─── Pockota — display / titles ────────────────────────────────── */
+@font-face { font-family:"Pockota"; src:url("../fonts/Pockota-Light.otf") format("opentype");       font-weight:300; font-style:normal; font-display:swap; }
+@font-face { font-family:"Pockota"; src:url("../fonts/Pockota-LightItalic.otf") format("opentype"); font-weight:300; font-style:italic; font-display:swap; }
+@font-face { font-family:"Pockota"; src:url("../fonts/Pockota-Regular.otf") format("opentype");     font-weight:400; font-style:normal; font-display:swap; }
+@font-face { font-family:"Pockota"; src:url("../fonts/Pockota-Italic.otf") format("opentype");      font-weight:400; font-style:italic; font-display:swap; }
+@font-face { font-family:"Pockota"; src:url("../fonts/Pockota-Medium.otf") format("opentype");      font-weight:500; font-style:normal; font-display:swap; }
+@font-face { font-family:"Pockota"; src:url("../fonts/Pockota-Bold.otf") format("opentype");        font-weight:700; font-style:normal; font-display:swap; }
+@font-face { font-family:"Pockota"; src:url("../fonts/Pockota-ExtraBold.otf") format("opentype");   font-weight:800; font-style:normal; font-display:swap; }
+@font-face { font-family:"Pockota"; src:url("../fonts/Pockota-Black.otf") format("opentype");       font-weight:900; font-style:normal; font-display:swap; }
+
+/* ─── Area Normal — body / UI ───────────────────────────────────── */
+@font-face { font-family:"Area Normal"; src:url("../fonts/AreaNormal-Hairline.otf") format("opentype");       font-weight:100; font-style:normal; font-display:swap; }
+@font-face { font-family:"Area Normal"; src:url("../fonts/AreaNormal-Regular.otf") format("opentype");        font-weight:400; font-style:normal; font-display:swap; }
+@font-face { font-family:"Area Normal"; src:url("../fonts/AreaNormal-Italic.otf") format("opentype");         font-weight:400; font-style:italic; font-display:swap; }
+@font-face { font-family:"Area Normal"; src:url("../fonts/AreaNormal-Semibold.otf") format("opentype");       font-weight:600; font-style:normal; font-display:swap; }
+@font-face { font-family:"Area Normal"; src:url("../fonts/AreaNormal-SemiboldItalic.otf") format("opentype"); font-weight:600; font-style:italic; font-display:swap; }
+@font-face { font-family:"Area Normal"; src:url("../fonts/AreaNormal-Extrabold.otf") format("opentype");      font-weight:800; font-style:normal; font-display:swap; }
+@font-face { font-family:"Area Normal"; src:url("../fonts/AreaNormal-ExtraboldItalic.otf") format("opentype");font-weight:800; font-style:italic; font-display:swap; }

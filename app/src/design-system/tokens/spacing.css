@@ -1,0 +1,53 @@
+/* ──────────────────────────────────────────────────────────────────
+   NBC Design System — Spacing, radii, shadow & layout tokens
+   8-pt grid. Soft, low-contrast elevation. Generous vertical rhythm
+   (sections breathe — 160px vertical padding is the norm).
+   ────────────────────────────────────────────────────────────────── */
+:root {
+  /* ─── Spacing scale (8-pt grid) ───────────────────────────────── */
+  --s-1:  4px;
+  --s-2:  8px;
+  --s-3:  12px;
+  --s-4:  16px;
+  --s-5:  20px;
+  --s-6:  24px;
+  --s-7:  32px;
+  --s-8:  40px;
+  --s-9:  48px;
+  --s-10: 64px;
+  --s-11: 80px;
+  --s-12: 112px;
+  --s-13: 160px;
+
+  /* ─── Radii — 4 / 8 / 16 / 24 / 32 / pill ─────────────────────── */
+  --r-xs:   4px;
+  --r-sm:   8px;    /* inputs (rectangular) */
+  --r-md:   16px;   /* standard cards */
+  --r-lg:   24px;   /* image-led cards */
+  --r-xl:   32px;   /* feature cards */
+  --r-pill: 999px;  /* buttons, badges, search bars */
+
+  /* ─── Borders ─────────────────────────────────────────────────── */
+  --border-w:        1px;
+  --border-light:    1px solid var(--nbc-stone-300);
+  --border-on-dark:  1px solid #303030;   /* @kind other */
+
+  /* ─── Shadows — soft, low-contrast ────────────────────────────── */
+  --shadow-sm: 0 1px 2px rgba(47,58,62,0.06);
+  --shadow-md: 0 8px 24px -10px rgba(47,58,62,0.12), 0 2px 6px rgba(47,58,62,0.04);
+  --shadow-lg: 0 20px 40px -8px rgba(47,58,62,0.10), 0 20px 40px -8px rgba(47,58,62,0.05);
+  --shadow-xl: 0 28px 60px -16px rgba(47,58,62,0.18);
+
+  /* ─── Layout — desktop 1920 grid ──────────────────────────────── */
+  --layout-pad:    64px;     /* page padding */
+  --container-max: 1792px;   /* content max-width */
+  --grid-gutter:   32px;
+  --grid-col:      576px;    /* two-/three-up column width */
+  --section-y:     160px;    /* vertical section padding */
+
+  /* ─── Motion — expo-out, no bounce ────────────────────────────── */
+  --ease:       cubic-bezier(0.22, 1, 0.36, 1);   /* @kind other */
+  --dur-fast:   200ms;   /* @kind other */
+  --dur-mid:    400ms;   /* @kind other */
+  --dur-slow:   800ms;   /* @kind other */
+}

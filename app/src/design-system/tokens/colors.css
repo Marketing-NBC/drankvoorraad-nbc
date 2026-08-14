@@ -1,0 +1,74 @@
+/* ──────────────────────────────────────────────────────────────────
+   NBC Design System — Colour tokens
+   Two brand hues, one warm paper, deep stone neutrals. Restraint is
+   the point. Body text is NEVER pure black — --nbc-stone-800 is default.
+   ────────────────────────────────────────────────────────────────── */
+:root {
+  /* ─── Brand: NBC blauwgroen (organic petrol-teal) ─────────────── */
+  --nbc-blue:        #229d96;   /* primary brand mark / accent on cream */
+  --nbc-blue-dark:   #0e0e0e;   /* text on blue tints is BLACK, not teal */
+  --nbc-blue-deep:   #165e5a;   /* graphic / hover use, not body text */
+  --nbc-blue-tint:   #d3ebea;   /* badge / surface tint */
+  --nbc-blue-soft:   #e9f5f4;   /* lightest surface tint, gradient stop */
+  --nbc-blue-mid:    #a8d8d5;   /* gradient stop */
+
+  /* ─── Accent: goudgeel (warm gold) — sparingly, never a CTA ───── */
+  --nbc-gold:        #f6a304;
+  --nbc-gold-soft:   #ffc266;
+
+  /* ─── Cream — warm paper backgrounds ──────────────────────────── */
+  --nbc-cream:       #f2e6da;   /* warm paper */
+  --nbc-cream-soft:  #f1f1ef;   /* cooler off-white — dominant section bg */
+
+  /* ─── Neutrals — stone scale (true to Figma usage) ────────────── */
+  --nbc-white:       #ffffff;
+  --nbc-paper:       #fafafa;   /* default surface */
+  --nbc-stone-50:    #f1f1f1;
+  --nbc-stone-100:   #eaebec;
+  --nbc-stone-200:   #d9e0e2;
+  --nbc-stone-300:   #c8c5c1;   /* warm stone — light borders */
+  --nbc-stone-400:   #acb0b2;
+  --nbc-stone-500:   #828b8d;
+  --nbc-stone-600:   #596165;
+  --nbc-stone-700:   #2f3a3e;   /* deep petrol-stone */
+  --nbc-stone-800:   #21282b;   /* primary body text */
+  --nbc-stone-900:   #121618;
+  --nbc-ink:         #0e0e0e;   /* near-black — primary button fill */
+  --nbc-black:       #050606;   /* hero / dark section bg */
+
+  /* ─── Semantic / status (used sparingly) ──────────────────────── */
+  --nbc-success:     #3d865f;
+  --nbc-success-bg:  #dbeee4;
+  --nbc-warning:     #f6a304;
+  --nbc-error:       #c0392b;
+
+  /* ─── Semantic role aliases ───────────────────────────────────── */
+  --fg-primary:      var(--nbc-stone-800);   /* default text */
+  --fg-secondary:    var(--nbc-stone-600);   /* meta / supporting */
+  --fg-muted:        var(--nbc-stone-400);
+  --fg-on-dark:      var(--nbc-paper);
+  --fg-on-brand:     var(--nbc-paper);
+  --fg-accent:       var(--nbc-blue-dark);
+
+  --bg-page:         var(--nbc-cream-soft);
+  --bg-surface:      var(--nbc-paper);
+  --bg-elev:         var(--nbc-white);
+  --bg-dark:         var(--nbc-black);
+  --bg-brand:        var(--nbc-blue);
+
+  --border-subtle:   var(--nbc-stone-200);
+  --border-default:  var(--nbc-stone-300);
+  --border-strong:   var(--nbc-stone-800);
+
+  /* ─── Signature gradients ─────────────────────────────────────── */
+  --grad-brand:      linear-gradient(180deg, #a8d8d5 0%, #e9f5f4 100%);   /* @kind color */
+  --grad-mark:       linear-gradient(120deg, #229d96 0%, #6fae5f 48%, #f6a304 100%);   /* @kind color */
+  --grad-hero:       linear-gradient(180deg, rgba(5,6,6,.35) 0%, rgba(5,6,6,0) 25%, rgba(5,6,6,.65) 100%);   /* @kind color */
+  --grad-protect:    linear-gradient(180deg, rgba(5,6,6,.1) 0%, rgba(5,6,6,.75) 100%);   /* @kind color */
+
+  /* ─── Brand photo background ──────────────────────────────────── */
+  /* The cinematic teal→black→gold gradient photo (assets/brand-bg-dark.jpg).
+     Apply via the .bg-brand-photo utility class (+ --scrim for legible
+     text overlays). This default reads the scrim overlay gradient. */
+  --grad-scrim:      linear-gradient(180deg, rgba(5,6,6,.25) 0%, rgba(5,6,6,.55) 60%, rgba(5,6,6,.8) 100%);   /* @kind color */
+}

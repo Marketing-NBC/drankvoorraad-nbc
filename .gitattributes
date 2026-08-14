@@ -1,0 +1,10 @@
+# Regeleindes normaliseren. Zonder dit ziet Git op Windows hele
+# bestanden als gewijzigd terwijl er niets veranderd is.
+* text=auto eol=lf
+
+# Binaire bestanden nooit aanpassen.
+*.otf binary
+*.png binary
+*.jpg binary
+*.zip binary
+*.docx binary

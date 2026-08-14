@@ -1,0 +1,18 @@
+export const ROUTES = {
+  login: "/login",
+  overzicht: "/",
+  evenementDetail: (id: string) => `/evenementen/${encodeURIComponent(id)}`,
+  evenementDetailPattern: "/evenementen/:id",
+  pakbonNieuw: (evenementId: string) => `/evenementen/${encodeURIComponent(evenementId)}/pakbon`,
+  pakbonNieuwPattern: "/evenementen/:id/pakbon",
+  pakbon: (id: string) => `/pakbonnen/${id}`,
+  pakbonPattern: "/pakbonnen/:id",
+  producten: "/producten",
+  magazijn: "/magazijn",
+  tellingen: "/tellingen",
+  tellingDetail: (id: string) => `/tellingen/${id}`,
+  tellingDetailPattern: "/tellingen/:id",
+  historie: "/historie",
+  gebruikers: "/gebruikers",
+  dashboard: "/dashboard",
+} as const;

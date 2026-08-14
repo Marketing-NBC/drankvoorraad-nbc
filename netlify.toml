@@ -1,0 +1,26 @@
+[build]
+  base = "app"
+  command = "npm run build"
+  publish = "dist"
+
+# React Router draait client-side: elke URL moet index.html serveren,
+# anders geeft Netlify een 404 bij het rechtstreeks openen van bijv.
+# /evenementen/EVT-2026-014 of bij het verversen van een subpagina.
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Frame-Options = "DENY"
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "strict-origin-when-cross-origin"
+    # De camera is nodig voor barcodescanning; verder niets toestaan.
+    Permissions-Policy = "camera=(self), microphone=(), geolocation=()"
+
+[[headers]]
+  for = "/assets/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"

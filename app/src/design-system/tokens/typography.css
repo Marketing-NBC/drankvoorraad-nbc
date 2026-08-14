@@ -1,0 +1,51 @@
+/* ──────────────────────────────────────────────────────────────────
+   NBC Design System — Typography tokens
+   Pockota for display/titles (lighter weight as size grows; swash
+   ligatures via ss01/liga/calt). Area Normal for everything else.
+   Type scale is desktop-large (1920) reference.
+   ────────────────────────────────────────────────────────────────── */
+:root {
+  /* ─── Families ────────────────────────────────────────────────── */
+  --font-display: "Pockota", "Optima", "Gill Sans", system-ui, sans-serif;
+  --font-body:    "Area Normal", system-ui, -apple-system, "Helvetica Neue", Arial, sans-serif;
+  --font-mono:    ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+
+  /* OpenType swash feature set for Pockota display headings */
+  --feat-swash:   "ss01" on, "liga" on, "calt" on;   /* @kind other */
+
+  /* ─── Display — Pockota, tight tracking, near-1.0 leading ─────── */
+  --t-display-xl: 700 clamp(72px, 8vw, 168px)/0.95 var(--font-display);
+  --t-display-lg: 400 clamp(64px, 6.5vw, 132px)/0.95 var(--font-display);
+  --t-display-md: 400 clamp(48px, 5vw, 96px)/1.0   var(--font-display);
+  --t-display-sm: 400 clamp(36px, 3.5vw, 64px)/1.05 var(--font-display);
+  --t-display-xs: 400 28px/1.1 var(--font-display);
+
+  /* ─── Title — Pockota Light/Regular ───────────────────────────── */
+  --t-title-xl:   300 88px/1.05 var(--font-display);
+  --t-title-lg:   300 66px/1.10 var(--font-display);
+  --t-title-md:   300 50px/1.10 var(--font-display);
+  --t-title-sm:   400 38px/1.15 var(--font-display);
+  --t-title-xs:   400 28px/1.20 var(--font-display);
+
+  /* ─── Body / headline — Area Normal ───────────────────────────── */
+  --t-headline:     800 28px/1.45 var(--font-body);
+  --t-subhead:      800 21px/1.45 var(--font-body);
+  --t-paragraph-lg: 400 21px/1.45 var(--font-body);
+  --t-paragraph:    400 18px/1.55 var(--font-body);
+  --t-paragraph-sm: 400 16px/1.55 var(--font-body);
+
+  /* ─── Labels & overlines ──────────────────────────────────────── */
+  --t-label:        800 16px/1.45 var(--font-body);
+  --t-label-sm:     800 14px/1.45 var(--font-body);
+  --t-overline:     800 15.76px/1.45 var(--font-body);  /* uppercase, tracked */
+  --t-tagline:      800 15.76px/1.45 var(--font-body);
+
+  /* ─── Buttons ─────────────────────────────────────────────────── */
+  --t-btn-lg:       800 28px/1.45 var(--font-body);
+  --t-btn-md:       800 18px/1.45 var(--font-body);
+  --t-btn-sm:       800 14px/1.45 var(--font-body);
+
+  /* ─── Tracking helpers ────────────────────────────────────────── */
+  --track-display:  -0.01em;   /* tight on display */
+  --track-overline: 0.06em;    /* open on overlines/labels */
+}
