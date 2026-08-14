@@ -52,11 +52,12 @@ blijft de vorige versie gewoon draaien.
 git add -A && git commit -m "wat er veranderd is" && git push
 ```
 
-**Let op de naam waarop je commit.** Netlify accepteert op dit abonnement
-alleen commits van een adres dat bij het account hoort — dat is
-`marketing@nbcevents.nl`. Staat er een ander adres in, dan blokkeert
-Netlify de build met *"Unrecognized Git contributor"*. Voor deze map is
-dat al goed gezet met `git config user.email`.
+**Voorwaarde:** het Netlify-account moet gekoppeld zijn aan het
+GitHub-account (Netlify → User settings → Connected accounts). Zonder die
+koppeling weigert Netlify op dit abonnement elke push naar een privé-repo
+met *"Unrecognized Git contributor"*, ongeacht het e-mailadres in de
+commit. Commit daarnaast op het adres dat op je GitHub-profiel staat;
+voor deze map staat dat goed via `git config user.email`.
 
 Handmatig publiceren kan nog steeds, bijvoorbeeld om de site snel te
 herstellen. Vanuit de projectmap, niet vanuit `app/`:
