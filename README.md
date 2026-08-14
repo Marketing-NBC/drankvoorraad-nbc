@@ -44,14 +44,36 @@ npm run build    # controleert types en bouwt naar dist/
 
 ## Publiceren
 
-Vanuit de projectmap, niet vanuit `app/`:
+Gaat vanzelf. Een push naar `main` laat Netlify de tests en de
+typecontrole draaien; slagen die, dan gaat het live. Faalt er iets, dan
+blijft de vorige versie gewoon draaien.
+
+```bash
+git add -A && git commit -m "wat er veranderd is" && git push
+```
+
+**Let op de naam waarop je commit.** Netlify accepteert op dit abonnement
+alleen commits van een adres dat bij het account hoort — dat is
+`marketing@nbcevents.nl`. Staat er een ander adres in, dan blokkeert
+Netlify de build met *"Unrecognized Git contributor"*. Voor deze map is
+dat al goed gezet met `git config user.email`.
+
+Handmatig publiceren kan nog steeds, bijvoorbeeld om de site snel te
+herstellen. Vanuit de projectmap, niet vanuit `app/`:
 
 ```bash
 npx netlify deploy --prod --no-build --dir "app\dist"
 ```
 
-Bouw eerst met `npm run build` in `app/`. De Netlify-token staat in
+Bouw dan eerst met `npm run build` in `app/`. De Netlify-token staat in
 `app/.env` en gaat nooit mee naar GitHub.
+
+### Instellingen die Netlify zelf moet kennen
+
+De app leest `VITE_SUPABASE_URL` en `VITE_SUPABASE_ANON_KEY`. Lokaal komen
+die uit `app/.env`; op Netlify staan ze onder Site configuration →
+Environment variables. Ontbreken ze daar, dan stopt de build met een
+duidelijke melding — zie `app/scripts/controleer-omgeving.mjs`.
 
 ## Database
 
