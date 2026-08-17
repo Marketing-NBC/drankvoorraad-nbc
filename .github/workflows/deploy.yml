@@ -1,0 +1,82 @@
+# Publiceert de app op GitHub Pages: https://marketing-nbc.github.io/drankvoorraad-nbc/
+#
+# De tests en de typecontrole draaien vóór het bouwen. Faalt er iets, dan
+# wordt er niets gepubliceerd en blijft de vorige versie gewoon staan.
+
+name: Publiceren op GitHub Pages
+
+on:
+  push:
+    branches: ["main"]
+  # Zo kun je opnieuw publiceren zonder een lege commit te maken:
+  # Actions → deze workflow → Run workflow.
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Eén publicatie tegelijk. Niet afbreken halverwege: een deploy die al bezig
+# is mag afmaken, anders staat er mogelijk een halve versie live.
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: app
+    steps:
+      - name: Code ophalen
+        uses: actions/checkout@v4
+
+      - name: Node installeren
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: app/package-lock.json
+
+      - name: Pakketten installeren
+        run: npm ci
+
+      - name: Tests draaien
+        run: npm run test
+
+      - name: Bouwen
+        run: npm run build
+        env:
+          # Staan in Settings → Secrets and variables → Actions. Ontbreken ze,
+          # dan stopt de build met een duidelijke melding — zie
+          # app/scripts/controleer-omgeving.mjs.
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+
+      # GitHub Pages kan niet elk pad naar index.html sturen zoals Netlify dat
+      # deed, maar valt bij een onbekend pad terug op 404.html. Een kopie van
+      # index.html daar zorgt dat de app alsnog start; React Router leest daarna
+      # het pad uit de adresbalk. Zo blijven diepe links en F5 werken.
+      #
+      # Dit gebeurt hier en niet in de repo, omdat index.html na het bouwen naar
+      # bestandsnamen met een hash verwijst.
+      - name: Terugval voor diepe links
+        run: cp dist/index.html dist/404.html
+
+      - name: Resultaat klaarzetten
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: app/dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Live zetten
+        id: deployment
+        uses: actions/deploy-pages@v5

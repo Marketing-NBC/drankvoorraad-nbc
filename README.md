@@ -1,7 +1,7 @@
 # Drankvoorraad — NBC & Green Village
 
 Voorraadbeheer voor drank rond evenementen, voor NBC en Green Village.
-Draait op **https://drankvoorraad-nbc.netlify.app**
+Draait op **https://marketing-nbc.github.io/drankvoorraad-nbc/**
 
 Wat het doet: voorraad per locatie bijhouden, drank uitgeven aan een evenement
 met een ondertekende pakbon, retouren verwerken, voorraadtellingen uitvoeren,
@@ -13,7 +13,7 @@ en automatisch de brutomarge per evenement berekenen.
 |---|---|
 | **App** | React + TypeScript, gebouwd met Vite. Alles staat in `app/` |
 | **Database** | Supabase (Postgres). Schema en migraties in `supabase/` |
-| **Hosting** | Netlify, configuratie in `netlify.toml` |
+| **Hosting** | GitHub Pages, workflow in `.github/workflows/deploy.yml` |
 | **Huisstijl** | NBC design system in `app/src/design-system/` |
 
 De volledige voorraadstand is altijd af te leiden uit de tabel `mutaties`:
@@ -44,37 +44,47 @@ npm run build    # controleert types en bouwt naar dist/
 
 ## Publiceren
 
-Gaat vanzelf. Een push naar `main` laat Netlify de tests en de
+Gaat vanzelf. Een push naar `main` laat GitHub Actions de tests en de
 typecontrole draaien; slagen die, dan gaat het live. Faalt er iets, dan
-blijft de vorige versie gewoon draaien.
+wordt er niets gepubliceerd en blijft de vorige versie gewoon draaien.
 
 ```bash
 git add -A && git commit -m "wat er veranderd is" && git push
 ```
 
-**Voorwaarde:** het Netlify-account moet gekoppeld zijn aan het
-GitHub-account (Netlify → User settings → Connected accounts). Zonder die
-koppeling weigert Netlify op dit abonnement elke push naar een privé-repo
-met *"Unrecognized Git contributor"*, ongeacht het e-mailadres in de
-commit. Commit daarnaast op het adres dat op je GitHub-profiel staat;
-voor deze map staat dat goed via `git config user.email`.
+Meekijken kan in de **Actions**-tab. Daar kun je ook opnieuw publiceren
+zonder iets te wijzigen: kies de workflow *Publiceren op GitHub Pages* en
+klik op **Run workflow**.
 
-Handmatig publiceren kan nog steeds, bijvoorbeeld om de site snel te
-herstellen. Vanuit de projectmap, niet vanuit `app/`:
-
-```bash
-npx netlify deploy --prod --no-build --dir "app\dist"
-```
-
-Bouw dan eerst met `npm run build` in `app/`. De Netlify-token staat in
-`app/.env` en gaat nooit mee naar GitHub.
-
-### Instellingen die Netlify zelf moet kennen
+### Instellingen die GitHub zelf moet kennen
 
 De app leest `VITE_SUPABASE_URL` en `VITE_SUPABASE_ANON_KEY`. Lokaal komen
-die uit `app/.env`; op Netlify staan ze onder Site configuration →
-Environment variables. Ontbreken ze daar, dan stopt de build met een
-duidelijke melding — zie `app/scripts/controleer-omgeving.mjs`.
+die uit `app/.env`; voor het publiceren staan ze in GitHub onder Settings →
+Secrets and variables → Actions. Ontbreken ze daar, dan stopt de build met
+een duidelijke melding — zie `app/scripts/controleer-omgeving.mjs`.
+
+Er is geen deploy-token nodig: de workflow publiceert met de rechten die
+er in `deploy.yml` aan toegekend zijn.
+
+### Waarom de app in een submap staat
+
+GitHub Pages serveert dit project vanaf `/drankvoorraad-nbc/` en niet vanaf
+de hoofdmap. Dat pad staat op één plek, `base` in `app/vite.config.ts`; de
+router in `app/src/main.tsx` leest dezelfde waarde uit
+`import.meta.env.BASE_URL`. Lokaal is die `/`, dus `npm run dev` merkt er
+niets van.
+
+Pages kan verder niet, zoals een gewone webserver, elk pad naar
+`index.html` sturen. Daarom zet de workflow een kopie van `index.html` neer
+als `404.html`. Pages valt daarop terug bij een onbekend pad, de app start
+alsnog op en de router leest het pad uit de adresbalk. Zo blijven diepe
+links en F5 werken.
+
+Twee dingen die Netlify wél deed en Pages niet kan: eigen
+beveiligingsheaders meesturen, en een lange cachetijd op `/assets/*`
+zetten. Het eerste maakte de app strenger dan de standaard, het tweede
+scheelde wat netwerkverkeer — de bestandsnamen bevatten een hash, dus een
+nieuwe versie komt nog altijd direct door.
 
 ## Database
 
