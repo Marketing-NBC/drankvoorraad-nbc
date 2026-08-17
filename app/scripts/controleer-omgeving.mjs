@@ -12,9 +12,10 @@
 import { loadEnv } from "vite";
 
 /*
- * Op Netlify staan de waarden in process.env; lokaal staan ze in app/.env,
- * dat Vite zelf inleest en dus níét in process.env terechtkomt. loadEnv
- * kijkt op allebei de plekken, precies zoals Vite dat bij het bouwen doet.
+ * In GitHub Actions staan de waarden in process.env; lokaal staan ze in
+ * app/.env, dat Vite zelf inleest en dus níét in process.env terechtkomt.
+ * loadEnv kijkt op allebei de plekken, precies zoals Vite dat bij het
+ * bouwen doet.
  */
 const omgeving = loadEnv(process.env.NODE_ENV ?? "production", process.cwd(), "");
 
@@ -32,7 +33,7 @@ const vereist = [
 const ontbreekt = vereist.filter(({ naam }) => !omgeving[naam]?.trim());
 
 if (ontbreekt.length > 0) {
-  const opNetlify = Boolean(process.env.NETLIFY);
+  const inActions = Boolean(process.env.GITHUB_ACTIONS);
 
   console.error("\n  De build is gestopt: er ontbreken instellingen.\n");
   for (const { naam, uitleg } of ontbreekt) {
@@ -40,9 +41,10 @@ if (ontbreekt.length > 0) {
   }
 
   console.error(
-    opNetlify
-      ? "\n  Voeg ze toe in Netlify onder Site configuration → Environment variables\n" +
-          "  en start daarna een nieuwe deploy.\n"
+    inActions
+      ? "\n  Voeg ze toe als repository secret in GitHub onder\n" +
+          "  Settings → Secrets and variables → Actions, en start daarna\n" +
+          "  de workflow opnieuw via Actions → Run workflow.\n"
       : "\n  Zet ze in app/.env. Zie app/.env.example voor de opzet.\n"
   );
 

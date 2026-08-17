@@ -9,7 +9,12 @@ import { App } from "./App";
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
-    <BrowserRouter>
+    {/*
+      BASE_URL is de submap uit vite.config.ts: lokaal "/" en op GitHub Pages
+      "/drankvoorraad-nbc/". Zo blijven de paden in routes.ts kort en klopt de
+      adresbalk in beide gevallen.
+    */}
+    <BrowserRouter basename={import.meta.env.BASE_URL}>
       <AuthProvider>
         <AppStateProvider>
           <App />

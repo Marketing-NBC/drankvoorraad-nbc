@@ -1,0 +1,51 @@
+# Controleert een pull request vóór het mergen: draaien de tests, klopt de
+# typering, en komt de build door? Er wordt niets gepubliceerd — dat doet
+# deploy.yml, na het mergen naar main.
+#
+# Zonder deze controle zou je een fout pas ná het mergen zien.
+
+name: Controle op pull request
+
+on:
+  pull_request:
+    branches: ["main"]
+
+# Duwt iemand een nieuwe commit naar dezelfde pull request, dan is de vorige
+# uitslag niet meer interessant: die run mag afgebroken worden.
+concurrency:
+  group: controle-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  controle:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: app
+    steps:
+      - name: Code ophalen
+        uses: actions/checkout@v4
+
+      - name: Node installeren
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: app/package-lock.json
+
+      - name: Pakketten installeren
+        run: npm ci
+
+      - name: Tests draaien
+        run: npm run test
+
+      # npm run build doet ook de typecontrole (tsc --noEmit), dus een
+      # typefout valt hier al door de mand.
+      - name: Bouwen
+        run: npm run build
+        env:
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
