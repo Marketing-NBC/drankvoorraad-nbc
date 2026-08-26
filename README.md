@@ -7,6 +7,9 @@ Wat het doet: voorraad per locatie bijhouden, drank uitgeven aan een evenement
 met een ondertekende pakbon, retouren verwerken, voorraadtellingen uitvoeren,
 en automatisch de brutomarge per evenement berekenen.
 
+Werk je aan de app? Lees dan eerst `CLAUDE.md`: daar staan de afspraken waar de
+betrouwbaarheid van de voorraadstand op rust, en de aandachtspunten voor V2.
+
 ## Hoe het in elkaar zit
 
 | | |
