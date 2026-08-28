@@ -72,6 +72,10 @@ beveiligingsheaders en een lange cachetijd op `/assets/*`.
 Wat er nu staat is een proof of concept dat echt draait. De stap naar V2 is het
 afmaken ervan. Deze paragraaf mag weg zodra dat plan er ligt.
 
+Werk je aan de vormgeving? Lees dan eerst `ontwerp-app-modus.md`. Daar staat
+waarom de huisstijl in `app/src/design-system/` tegenwerkt op een werkscherm, en
+in welke volgorde dat wordt aangepakt.
+
 Vier dingen die bij "van PoC naar af" waarschijnlijk terugkomen. Geen van deze is
 kapot — het zijn keuzes die passen bij een PoC en knellen zodra het menens wordt:
 
