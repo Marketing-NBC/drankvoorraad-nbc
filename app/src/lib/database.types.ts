@@ -1,6 +1,7 @@
 /**
- * Handgeschreven typen die exact overeenkomen met supabase/schema.sql.
- * Bij een schemawijziging: pas hier én in schema.sql aan.
+ * Handgeschreven typen die exact overeenkomen met de database: supabase/schema.sql
+ * plus alle migraties in supabase/migraties/. Bij een schemawijziging: schrijf
+ * een migratie én pas dit bestand aan.
  *
  * Let op: dit moeten `type`-aliassen zijn, geen `interface`s. Een interface
  * heeft in TypeScript geen impliciete index-signature en is daardoor niet
@@ -10,11 +11,14 @@
 import type {
   EvenementStatus,
   GebruikerRol,
+  KoppelingSoort,
   LocatieType,
   Merk,
+  MetingBron,
   MutatieType,
   ProductCategorie,
   TellingStatus,
+  VulplekType,
 } from "../data/types";
 
 export type ProfileRow = {
@@ -29,6 +33,7 @@ export type LocatieRow = {
   naam: string;
   type: LocatieType;
   merk: Merk | null;
+  voor_personeel: boolean;
   aangemaakt_op: string;
 };
 
@@ -40,9 +45,79 @@ export type ProductRow = {
   categorie: ProductCategorie;
   leverancier: string | null;
   inkoopprijs: number;
-  verkoopprijs: number;
   eenheid: string;
+  inhoud: string | null;
+  verpakking: string | null;
+  stuks_per_verpakking: number;
+  alleen_per_verpakking: boolean;
+  statiegeld_per_stuk: number;
+  statiegeld_per_verpakking: number;
+  voorraadloos: boolean;
   aangemaakt_op: string;
+};
+
+export type ZaalRow = {
+  id: string;
+  naam: string;
+  actief: boolean;
+  aangemaakt_op: string;
+};
+
+export type EvenementZaalRow = {
+  evenement_id: string;
+  zaal_id: string;
+};
+
+export type VulplekRow = {
+  id: string;
+  naam: string;
+  type: VulplekType;
+  zaal_id: string | null;
+  actief: boolean;
+  aangemaakt_op: string;
+};
+
+export type VulplekStandaardRow = {
+  vulplek_id: string;
+  product_id: string;
+  aantal: number;
+};
+
+export type KoppelingRow = {
+  id: string;
+  soort: KoppelingSoort;
+  naam: string;
+  actief: boolean;
+  api_basis_url: string | null;
+  notitie: string | null;
+  laatste_import: string | null;
+  laatste_fout: string | null;
+  aangemaakt_op: string;
+};
+
+export type MachineRow = {
+  id: string;
+  koppeling_id: string;
+  naam: string;
+  extern_id: string | null;
+  product_id: string;
+  zaal_id: string | null;
+  actief: boolean;
+  aangemaakt_op: string;
+};
+
+export type MetingRow = {
+  id: string;
+  machine_id: string;
+  datum: string;
+  aantal: number;
+  bron: MetingBron;
+  extern_id: string | null;
+  evenement_id: string | null;
+  gebruiker_id: string | null;
+  notitie: string | null;
+  aangemaakt_op: string;
+  bijgewerkt_op: string;
 };
 
 export type VoorraadRow = {
@@ -119,7 +194,7 @@ export type Database = {
       };
       locaties: {
         Row: LocatieRow;
-        Insert: MetDefaults<LocatieRow, "id" | "merk" | "aangemaakt_op">;
+        Insert: MetDefaults<LocatieRow, "id" | "merk" | "voor_personeel" | "aangemaakt_op">;
         Update: Partial<LocatieRow>;
         Relationships: [];
       };
@@ -128,7 +203,10 @@ export type Database = {
         Insert: MetDefaults<
           ProductRow,
           | "id" | "sku" | "barcode" | "categorie" | "leverancier"
-          | "inkoopprijs" | "verkoopprijs" | "eenheid" | "aangemaakt_op"
+          | "inkoopprijs" | "eenheid" | "inhoud" | "verpakking"
+          | "stuks_per_verpakking" | "alleen_per_verpakking"
+          | "statiegeld_per_stuk" | "statiegeld_per_verpakking"
+          | "voorraadloos" | "aangemaakt_op"
         >;
         Update: Partial<ProductRow>;
         Relationships: [];
@@ -173,6 +251,55 @@ export type Database = {
         Update: Partial<TellingregelRow>;
         Relationships: [];
       };
+      zalen: {
+        Row: ZaalRow;
+        Insert: MetDefaults<ZaalRow, "id" | "actief" | "aangemaakt_op">;
+        Update: Partial<ZaalRow>;
+        Relationships: [];
+      };
+      evenement_zalen: {
+        Row: EvenementZaalRow;
+        Insert: EvenementZaalRow;
+        Update: Partial<EvenementZaalRow>;
+        Relationships: [];
+      };
+      vulplekken: {
+        Row: VulplekRow;
+        Insert: MetDefaults<VulplekRow, "id" | "zaal_id" | "actief" | "aangemaakt_op">;
+        Update: Partial<VulplekRow>;
+        Relationships: [];
+      };
+      vulplek_standaard: {
+        Row: VulplekStandaardRow;
+        Insert: VulplekStandaardRow;
+        Update: Partial<VulplekStandaardRow>;
+        Relationships: [];
+      };
+      koppelingen: {
+        Row: KoppelingRow;
+        Insert: MetDefaults<
+          KoppelingRow,
+          "id" | "actief" | "api_basis_url" | "notitie" | "laatste_import" | "laatste_fout" | "aangemaakt_op"
+        >;
+        Update: Partial<KoppelingRow>;
+        Relationships: [];
+      };
+      machines: {
+        Row: MachineRow;
+        Insert: MetDefaults<MachineRow, "id" | "extern_id" | "zaal_id" | "actief" | "aangemaakt_op">;
+        Update: Partial<MachineRow>;
+        Relationships: [];
+      };
+      machine_metingen: {
+        Row: MetingRow;
+        Insert: MetDefaults<
+          MetingRow,
+          | "id" | "bron" | "extern_id" | "evenement_id" | "gebruiker_id"
+          | "notitie" | "aangemaakt_op" | "bijgewerkt_op"
+        >;
+        Update: Partial<MetingRow>;
+        Relationships: [];
+      };
     };
     Views: Record<string, never>;
     Functions: {
@@ -191,6 +318,28 @@ export type Database = {
       annuleer_telling: {
         Args: { p_telling_id: string };
         Returns: undefined;
+      };
+      boek_meting: {
+        Args: {
+          p_machine_id: string;
+          p_datum: string;
+          p_aantal: number;
+          p_evenement_id?: string | null;
+          p_notitie?: string | null;
+        };
+        Returns: string;
+      };
+      /**
+       * De ingang voor Franke en Aquablu. De app roept hem niet aan — dat doet
+       * straks de Edge Function die bij hun API langsgaat. Hij staat hier zodat
+       * de vorm van wat er binnenkomt vastligt en meegetypecheckt wordt.
+       */
+      importeer_metingen: {
+        Args: {
+          p_soort: KoppelingSoort;
+          p_metingen: { machine: string; datum: string; aantal: number; extern_id?: string }[];
+        };
+        Returns: { verwerkt: number; onbekende_machines: string[] };
       };
       maak_pakbon: {
         Args: {
@@ -211,6 +360,9 @@ export type Database = {
       product_categorie: ProductCategorie;
       mutatie_type: MutatieType;
       telling_status: TellingStatus;
+      vulplek_type: VulplekType;
+      koppeling_soort: KoppelingSoort;
+      meting_bron: MetingBron;
     };
     CompositeTypes: Record<string, never>;
   };

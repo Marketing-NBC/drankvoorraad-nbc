@@ -4,9 +4,16 @@ export type GebruikerRol = "beheerder" | "magazijnmedewerker" | "evenementmanage
 
 export type EvenementStatus = "Gepland" | "Actief" | "Afgerond";
 
-export type ProductCategorie = "bier" | "wijn" | "fris" | "sterke drank" | "overig";
+export type ProductCategorie =
+  | "bier"
+  | "wijn"
+  | "fris"
+  | "sterke drank"
+  | "koffie"
+  | "water"
+  | "overig";
 
-export type LocatieType = "magazijn" | "koelcel" | "bar";
+export type LocatieType = "magazijn" | "koelcel" | "bar" | "kantine" | "kroeg";
 
 export interface Profiel {
   id: string;
@@ -20,15 +27,44 @@ export interface Locatie {
   naam: string;
   type: LocatieType;
   merk: Merk | null;
+  /**
+   * Kantine en kroeg: wat hier opgaat is personeelsverbruik en telt nooit mee
+   * in de cijfers van een evenement. De database weigert een boeking die die
+   * twee mengt — zie supabase/migraties/011_personeelslocaties.sql.
+   */
+  voorPersoneel: boolean;
 }
 
+/**
+ * Eén product uit het assortiment.
+ *
+ * Alles rekent in stuks — flesjes, fusten, glazen. De verpakking bepaalt
+ * alleen hoe er ingevoerd wordt: bij `alleenPerVerpakking` vraagt de app
+ * kratten en rekent zelf om. Zo blijft een koelkast van 12 flesjes mogelijk
+ * terwijl het magazijn nooit losse flesjes hoeft te tellen.
+ *
+ * Er is geen verkoopprijs: NBC verkoopt per pakket, niet per product. De
+ * omzet wordt per evenement ingevuld en daar rekent de marge mee.
+ */
 export interface Product {
   id: string;
   naam: string;
   categorie: ProductCategorie;
   inkoopprijs: number;
-  verkoopprijs: number;
+  /** Eenheid waarin geteld wordt: fles, fust, kop, glas. */
   eenheid: string;
+  /** Inhoud per stuk zoals op de leverancierslijst: "0,2 L", "20 L". */
+  inhoud?: string;
+  /** Naam van de verpakkingseenheid ("krat"), of leeg als het product los gaat. */
+  verpakking?: string;
+  /** Aantal stuks in één verpakking; 1 wanneer er geen verpakking is. */
+  stuksPerVerpakking: number;
+  /** true = in het magazijn nooit los boeken of tellen, altijd per verpakking. */
+  alleenPerVerpakking: boolean;
+  statiegeldPerStuk: number;
+  statiegeldPerVerpakking: number;
+  /** true = geen fysieke voorraad. Koffie en water: verbruik komt uit de machines. */
+  voorraadloos: boolean;
   sku?: string;
   barcode?: string;
   leverancier?: string;
@@ -65,7 +101,8 @@ export type MutatieType =
   | "magazijn-naar-magazijn"
   | "inkoop"
   | "beschadigd"
-  | "correctie";
+  | "correctie"
+  | "personeelsverbruik";
 
 /**
  * Eén voorraadbeweging. Append-only: mutaties worden nooit gewijzigd of
@@ -138,8 +175,91 @@ export interface Tellingregel {
   geteldAantal: number | null;
 }
 
+/** Personeelsverbruik: gaat van de kantine of de kroeg af en nergens heen. */
+export const PERSONEELSVERBRUIK: MutatieType = "personeelsverbruik";
+
 /** Mutatietypen die meetellen als uitgifte richting een evenement. */
 export const UITGIFTE_TYPES: MutatieType[] = ["magazijn-naar-evenement"];
 
 /** Mutatietypen die meetellen als retour vanaf een evenement. */
 export const RETOUR_TYPES: MutatieType[] = ["evenement-naar-magazijn"];
+
+// ─── Zalen, vulplekken en machines ────────────────────────────────────────────
+
+/** Een ruimte waar een evenement plaatsvindt. Hier wordt géén drank naartoe geboekt. */
+export interface Zaal {
+  id: string;
+  naam: string;
+  actief: boolean;
+}
+
+export type VulplekType = "koelkast" | "bar";
+
+/**
+ * Een koelkast of bar die bijgevuld wordt. Bewust géén voorraadlocatie: uit een
+ * koelkast wordt niet geboekt, er wordt uit gedronken. Zou de app er voorraad
+ * van bijhouden, dan bleef die eeuwig vol staan.
+ */
+export interface Vulplek {
+  id: string;
+  naam: string;
+  type: VulplekType;
+  zaalId?: string;
+  actief: boolean;
+}
+
+/** Eén regel van de standaardvulling van een vulplek, in stuks. */
+export interface VulplekRegel {
+  vulplekId: string;
+  productId: string;
+  aantal: number;
+}
+
+export type KoppelingSoort = "franke" | "aquablu";
+
+/**
+ * Een koppeling met het systeem van een leverancier. `actief` staat op false
+ * zolang die er niet is; er wordt dan handmatig ingevoerd, op precies dezelfde
+ * plek. Er staat geen sleutel of wachtwoord in — die horen in de omgeving van
+ * de Edge Function die de import doet.
+ */
+export interface Koppeling {
+  id: string;
+  soort: KoppelingSoort;
+  naam: string;
+  actief: boolean;
+  apiBasisUrl?: string;
+  notitie?: string;
+  laatsteImport?: string;
+  laatsteFout?: string;
+}
+
+/** Een koffiemachine of watertappunt, gekoppeld aan de zaal waar hij staat. */
+export interface Machine {
+  id: string;
+  koppelingId: string;
+  naam: string;
+  /** Het nummer waaronder de machine bij Franke of Aquablu bekend staat. */
+  externId?: string;
+  productId: string;
+  zaalId?: string;
+  actief: boolean;
+}
+
+export type MetingBron = "handmatig" | "koppeling";
+
+/**
+ * Het dagtotaal van één machine. Geen voorraadmutatie: er is geen voorraad om
+ * af te boeken. Eén regel per machine per dag — een dagtotaal is een waarneming
+ * die je corrigeert, niet een boeking die je terugdraait.
+ */
+export interface Meting {
+  id: string;
+  machineId: string;
+  datum: string;
+  aantal: number;
+  bron: MetingBron;
+  evenementId?: string;
+  gebruikerId?: string;
+  notitie?: string;
+}

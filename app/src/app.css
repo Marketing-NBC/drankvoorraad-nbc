@@ -1270,6 +1270,72 @@ body { background: var(--canvas); }
 .pakbon-teken__voet { font: var(--t-ui-xs); color: var(--nbc-stone-500); margin: 0; }
 
 /* ══════════════════════════════════════════════════════════════════
+   Keuzevakjes, verpakking, koppelingen en personeel
+   ══════════════════════════════════════════════════════════════════ */
+
+/* Een vinkje met uitleg eronder. De uitleg staat er niet voor de sier: bij
+   "nooit los boeken" en "voor personeel" verandert het gedrag van de app,
+   en dat moet je kunnen lezen zonder het geprobeerd te hebben. */
+.keuzevakje {
+  display: grid; grid-template-columns: auto 1fr; gap: 10px;
+  align-items: start; font: var(--t-ui); color: var(--nbc-stone-800);
+  padding: 4px 0; cursor: pointer;
+}
+.keuzevakje input { width: 18px; height: 18px; margin: 2px 0 0; accent-color: var(--nbc-blue); }
+.keuzevakje > span { display: flex; flex-direction: column; gap: 2px; }
+.keuzevakje .field-group__hint { display: block; }
+
+.veldgroep-kader {
+  border: 1px solid var(--lijn); border-radius: var(--r-rij);
+  padding: 14px 16px; margin: 0; display: flex; flex-direction: column; gap: 12px;
+}
+.veldgroep-kader > legend {
+  font: var(--t-ui-xs); text-transform: uppercase; letter-spacing: .08em;
+  color: var(--fg-muted); padding: 0 6px;
+}
+
+.product-naam { display: flex; flex-direction: column; gap: 2px; }
+.product-naam__hint { font: var(--t-ui-xs); color: var(--fg-muted); }
+
+.veld-toelichting { font: var(--t-ui-xs); color: var(--fg-muted); margin: 6px 0 0; }
+
+.kaart-tekst { font: var(--t-ui); color: var(--nbc-stone-600); margin: 0 0 4px; }
+.kaart-actie { padding: 4px 0 2px; }
+.kaart-kop__cijfers { display: inline-flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+
+/* Zaalkeuze bij een evenement: chips die je aan- en uitzet. Meerdere zalen
+   tegelijk komt vaak voor, dus geen keuzelijst maar een rij knoppen. */
+.zaal-keuze { display: flex; flex-wrap: wrap; gap: 8px; }
+.zaal-chip {
+  font: var(--t-ui); color: var(--nbc-stone-700); cursor: pointer;
+  background: var(--vlak-chip); border: 1px solid var(--lijn);
+  border-radius: var(--r-pill); padding: 8px 14px; min-height: 36px;
+}
+.zaal-chip--actief {
+  background: var(--nbc-blue); border-color: var(--nbc-blue); color: #fff;
+}
+.zaal-chip:disabled { opacity: .6; cursor: progress; }
+
+.koppeling-instellingen {
+  display: flex; flex-direction: column; gap: 12px;
+  background: var(--vlak-rij); border-radius: var(--r-rij); padding: 14px 16px;
+}
+
+/* Periode plus de twee kerncijfers. Op een telefoon onder elkaar, vanaf
+   tablet op één regel zodat het filter en het antwoord samen in beeld staan. */
+.periode-kiezer { display: flex; flex-direction: column; gap: 14px; }
+.periode-cijfers { display: flex; gap: 28px; flex-wrap: wrap; }
+.periode-cijfer { display: flex; flex-direction: column; gap: 2px; }
+.periode-cijfer__label {
+  font: var(--t-ui-xs); text-transform: uppercase; letter-spacing: .08em; color: var(--fg-muted);
+}
+.periode-cijfer__waarde { font: 800 22px/1.15 var(--font-body); color: var(--nbc-stone-900); }
+@media (min-width: 640px) {
+  .periode-kiezer { flex-direction: row; align-items: flex-end; gap: 20px; flex-wrap: wrap; }
+  .periode-kiezer .field-group { max-width: 190px; }
+}
+
+/* ══════════════════════════════════════════════════════════════════
    Printen
    ══════════════════════════════════════════════════════════════════ */
 @media print {

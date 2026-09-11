@@ -8,6 +8,7 @@ export const mutatieLabels: Record<MutatieType, string> = {
   inkoop: "Inkoop",
   beschadigd: "Afschrijving",
   correctie: "Correctie",
+  personeelsverbruik: "Personeel",
 };
 
 /**
@@ -22,6 +23,7 @@ export const mutatieVariant: Record<MutatieType, "tint" | "neutral" | "gold" | "
   inkoop: "tint",
   beschadigd: "gold",
   correctie: "neutral",
+  personeelsverbruik: "gold",
 };
 
 export const mutatieTypeOpties = (Object.keys(mutatieLabels) as MutatieType[]).map((type) => ({

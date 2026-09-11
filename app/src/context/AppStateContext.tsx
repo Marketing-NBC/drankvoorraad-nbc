@@ -4,7 +4,11 @@ import {
 import { supabase } from "../lib/supabaseClient";
 import type {
   EvenementRow,
+  EvenementZaalRow,
+  KoppelingRow,
   LocatieRow,
+  MachineRow,
+  MetingRow,
   MutatieRow,
   PakbonRow,
   ProductRow,
@@ -12,11 +16,17 @@ import type {
   TellingRow,
   TellingregelRow,
   VoorraadRow,
+  VulplekRow,
+  VulplekStandaardRow,
+  ZaalRow,
 } from "../lib/database.types";
 import type {
   Evenement,
   GebruikerRol,
+  Koppeling,
   Locatie,
+  Machine,
+  Meting,
   Mutatie,
   Pakbon,
   PakbonRegel,
@@ -26,6 +36,9 @@ import type {
   Telling,
   Tellingregel,
   Voorraad,
+  Vulplek,
+  VulplekRegel,
+  Zaal,
 } from "../data/types";
 import { useAuth } from "./AuthContext";
 
@@ -37,11 +50,67 @@ function naarProduct(r: ProductRow): Product {
     naam: r.naam,
     categorie: r.categorie,
     inkoopprijs: Number(r.inkoopprijs),
-    verkoopprijs: Number(r.verkoopprijs),
     eenheid: r.eenheid,
+    inhoud: r.inhoud ?? undefined,
+    verpakking: r.verpakking ?? undefined,
+    stuksPerVerpakking: r.stuks_per_verpakking ?? 1,
+    alleenPerVerpakking: r.alleen_per_verpakking ?? false,
+    statiegeldPerStuk: Number(r.statiegeld_per_stuk ?? 0),
+    statiegeldPerVerpakking: Number(r.statiegeld_per_verpakking ?? 0),
+    voorraadloos: r.voorraadloos ?? false,
     sku: r.sku ?? undefined,
     barcode: r.barcode ?? undefined,
     leverancier: r.leverancier ?? undefined,
+  };
+}
+
+function naarZaal(r: ZaalRow): Zaal {
+  return { id: r.id, naam: r.naam, actief: r.actief };
+}
+
+function naarVulplek(r: VulplekRow): Vulplek {
+  return { id: r.id, naam: r.naam, type: r.type, zaalId: r.zaal_id ?? undefined, actief: r.actief };
+}
+
+function naarVulplekRegel(r: VulplekStandaardRow): VulplekRegel {
+  return { vulplekId: r.vulplek_id, productId: r.product_id, aantal: r.aantal };
+}
+
+function naarKoppeling(r: KoppelingRow): Koppeling {
+  return {
+    id: r.id,
+    soort: r.soort,
+    naam: r.naam,
+    actief: r.actief,
+    apiBasisUrl: r.api_basis_url ?? undefined,
+    notitie: r.notitie ?? undefined,
+    laatsteImport: r.laatste_import ?? undefined,
+    laatsteFout: r.laatste_fout ?? undefined,
+  };
+}
+
+function naarMachine(r: MachineRow): Machine {
+  return {
+    id: r.id,
+    koppelingId: r.koppeling_id,
+    naam: r.naam,
+    externId: r.extern_id ?? undefined,
+    productId: r.product_id,
+    zaalId: r.zaal_id ?? undefined,
+    actief: r.actief,
+  };
+}
+
+function naarMeting(r: MetingRow): Meting {
+  return {
+    id: r.id,
+    machineId: r.machine_id,
+    datum: r.datum,
+    aantal: r.aantal,
+    bron: r.bron,
+    evenementId: r.evenement_id ?? undefined,
+    gebruikerId: r.gebruiker_id ?? undefined,
+    notitie: r.notitie ?? undefined,
   };
 }
 
@@ -74,7 +143,13 @@ function naarMutatie(r: MutatieRow): Mutatie {
 }
 
 function naarLocatie(r: LocatieRow): Locatie {
-  return { id: r.id, naam: r.naam, type: r.type, merk: r.merk };
+  return {
+    id: r.id,
+    naam: r.naam,
+    type: r.type,
+    merk: r.merk,
+    voorPersoneel: r.voor_personeel ?? false,
+  };
 }
 
 function naarProfiel(r: Pick<ProfileRow, "id" | "naam" | "rol">): Profiel {
@@ -137,6 +212,14 @@ export interface AppState {
   profielen: Profiel[];
   tellingen: Telling[];
   pakbonnen: PakbonSamenvatting[];
+  zalen: Zaal[];
+  /** Welke zalen bij welk evenement horen. */
+  evenementZalen: { evenementId: string; zaalId: string }[];
+  vulplekken: Vulplek[];
+  standaardvulling: VulplekRegel[];
+  koppelingen: Koppeling[];
+  machines: Machine[];
+  metingen: Meting[];
 }
 
 interface AppStateContextValue {
@@ -144,6 +227,8 @@ interface AppStateContextValue {
   laden: boolean;
   fout: string | null;
   mutatiesPerEvenement: Map<string, Mutatie[]>;
+  /** Machineverbruik per evenement — koffie en water, gekoppeld via de zaal. */
+  metingenPerEvenement: Map<string, Meting[]>;
   /** Het gedeelde hoofdmagazijn (merk === null). */
   hoofdmagazijn: Locatie | undefined;
   herlaad: () => Promise<void>;
@@ -172,13 +257,30 @@ interface AppStateContextValue {
     regels: PakbonRegel[];
   }) => Promise<string>;
   haalPakbon: (pakbonId: string) => Promise<Pakbon | null>;
+  zetEvenementZalen: (evenementId: string, zaalIds: string[]) => Promise<void>;
+  zetStandaardvulling: (vulplekId: string, productId: string, aantal: number) => Promise<void>;
+  boekMeting: (meting: {
+    machineId: string;
+    datum: string;
+    aantal: number;
+    evenementId?: string | null;
+    notitie?: string | null;
+  }) => Promise<void>;
+  voegMachineToe: (machine: Omit<Machine, "id">) => Promise<void>;
+  wijzigMachine: (id: string, changes: Partial<Omit<Machine, "id">>) => Promise<void>;
+  verwijderMachine: (id: string) => Promise<void>;
+  wijzigKoppeling: (
+    id: string,
+    changes: { actief?: boolean; apiBasisUrl?: string | null; notitie?: string | null }
+  ) => Promise<void>;
 }
 
 const AppStateContext = createContext<AppStateContextValue | null>(null);
 
 const legeState: AppState = {
   producten: [], evenementen: [], mutaties: [], locaties: [], voorraad: [],
-  profielen: [], tellingen: [], pakbonnen: [],
+  profielen: [], tellingen: [], pakbonnen: [], zalen: [], evenementZalen: [],
+  vulplekken: [], standaardvulling: [], koppelingen: [], machines: [], metingen: [],
 };
 
 export function AppStateProvider({ children }: { children: ReactNode }) {
@@ -202,6 +304,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     async function haalAllesOp() {
       const [
         producten, evenementen, mutaties, locaties, voorraad, profielen, tellingen, pakbonnen,
+        zalen, evenementZalen, vulplekken, standaardvulling, koppelingen, machines, metingen,
       ] = await Promise.all([
         supabase.from("producten").select("*").order("naam"),
         supabase.from("evenementen").select("*").order("datum"),
@@ -215,12 +318,23 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
           .from("pakbonnen")
           .select("id, evenement_id, van_locatie_id, ontvanger_naam, gebruiker_id, aangemaakt_op")
           .order("aangemaakt_op", { ascending: false }),
+        supabase.from("zalen").select("*").order("naam"),
+        supabase.from("evenement_zalen").select("*"),
+        supabase.from("vulplekken").select("*").order("naam"),
+        supabase.from("vulplek_standaard").select("*"),
+        supabase.from("koppelingen").select("*").order("naam"),
+        supabase.from("machines").select("*").order("naam"),
+        supabase.from("machine_metingen").select("*").order("datum", { ascending: false }),
       ]);
       const eersteFout =
         producten.error ?? evenementen.error ?? mutaties.error ?? locaties.error ??
-        voorraad.error ?? profielen.error ?? tellingen.error ?? pakbonnen.error;
+        voorraad.error ?? profielen.error ?? tellingen.error ?? pakbonnen.error ??
+        zalen.error ?? evenementZalen.error ?? vulplekken.error ?? standaardvulling.error ??
+        koppelingen.error ?? machines.error ?? metingen.error;
       return {
-        producten, evenementen, mutaties, locaties, voorraad, profielen, tellingen, pakbonnen, eersteFout,
+        producten, evenementen, mutaties, locaties, voorraad, profielen, tellingen, pakbonnen,
+        zalen, evenementZalen, vulplekken, standaardvulling, koppelingen, machines, metingen,
+        eersteFout,
       };
     }
 
@@ -248,6 +362,16 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       profielen: (resultaat.profielen.data ?? []).map(naarProfiel),
       tellingen: (resultaat.tellingen.data ?? []).map(naarTelling),
       pakbonnen: (resultaat.pakbonnen.data ?? []).map(naarPakbonSamenvatting),
+      zalen: (resultaat.zalen.data ?? []).map(naarZaal),
+      evenementZalen: (resultaat.evenementZalen.data ?? []).map((r: EvenementZaalRow) => ({
+        evenementId: r.evenement_id,
+        zaalId: r.zaal_id,
+      })),
+      vulplekken: (resultaat.vulplekken.data ?? []).map(naarVulplek),
+      standaardvulling: (resultaat.standaardvulling.data ?? []).map(naarVulplekRegel),
+      koppelingen: (resultaat.koppelingen.data ?? []).map(naarKoppeling),
+      machines: (resultaat.machines.data ?? []).map(naarMachine),
+      metingen: (resultaat.metingen.data ?? []).map(naarMeting),
     });
     alEensGeladen.current = true;
     setLaden(false);
@@ -276,6 +400,10 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       .on("postgres_changes", { event: "*", schema: "public", table: "voorraad" }, () => void herlaad())
       .on("postgres_changes", { event: "*", schema: "public", table: "locaties" }, () => void herlaad())
       .on("postgres_changes", { event: "*", schema: "public", table: "pakbonnen" }, () => void herlaad())
+      .on("postgres_changes", { event: "*", schema: "public", table: "evenement_zalen" }, () => void herlaad())
+      .on("postgres_changes", { event: "*", schema: "public", table: "machine_metingen" }, () => void herlaad())
+      .on("postgres_changes", { event: "*", schema: "public", table: "machines" }, () => void herlaad())
+      .on("postgres_changes", { event: "*", schema: "public", table: "vulplek_standaard" }, () => void herlaad())
       .subscribe();
 
     return () => {
@@ -294,6 +422,17 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     return map;
   }, [state.mutaties]);
 
+  const metingenPerEvenement = useMemo(() => {
+    const map = new Map<string, Meting[]>();
+    for (const meting of state.metingen) {
+      if (!meting.evenementId) continue;
+      const list = map.get(meting.evenementId) ?? [];
+      list.push(meting);
+      map.set(meting.evenementId, list);
+    }
+    return map;
+  }, [state.metingen]);
+
   const hoofdmagazijn = useMemo(
     () => state.locaties.find((l) => l.merk === null && l.type === "magazijn"),
     [state.locaties]
@@ -305,6 +444,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       laden,
       fout,
       mutatiesPerEvenement,
+      metingenPerEvenement,
       hoofdmagazijn,
       herlaad,
 
@@ -359,8 +499,14 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
             naam: product.naam,
             categorie: product.categorie,
             inkoopprijs: product.inkoopprijs,
-            verkoopprijs: product.verkoopprijs,
             eenheid: product.eenheid,
+            inhoud: product.inhoud ?? null,
+            verpakking: product.verpakking ?? null,
+            stuks_per_verpakking: product.stuksPerVerpakking,
+            alleen_per_verpakking: product.alleenPerVerpakking,
+            statiegeld_per_stuk: product.statiegeldPerStuk,
+            statiegeld_per_verpakking: product.statiegeldPerVerpakking,
+            voorraadloos: product.voorraadloos,
             sku: product.sku ?? null,
             barcode: product.barcode ?? null,
             leverancier: product.leverancier ?? null,
@@ -379,8 +525,22 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
             ...(changes.naam !== undefined && { naam: changes.naam }),
             ...(changes.categorie !== undefined && { categorie: changes.categorie }),
             ...(changes.inkoopprijs !== undefined && { inkoopprijs: changes.inkoopprijs }),
-            ...(changes.verkoopprijs !== undefined && { verkoopprijs: changes.verkoopprijs }),
             ...(changes.eenheid !== undefined && { eenheid: changes.eenheid }),
+            ...(changes.inhoud !== undefined && { inhoud: changes.inhoud ?? null }),
+            ...(changes.verpakking !== undefined && { verpakking: changes.verpakking ?? null }),
+            ...(changes.stuksPerVerpakking !== undefined && {
+              stuks_per_verpakking: changes.stuksPerVerpakking,
+            }),
+            ...(changes.alleenPerVerpakking !== undefined && {
+              alleen_per_verpakking: changes.alleenPerVerpakking,
+            }),
+            ...(changes.statiegeldPerStuk !== undefined && {
+              statiegeld_per_stuk: changes.statiegeldPerStuk,
+            }),
+            ...(changes.statiegeldPerVerpakking !== undefined && {
+              statiegeld_per_verpakking: changes.statiegeldPerVerpakking,
+            }),
+            ...(changes.voorraadloos !== undefined && { voorraadloos: changes.voorraadloos }),
             ...(changes.sku !== undefined && { sku: changes.sku ?? null }),
             ...(changes.barcode !== undefined && { barcode: changes.barcode ?? null }),
             ...(changes.leverancier !== undefined && { leverancier: changes.leverancier ?? null }),
@@ -418,6 +578,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
           naam: locatie.naam,
           type: locatie.type,
           merk: locatie.merk,
+          voor_personeel: locatie.voorPersoneel,
         });
         if (error) throw error;
         await herlaad();
@@ -430,6 +591,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
             ...(changes.naam !== undefined && { naam: changes.naam }),
             ...(changes.type !== undefined && { type: changes.type }),
             ...(changes.merk !== undefined && { merk: changes.merk }),
+            ...(changes.voorPersoneel !== undefined && { voor_personeel: changes.voorPersoneel }),
           })
           .eq("id", id);
         if (error) throw error;
@@ -514,6 +676,111 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
         return data ? naarPakbon(data) : null;
       },
 
+      /**
+       * Zalen van een evenement in één keer zetten. Weghalen en opnieuw
+       * neerzetten: een zaal is geen boeking maar een eigenschap van het
+       * evenement, dus er valt niets te bewaren.
+       */
+      async zetEvenementZalen(evenementId, zaalIds) {
+        const { error: verwijderFout } = await supabase
+          .from("evenement_zalen")
+          .delete()
+          .eq("evenement_id", evenementId);
+        if (verwijderFout) throw verwijderFout;
+
+        if (zaalIds.length > 0) {
+          const { error } = await supabase
+            .from("evenement_zalen")
+            .insert(zaalIds.map((zaalId) => ({ evenement_id: evenementId, zaal_id: zaalId })));
+          if (error) throw error;
+        }
+        await herlaad();
+      },
+
+      async zetStandaardvulling(vulplekId, productId, aantal) {
+        if (aantal <= 0) {
+          const { error } = await supabase
+            .from("vulplek_standaard")
+            .delete()
+            .eq("vulplek_id", vulplekId)
+            .eq("product_id", productId);
+          if (error) throw error;
+        } else {
+          const { error } = await supabase
+            .from("vulplek_standaard")
+            .upsert({ vulplek_id: vulplekId, product_id: productId, aantal });
+          if (error) throw error;
+        }
+        await herlaad();
+      },
+
+      /**
+       * Het dagverbruik van één machine. Gaat via een RPC en niet via een
+       * insert, omdat de database er zelf het juiste evenement bij zoekt aan
+       * de hand van de zaal en de datum — en omdat een tweede invoer voor
+       * dezelfde dag de eerste hoort te overschrijven in plaats van ernaast
+       * te komen staan.
+       */
+      async boekMeting({ machineId, datum, aantal, evenementId, notitie }) {
+        const { error } = await supabase.rpc("boek_meting", {
+          p_machine_id: machineId,
+          p_datum: datum,
+          p_aantal: aantal,
+          p_evenement_id: evenementId ?? null,
+          p_notitie: notitie ?? null,
+        });
+        if (error) throw error;
+        await herlaad();
+      },
+
+      async voegMachineToe(machine) {
+        const { error } = await supabase.from("machines").insert({
+          koppeling_id: machine.koppelingId,
+          naam: machine.naam,
+          extern_id: machine.externId ?? null,
+          product_id: machine.productId,
+          zaal_id: machine.zaalId ?? null,
+          actief: machine.actief,
+        });
+        if (error) throw error;
+        await herlaad();
+      },
+
+      async wijzigMachine(id, changes) {
+        const { error } = await supabase
+          .from("machines")
+          .update({
+            ...(changes.naam !== undefined && { naam: changes.naam }),
+            ...(changes.externId !== undefined && { extern_id: changes.externId ?? null }),
+            ...(changes.productId !== undefined && { product_id: changes.productId }),
+            ...(changes.zaalId !== undefined && { zaal_id: changes.zaalId ?? null }),
+            ...(changes.actief !== undefined && { actief: changes.actief }),
+            ...(changes.koppelingId !== undefined && { koppeling_id: changes.koppelingId }),
+          })
+          .eq("id", id);
+        if (error) throw error;
+        await herlaad();
+      },
+
+      async verwijderMachine(id) {
+        const { error } = await supabase.from("machines").delete().eq("id", id);
+        if (error) throw error;
+        await herlaad();
+      },
+
+      async wijzigKoppeling(id, changes) {
+        const { error } = await supabase
+          .from("koppelingen")
+          .update({
+            ...(changes.actief !== undefined && { actief: changes.actief }),
+            ...(changes.apiBasisUrl !== undefined && { api_basis_url: changes.apiBasisUrl }),
+            ...(changes.notitie !== undefined && { notitie: changes.notitie }),
+          })
+          .eq("id", id);
+        if (error) throw error;
+        await herlaad();
+      },
+
       async stelMinVoorraadIn(locatieId, productId, minVoorraad) {
         const { error } = await supabase.rpc("stel_min_voorraad", {
           p_locatie_id: locatieId,
@@ -524,7 +791,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
         await herlaad();
       },
     }),
-    [state, laden, fout, mutatiesPerEvenement, hoofdmagazijn, herlaad, session]
+    [state, laden, fout, mutatiesPerEvenement, metingenPerEvenement, hoofdmagazijn, herlaad, session]
   );
 
   return <AppStateContext.Provider value={value}>{children}</AppStateContext.Provider>;

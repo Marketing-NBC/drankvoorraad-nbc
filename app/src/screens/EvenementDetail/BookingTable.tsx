@@ -1,6 +1,7 @@
 import { Table } from "../../components/ui/Table";
 import { productVerbruikPerEvenement, type ProductVerbruik } from "../../data/calculations";
 import type { Mutatie, Product } from "../../data/types";
+import { eenheidLabel, heeftVerpakking, omschrijfAantal, verpakkingLabel } from "../../data/verpakking";
 import { formatNumber } from "../../utils/format";
 
 export function BookingTable({
@@ -18,6 +19,12 @@ export function BookingTable({
   const productenById = new Map(producten.map((p) => [p.id, p]));
   const regels = productVerbruikPerEvenement(mutaties);
   const snelBoeken = onUitgifte && onRetour;
+
+  /* Bij een product dat nooit los gaat zegt "20 kratten" meer dan "480". */
+  function toon(productId: string, aantal: number): string {
+    const product = productenById.get(productId);
+    return product ? omschrijfAantal(product, aantal) : formatNumber(aantal);
+  }
 
   const totalen = regels.reduce(
     (som, r) => ({
@@ -49,17 +56,27 @@ export function BookingTable({
             return (
               <>
                 {product?.naam ?? r.productId}
-                {product ? <span className="kaart-kop__sub">per {product.eenheid}</span> : null}
+                {product ? (
+                  <span className="kaart-kop__sub">
+                    per {product.alleenPerVerpakking && heeftVerpakking(product)
+                      ? verpakkingLabel(product)
+                      : eenheidLabel(product)}
+                  </span>
+                ) : null}
               </>
             );
           },
         },
-        { header: "Uitgegeven", align: "right", render: (r) => formatNumber(r.aantalUitgegeven) },
-        { header: "Retour", align: "right", render: (r) => formatNumber(r.aantalRetour) },
+        {
+          header: "Uitgegeven",
+          align: "right",
+          render: (r) => toon(r.productId, r.aantalUitgegeven),
+        },
+        { header: "Retour", align: "right", render: (r) => toon(r.productId, r.aantalRetour) },
         {
           header: "Werkelijk verbruik",
           align: "right",
-          render: (r) => <strong>{formatNumber(r.werkelijkVerbruik)}</strong>,
+          render: (r) => <strong>{toon(r.productId, r.werkelijkVerbruik)}</strong>,
         },
         ...(snelBoeken
           ? [

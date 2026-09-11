@@ -14,5 +14,7 @@ export const ROUTES = {
   tellingDetailPattern: "/tellingen/:id",
   historie: "/historie",
   gebruikers: "/gebruikers",
+  koppelingen: "/koppelingen",
+  personeel: "/personeel",
   dashboard: "/dashboard",
 } as const;

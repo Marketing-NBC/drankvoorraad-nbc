@@ -6,6 +6,7 @@ import { Select } from "../../components/ui/Select";
 import { useAppState } from "../../context/AppStateContext";
 import { productVerbruikPerEvenement } from "../../data/calculations";
 import type { Product } from "../../data/types";
+import { invoer, omschrijfAantal, verpakkingLabel } from "../../data/verpakking";
 import { formatNumber } from "../../utils/format";
 
 export type BoekingRichting = "uitgifte" | "retour";
@@ -33,7 +34,15 @@ export function BookingModal({
   const [fout, setFout] = useState<string | null>(null);
   const [bezig, setBezig] = useState(false);
 
-  const magazijnen = state.locaties.filter((l) => l.type === "magazijn" || l.type === "koelcel");
+  /* Koffie en water hebben geen voorraad om uit te geven, en de kantine en de
+     kroeg mogen niet aan een evenement hangen — dat weigert de database ook. */
+  const boekbareProducten = producten.filter((p) => !p.voorraadloos);
+  const magazijnen = state.locaties.filter(
+    (l) => (l.type === "magazijn" || l.type === "koelcel") && !l.voorPersoneel
+  );
+
+  const product = boekbareProducten.find((p) => p.id === productId) ?? null;
+  const invoerVorm = product ? invoer(product) : { label: "Aantal", eenheid: "", factor: 1 };
 
   /**
    * Waarschuwing bij een retour die groter is dan wat er ooit naar dit
@@ -53,12 +62,10 @@ export function BookingModal({
     const regels = productVerbruikPerEvenement(mutatiesPerEvenement.get(evenementId) ?? []);
     const regel = regels.find((r) => r.productId === productId);
     const nogOpenstaand = (regel?.aantalUitgegeven ?? 0) - (regel?.aantalRetour ?? 0);
-    if (aantalGetal <= nogOpenstaand) return null;
+    const gebooktInStuks = aantalGetal * (product ? invoer(product).factor : 1);
+    if (gebooktInStuks <= nogOpenstaand) return null;
 
-    return {
-      nogOpenstaand,
-      product: producten.find((p) => p.id === productId),
-    };
+    return { nogOpenstaand, product };
   })();
 
   useEffect(() => {
@@ -85,6 +92,10 @@ export function BookingModal({
       setFout("Vul een aantal groter dan 0 in.");
       return;
     }
+    if (!Number.isInteger(aantalGetal)) {
+      setFout("Vul een heel aantal in.");
+      return;
+    }
     if (!locatieId) {
       setFout("Kies een magazijnlocatie.");
       return;
@@ -94,7 +105,8 @@ export function BookingModal({
     try {
       await voegMutatieToe({
         productId,
-        aantal: aantalGetal,
+        /* Kratten in, stuks opgeslagen — zie src/data/verpakking.ts. */
+        aantal: aantalGetal * invoerVorm.factor,
         evenementId,
         ...(richting === "uitgifte"
           ? { type: "magazijn-naar-evenement", vanLocatieId: locatieId }
@@ -112,7 +124,7 @@ export function BookingModal({
     <Modal open={open} onClose={onClose} title={richting === "uitgifte" ? "Product boeken" : "Retour boeken"}>
       <form className="product-form" onSubmit={handleSubmit}>
         <ProductKiezer
-          producten={producten}
+          producten={boekbareProducten}
           productId={productId}
           onProductIdChange={setProductId}
           onOnbekendeBarcode={() =>
@@ -132,7 +144,12 @@ export function BookingModal({
           />
         </div>
         <div className="field-group">
-          <label className="field-group__label" htmlFor="boeking-aantal">Aantal</label>
+          <label className="field-group__label" htmlFor="boeking-aantal">
+            {invoerVorm.label}
+            {product && invoerVorm.factor > 1 ? (
+              <span className="field-group__hint">1 {product.verpakking} = {verpakkingLabel(product)}</span>
+            ) : null}
+          </label>
           <Input
             id="boeking-aantal"
             type="number"
@@ -146,7 +163,10 @@ export function BookingModal({
           <p className="melding-waarschuwing">
             Er staat nog{" "}
             <strong>
-              {formatNumber(teveelRetour.nogOpenstaand)} {teveelRetour.product?.eenheid ?? ""}
+              {teveelRetour.product
+                ? omschrijfAantal(teveelRetour.product, teveelRetour.nogOpenstaand)
+                : formatNumber(teveelRetour.nogOpenstaand)}{" "}
+              {teveelRetour.product?.eenheid ?? ""}
             </strong>{" "}
             open bij dit evenement, en je boekt er meer terug. Klopt het aantal, of hoort deze
             retour bij een ander evenement? Je kunt gewoon doorgaan — dit is alleen een seintje.

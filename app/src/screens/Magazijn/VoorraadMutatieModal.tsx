@@ -5,14 +5,21 @@ import { ProductKiezer } from "../../components/ui/ProductKiezer";
 import { Select } from "../../components/ui/Select";
 import { useAppState } from "../../context/AppStateContext";
 import type { MutatieType } from "../../data/types";
+import { invoer, verpakkingLabel } from "../../data/verpakking";
 
-export type MagazijnActie = "inkoop" | "verplaatsen" | "beschadigd" | "correctie";
+export type MagazijnActie =
+  | "inkoop"
+  | "verplaatsen"
+  | "beschadigd"
+  | "correctie"
+  | "personeelsverbruik";
 
 const titels: Record<MagazijnActie, string> = {
   inkoop: "Voorraad inboeken",
   verplaatsen: "Voorraad verplaatsen",
   beschadigd: "Afschrijven",
   correctie: "Voorraad corrigeren",
+  personeelsverbruik: "Personeelsverbruik boeken",
 };
 
 const toelichting: Record<MagazijnActie, string> = {
@@ -20,6 +27,8 @@ const toelichting: Record<MagazijnActie, string> = {
   verplaatsen: "Voorraad van de ene locatie naar de andere brengen.",
   beschadigd: "Beschadigde of weggegooide producten afboeken. Dit telt mee als derving.",
   correctie: "Handmatige correctie na een telling of vergissing. Gebruik een negatief aantal om af te boeken.",
+  personeelsverbruik:
+    "Wat het personeel in de kantine of de kroeg heeft opgemaakt. Telt nooit mee bij een evenement.",
 };
 
 export function VoorraadMutatieModal({
@@ -48,14 +57,32 @@ export function VoorraadMutatieModal({
   const [fout, setFout] = useState<string | null>(null);
   const [bezig, setBezig] = useState(false);
 
+  /* Koffie en water hebben geen voorraad om te verplaatsen of af te boeken. */
+  const boekbareProducten = state.producten.filter((p) => !p.voorraadloos);
+
+  /* Personeelsverbruik kan alleen áf van een kantine of kroeg — dat dwingt de
+     database ook af, maar een keuzelijst met onmogelijke opties is een val. */
+  const kiesbareLocaties =
+    actie === "personeelsverbruik"
+      ? state.locaties.filter((l) => l.voorPersoneel)
+      : state.locaties;
+
+  const product = boekbareProducten.find((p) => p.id === productId) ?? null;
+  const invoerVorm = product ? invoer(product) : { label: "Aantal", eenheid: "", factor: 1 };
+
   useEffect(() => {
     if (!open) return;
-    setProductId(standaardProductId ?? state.producten[0]?.id ?? "");
-    setVanLocatieId(standaardLocatieId ?? state.locaties[0]?.id ?? "");
+    setProductId(standaardProductId ?? boekbareProducten[0]?.id ?? "");
+    setVanLocatieId(
+      actie === "personeelsverbruik"
+        ? kiesbareLocaties.find((l) => l.id === standaardLocatieId)?.id ?? kiesbareLocaties[0]?.id ?? ""
+        : standaardLocatieId ?? state.locaties[0]?.id ?? ""
+    );
     setNaarLocatieId(state.locaties.find((l) => l.id !== standaardLocatieId)?.id ?? "");
     setAantal("");
     setNotitie("");
     setFout(null);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, actie, standaardLocatieId, standaardProductId, state.producten, state.locaties]);
 
   async function handleSubmit(e: FormEvent) {
@@ -68,11 +95,19 @@ export function VoorraadMutatieModal({
     if (actie === "verplaatsen" && vanLocatieId === naarLocatieId) {
       return setFout("Kies twee verschillende locaties.");
     }
+    if (actie === "personeelsverbruik" && !vanLocatieId) {
+      return setFout("Er is nog geen locatie voor personeel. Maak eerst de kantine of de kroeg aan.");
+    }
+    if (!Number.isInteger(aantalGetal)) {
+      return setFout("Vul een heel aantal in.");
+    }
 
     // Een correctie met een negatief aantal is een afboeking: draai de richting om
     // en houd het aantal positief, zodat de voorraadtrigger correct rekent.
     const negatieveCorrectie = actie === "correctie" && aantalGetal < 0;
-    const absAantal = Math.abs(aantalGetal);
+    /* Bij een product dat nooit los gaat vult het magazijn kratten in; de
+       voorraad blijft in stuks staan. Zie src/data/verpakking.ts. */
+    const absAantal = Math.abs(aantalGetal) * invoerVorm.factor;
 
     const velden: {
       type: MutatieType;
@@ -85,9 +120,11 @@ export function VoorraadMutatieModal({
           ? { type: "magazijn-naar-magazijn", vanLocatieId, naarLocatieId }
           : actie === "beschadigd"
             ? { type: "beschadigd", vanLocatieId }
-            : negatieveCorrectie
-              ? { type: "correctie", vanLocatieId }
-              : { type: "correctie", naarLocatieId: vanLocatieId };
+            : actie === "personeelsverbruik"
+              ? { type: "personeelsverbruik", vanLocatieId }
+              : negatieveCorrectie
+                ? { type: "correctie", vanLocatieId }
+                : { type: "correctie", naarLocatieId: vanLocatieId };
 
     setBezig(true);
     try {
@@ -98,16 +135,28 @@ export function VoorraadMutatieModal({
         ...velden,
       });
       onClose();
-    } catch {
-      setFout("Opslaan is niet gelukt. Controleer je verbinding en probeer opnieuw.");
+    } catch (err) {
+      /* De database weigert bijvoorbeeld personeelsverbruik vanaf het
+         magazijn. Die melding is duidelijker dan "er ging iets mis", dus die
+         laten we staan. */
+      const bericht = err instanceof Error ? err.message : "";
+      setFout(
+        bericht && !bericht.toLowerCase().includes("fetch")
+          ? bericht
+          : "Opslaan is niet gelukt. Controleer je verbinding en probeer opnieuw."
+      );
     } finally {
       setBezig(false);
     }
   }
 
-  const locatieOpties = state.locaties.map((l) => ({ value: l.id, label: l.naam }));
+  const locatieOpties = kiesbareLocaties.map((l) => ({ value: l.id, label: l.naam }));
   const eersteLocatieLabel =
-    actie === "inkoop" ? "Naar locatie" : actie === "verplaatsen" ? "Vanuit locatie" : "Locatie";
+    actie === "inkoop"
+      ? "Naar locatie"
+      : actie === "verplaatsen" || actie === "personeelsverbruik"
+        ? "Vanuit locatie"
+        : "Locatie";
 
   return (
     <Modal open={open} onClose={onClose} title={titels[actie]}>
@@ -115,7 +164,7 @@ export function VoorraadMutatieModal({
         <p className="modal-toelichting">{toelichting[actie]}</p>
 
         <ProductKiezer
-          producten={state.producten}
+          producten={boekbareProducten}
           productId={productId}
           onProductIdChange={setProductId}
           onOnbekendeBarcode={onNieuwProduct}
@@ -147,9 +196,11 @@ export function VoorraadMutatieModal({
 
         <div className="field-group">
           <label className="field-group__label" htmlFor="mutatie-aantal">
-            Aantal
+            {invoerVorm.label}
             {actie === "correctie" ? (
               <span className="field-group__hint">negatief = afboeken</span>
+            ) : product && invoerVorm.factor > 1 ? (
+              <span className="field-group__hint">1 {product.verpakking} = {verpakkingLabel(product)}</span>
             ) : null}
           </label>
           <Input
@@ -162,14 +213,22 @@ export function VoorraadMutatieModal({
           />
         </div>
 
-        {actie === "beschadigd" || actie === "correctie" ? (
+        {actie === "beschadigd" || actie === "correctie" || actie === "personeelsverbruik" ? (
           <div className="field-group">
-            <label className="field-group__label" htmlFor="mutatie-notitie">Reden</label>
+            <label className="field-group__label" htmlFor="mutatie-notitie">
+              {actie === "personeelsverbruik" ? "Toelichting" : "Reden"}
+            </label>
             <Input
               id="mutatie-notitie"
               value={notitie}
               onChange={(e) => setNotitie(e.target.value)}
-              placeholder={actie === "beschadigd" ? "bijv. gebroken bij transport" : "bijv. telverschil"}
+              placeholder={
+                actie === "beschadigd"
+                  ? "bijv. gebroken bij transport"
+                  : actie === "personeelsverbruik"
+                    ? "bijv. week 37"
+                    : "bijv. telverschil"
+              }
             />
           </div>
         ) : null}

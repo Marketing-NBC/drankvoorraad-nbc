@@ -3,6 +3,7 @@ import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import { Logo } from "../../design-system";
 import { AppIcon, type AppIconName } from "../ui/AppIcon";
 import { useAppState } from "../../context/AppStateContext";
+import type { GebruikerRol } from "../../data/types";
 import { useAuth } from "../../context/AuthContext";
 import { ROUTES } from "../../routes/routes";
 import { Zoekbalk } from "./Zoekbalk";
@@ -14,6 +15,8 @@ interface NavItem {
   tabLabel?: string;
   icon: AppIconName;
   alleenBeheerder?: boolean;
+  /** Beperkt het item tot deze rollen — houd gelijk aan de guard in App.tsx. */
+  rollen?: GebruikerRol[];
   /** Niet in de mobiele onderbalk — die wordt anders te vol. */
   buitenTabbalk?: boolean;
 }
@@ -26,6 +29,18 @@ const navItems: NavItem[] = [
   { to: ROUTES.tellingen, label: "Tellingen", tabLabel: "Tellen", icon: "scan" },
   { to: ROUTES.producten, label: "Producten", icon: "doos" },
   { to: ROUTES.historie, label: "Mutaties", icon: "clock" },
+  /* Koffie, water en personeel zijn beheerwerk dat niet dagelijks op de vloer
+     gebeurt. Ze horen in de zijbalk en het accountmenu, niet in de zes vakken
+     van de onderbalk — die is voor wat je met een kar in je hand doet. */
+  {
+    to: ROUTES.koppelingen,
+    label: "Koffie en water",
+    tabLabel: "Koffie",
+    icon: "doos",
+    buitenTabbalk: true,
+    rollen: ["beheerder", "magazijnmedewerker"],
+  },
+  { to: ROUTES.personeel, label: "Personeel", icon: "gebruikers", buitenTabbalk: true },
   { to: ROUTES.gebruikers, label: "Gebruikers", icon: "gebruikers", alleenBeheerder: true, buitenTabbalk: true },
 ];
 
@@ -56,7 +71,10 @@ export function AppShell({ children }: { children: ReactNode }) {
   const pad = useLocation().pathname;
   const [accountOpen, setAccountOpen] = useState(false);
 
-  const zichtbareNav = navItems.filter((item) => !item.alleenBeheerder || mag("beheerder"));
+  const zichtbareNav = navItems.filter(
+    (item) =>
+      (!item.alleenBeheerder || mag("beheerder")) && (!item.rollen || mag(...item.rollen))
+  );
   const menuNav = zichtbareNav.filter((item) => item.buitenTabbalk);
   const gebruikersItem = navItems.find((item) => item.to === ROUTES.gebruikers)!;
 

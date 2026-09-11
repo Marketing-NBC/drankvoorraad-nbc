@@ -1,7 +1,8 @@
 /* Alleen voor de visuele preview (npm run preview:ui) — niet in de app. */
 import { createContext, useContext, type ReactNode } from "react";
 import type {
-  Evenement, Locatie, Mutatie, Pakbon, PakbonSamenvatting, Product, Profiel, Telling, Tellingregel, Voorraad,
+  Evenement, Koppeling, Locatie, Machine, Meting, Mutatie, Pakbon, PakbonSamenvatting, Product,
+  Profiel, Telling, Tellingregel, Voorraad, Vulplek, VulplekRegel, Zaal,
 } from "../src/data/types";
 
 const profielen: Profiel[] = [
@@ -13,21 +14,40 @@ const profielen: Profiel[] = [
 ];
 
 const locaties: Locatie[] = [
-  { id: "l0", naam: "Hoofdmagazijn", type: "magazijn", merk: null },
-  { id: "l1", naam: "Koelcel NBC", type: "koelcel", merk: "NBC" },
-  { id: "l2", naam: "Bar Green Village", type: "bar", merk: "Green Village" },
-  { id: "l3", naam: "Koelcel Green Village", type: "koelcel", merk: "Green Village" },
-  { id: "l4", naam: "Bar Foyer", type: "bar", merk: null },
+  { id: "l0", naam: "Hoofdmagazijn", type: "magazijn", merk: null, voorPersoneel: false },
+  { id: "l1", naam: "Koelcel NBC", type: "koelcel", merk: "NBC", voorPersoneel: false },
+  { id: "l2", naam: "Bar Green Village", type: "bar", merk: "Green Village", voorPersoneel: false },
+  { id: "l3", naam: "Koelcel Green Village", type: "koelcel", merk: "Green Village", voorPersoneel: false },
+  { id: "l4", naam: "Bar Foyer", type: "bar", merk: null, voorPersoneel: false },
+  { id: "l5", naam: "Kantine", type: "kantine", merk: "NBC", voorPersoneel: true },
+  { id: "l6", naam: "Kroeg", type: "kroeg", merk: "NBC", voorPersoneel: true },
 ];
 
+/** Kale velden, zodat een regel hieronder alleen zegt wat afwijkt. */
+function p(velden: Partial<Product> & Pick<Product, "id" | "naam">): Product {
+  return {
+    categorie: "fris",
+    inkoopprijs: 0,
+    eenheid: "fles",
+    stuksPerVerpakking: 1,
+    alleenPerVerpakking: false,
+    statiegeldPerStuk: 0,
+    statiegeldPerVerpakking: 0,
+    voorraadloos: false,
+    ...velden,
+  };
+}
+
 const producten: Product[] = [
-  { id: "p1", naam: "Heineken fust 50 L", categorie: "bier", inkoopprijs: 96.5, verkoopprijs: 0, eenheid: "fust", barcode: "8712000012345", leverancier: "Heineken" },
-  { id: "p2", naam: "Jupiler fust 20 L", categorie: "bier", inkoopprijs: 42, verkoopprijs: 0, eenheid: "fust", barcode: "8712000098765", leverancier: "Heineken" },
-  { id: "p3", naam: "Spa Blauw 0,5 L", categorie: "overig", inkoopprijs: 0.42, verkoopprijs: 2.75, eenheid: "krat", barcode: "8712000055512", leverancier: "Spadel" },
-  { id: "p4", naam: "Coca-Cola 0,25 L", categorie: "fris", inkoopprijs: 0.48, verkoopprijs: 2.95, eenheid: "krat", barcode: "8712000044421", leverancier: "Coca-Cola" },
-  { id: "p5", naam: "Appelsap 1 L", categorie: "fris", inkoopprijs: 1.1, verkoopprijs: 3.25, eenheid: "pak", leverancier: "Riedel" },
-  { id: "p6", naam: "Chardonnay wit", categorie: "wijn", inkoopprijs: 5.2, verkoopprijs: 24.5, eenheid: "fles", barcode: "8712000033310", leverancier: "Wijnhuis" },
-  { id: "p7", naam: "Prosecco", categorie: "wijn", inkoopprijs: 6.8, verkoopprijs: 29.5, eenheid: "fles", barcode: "8712000022209", leverancier: "Wijnhuis" },
+  p({ id: "p1", naam: "Fust Swinckels 20 L", categorie: "bier", inhoud: "20 L", eenheid: "fust", inkoopprijs: 40.7, statiegeldPerStuk: 30, barcode: "8712000012345", leverancier: "Swinkels" }),
+  p({ id: "p2", naam: "Swinckels 0,3 L", categorie: "bier", inhoud: "0,3 L", inkoopprijs: 0.53, verpakking: "krat", stuksPerVerpakking: 24, statiegeldPerVerpakking: 3.9, barcode: "8712000098765", leverancier: "Swinkels" }),
+  p({ id: "p3", naam: "Spa blauw 1 L", inhoud: "1 L", inkoopprijs: 0.95, verpakking: "krat", stuksPerVerpakking: 12, statiegeldPerVerpakking: 5, barcode: "8712000055512", leverancier: "Spadel" }),
+  p({ id: "p4", naam: "Coca Cola 0,2 L", inhoud: "0,2 L", inkoopprijs: 0.46, verpakking: "krat", stuksPerVerpakking: 24, alleenPerVerpakking: true, statiegeldPerVerpakking: 5, barcode: "8712000044421", leverancier: "Coca-Cola" }),
+  p({ id: "p5", naam: "Coca Cola 1,25 L", inhoud: "1,25 L", inkoopprijs: 2.05, statiegeldPerStuk: 0.25, leverancier: "Coca-Cola" }),
+  p({ id: "p6", naam: "Witte wijn 0,7 L", categorie: "wijn", inhoud: "0,7 L", inkoopprijs: 4.15, barcode: "8712000033310" }),
+  p({ id: "p7", naam: "Prosecco 0,7 L", categorie: "wijn", inhoud: "0,7 L", inkoopprijs: 7.15, barcode: "8712000022209" }),
+  p({ id: "p8", naam: "Koffie", categorie: "koffie", eenheid: "kop", inkoopprijs: 0.12, voorraadloos: true, leverancier: "Franke" }),
+  p({ id: "p9", naam: "Water koud", categorie: "water", eenheid: "glas", inkoopprijs: 0, voorraadloos: true, leverancier: "Aquablu" }),
 ];
 
 const voorraadRuw: [string, string, number, number][] = [
@@ -36,6 +56,7 @@ const voorraadRuw: [string, string, number, number][] = [
   ["l1", "p1", 38, 12], ["l1", "p3", 1240, 400], ["l1", "p4", 860, 400],
   ["l1", "p6", 96, 120], ["l1", "p7", 54, 60], ["l1", "p2", 16, 8], ["l1", "p5", 180, 60],
   ["l2", "p3", 220, 100], ["l4", "p1", 6, 4],
+  ["l5", "p4", 96, 48], ["l5", "p3", 36, 24], ["l6", "p2", 72, 48], ["l6", "p6", 9, 6],
 ];
 const voorraad: Voorraad[] = voorraadRuw.map(([locatieId, productId, aantal, minVoorraad]) => ({
   locatieId, productId, aantal, minVoorraad,
@@ -76,6 +97,69 @@ const mutaties: Mutatie[] = [
   mut({ productId: "p4", aantal: 300, type: "magazijn-naar-evenement", vanLocatieId: "l0", naarLocatieId: "l1", evenementId: "NBC-2026-009", gebruikerId: "u4", datumTijd: "2026-04-09T09:00:00Z" }),
 ];
 
+const zalen: Zaal[] = [
+  { id: "z1", naam: "HOS 1", actief: true },
+  { id: "z2", naam: "HOS 2", actief: true },
+  { id: "z3", naam: "Lounge", actief: true },
+  { id: "z4", naam: "Grand Hall", actief: true },
+  { id: "z5", naam: "Event hall", actief: true },
+];
+
+const evenementZalen = [
+  { evenementId: "NBC-2026-014", zaalId: "z1" },
+  { evenementId: "NBC-2026-014", zaalId: "z3" },
+  { evenementId: "NBC-2026-011", zaalId: "z4" },
+];
+
+const vulplekken: Vulplek[] = [
+  { id: "vp1", naam: "Koelkast HOS 1", type: "koelkast", zaalId: "z1", actief: true },
+  { id: "vp2", naam: "Bar Lounge", type: "bar", zaalId: "z3", actief: true },
+];
+
+const standaardvulling: VulplekRegel[] = [
+  { vulplekId: "vp1", productId: "p4", aantal: 20 },
+  { vulplekId: "vp1", productId: "p3", aantal: 12 },
+  { vulplekId: "vp2", productId: "p4", aantal: 24 },
+  { vulplekId: "vp2", productId: "p6", aantal: 12 },
+];
+
+const koppelingen: Koppeling[] = [
+  {
+    id: "k1", soort: "franke", naam: "Franke", actief: false,
+    notitie: "Koffiemachines. Koppeling aangevraagd, nog niet beschikbaar — voer het dagverbruik zolang handmatig in.",
+  },
+  {
+    id: "k2", soort: "aquablu", naam: "Aquablu", actief: false,
+    notitie: "Watertappunten. Koppeling aangevraagd, nog niet beschikbaar — voer het dagverbruik zolang handmatig in.",
+  },
+];
+
+const machines: Machine[] = [
+  { id: "ma1", koppelingId: "k1", naam: "Koffiemachine HOS 1", productId: "p8", zaalId: "z1", actief: true },
+  { id: "ma2", koppelingId: "k1", naam: "Koffiemachine Lounge", productId: "p8", zaalId: "z3", actief: true },
+  { id: "ma3", koppelingId: "k2", naam: "Watertappunt HOS 1", productId: "p9", zaalId: "z1", actief: true },
+];
+
+const metingen: Meting[] = [
+  { id: "mt1", machineId: "ma1", datum: "2026-05-14", aantal: 184, bron: "handmatig", evenementId: "NBC-2026-014", gebruikerId: "u2" },
+  { id: "mt2", machineId: "ma2", datum: "2026-05-14", aantal: 96, bron: "handmatig", evenementId: "NBC-2026-014", gebruikerId: "u2" },
+  { id: "mt3", machineId: "ma3", datum: "2026-05-14", aantal: 240, bron: "handmatig", evenementId: "NBC-2026-014", gebruikerId: "u2" },
+  { id: "mt4", machineId: "ma1", datum: "2026-04-28", aantal: 210, bron: "handmatig", evenementId: "NBC-2026-011", gebruikerId: "u4" },
+];
+
+/* Personeelsverbruik met datums rond vandaag, zodat het scherm in de preview
+   binnen de standaardperiode (deze maand) iets te laten zien heeft. */
+const dagenGeleden = (n: number) => new Date(Date.now() - n * 86400000).toISOString();
+mutaties.push(
+  mut({ productId: "p4", aantal: 96, type: "magazijn-naar-magazijn", vanLocatieId: "l0", naarLocatieId: "l5", gebruikerId: "u2", datumTijd: dagenGeleden(9) }),
+  mut({ productId: "p4", aantal: 48, type: "personeelsverbruik", vanLocatieId: "l5", gebruikerId: "u2", notitie: "week 36", datumTijd: dagenGeleden(4) }),
+  mut({ productId: "p3", aantal: 36, type: "magazijn-naar-magazijn", vanLocatieId: "l0", naarLocatieId: "l5", gebruikerId: "u4", datumTijd: dagenGeleden(9) }),
+  mut({ productId: "p3", aantal: 12, type: "personeelsverbruik", vanLocatieId: "l5", gebruikerId: "u4", notitie: "week 36", datumTijd: dagenGeleden(4) }),
+  mut({ productId: "p2", aantal: 72, type: "magazijn-naar-magazijn", vanLocatieId: "l0", naarLocatieId: "l6", gebruikerId: "u2", datumTijd: dagenGeleden(11) }),
+  mut({ productId: "p2", aantal: 24, type: "personeelsverbruik", vanLocatieId: "l6", gebruikerId: "u3", notitie: "vrijdagmiddag", datumTijd: dagenGeleden(3) }),
+  mut({ productId: "p6", aantal: 6, type: "personeelsverbruik", vanLocatieId: "l6", gebruikerId: "u3", notitie: "vrijdagmiddag", datumTijd: dagenGeleden(3) })
+);
+
 const pakbonnen: PakbonSamenvatting[] = [
   { id: "a7f31c29-0000-0000-0000-000000000000", evenementId: "NBC-2026-014", vanLocatieId: "l0", ontvangerNaam: "Jeroen de Wit", gebruikerId: "u2", aangemaaktOp: "2026-05-13T16:40:00Z" },
   { id: "b21d0e84-0000-0000-0000-000000000000", evenementId: "NBC-2026-014", vanLocatieId: "l0", ontvangerNaam: "Sanne Vos", gebruikerId: "u2", aangemaaktOp: "2026-05-14T09:05:00Z" },
@@ -99,12 +183,21 @@ const tellingregels: Record<string, Tellingregel[]> = {
   t2: [],
 };
 
-const state = { producten, evenementen, mutaties, locaties, voorraad, profielen, tellingen, pakbonnen };
+const state = {
+  producten, evenementen, mutaties, locaties, voorraad, profielen, tellingen, pakbonnen,
+  zalen, evenementZalen, vulplekken, standaardvulling, koppelingen, machines, metingen,
+};
 
 const mutatiesPerEvenement = new Map<string, Mutatie[]>();
 for (const m of mutaties) {
   if (!m.evenementId) continue;
   mutatiesPerEvenement.set(m.evenementId, [...(mutatiesPerEvenement.get(m.evenementId) ?? []), m]);
+}
+
+const metingenPerEvenement = new Map<string, Meting[]>();
+for (const m of metingen) {
+  if (!m.evenementId) continue;
+  metingenPerEvenement.set(m.evenementId, [...(metingenPerEvenement.get(m.evenementId) ?? []), m]);
 }
 
 const niets = async () => {};
@@ -113,6 +206,7 @@ const waarde: Record<string, unknown> = {
   laden: false,
   fout: null,
   mutatiesPerEvenement,
+  metingenPerEvenement,
   hoofdmagazijn: locaties[0],
   herlaad: niets,
   voegEvenementToe: niets,
@@ -133,6 +227,13 @@ const waarde: Record<string, unknown> = {
   rondTellingAf: async () => 2,
   annuleerTelling: niets,
   maakPakbon: async () => pakbonnen[0].id,
+  zetEvenementZalen: niets,
+  zetStandaardvulling: niets,
+  boekMeting: niets,
+  voegMachineToe: niets,
+  wijzigMachine: niets,
+  verwijderMachine: niets,
+  wijzigKoppeling: niets,
   haalPakbon: async (id: string) => {
     const p = pakbonnen.find((b) => b.id === id);
     return p ? ({ ...p, handtekening: undefined } as Pakbon) : null;

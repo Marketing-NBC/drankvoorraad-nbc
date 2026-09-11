@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
 import {
   berekenMarge,
+  kostprijsMetingen,
+  personeelsverbruik,
+  verbruikUitMetingen,
   brutomarge,
   brutowinst,
   dervingPerProduct,
@@ -13,10 +16,25 @@ import {
   voorraadverschillen,
   werkelijkVerbruik,
 } from "./calculations";
-import type { Evenement, Mutatie, Product, Voorraad } from "./types";
+import type { Evenement, Locatie, Machine, Meting, Mutatie, Product, Voorraad } from "./types";
 
-const bier: Product = { id: "p1", naam: "Heineken Pils fust 50L", categorie: "bier", inkoopprijs: 85, verkoopprijs: 180, eenheid: "fust" };
-const wijn: Product = { id: "p2", naam: "Chardonnay huiswijn fles", categorie: "wijn", inkoopprijs: 6.5, verkoopprijs: 22, eenheid: "fles" };
+/** Kale productvelden, zodat een fixture alleen hoeft te zeggen wat afwijkt. */
+function product(velden: Partial<Product> & Pick<Product, "id" | "naam">): Product {
+  return {
+    categorie: "overig",
+    inkoopprijs: 0,
+    eenheid: "fles",
+    stuksPerVerpakking: 1,
+    alleenPerVerpakking: false,
+    statiegeldPerStuk: 0,
+    statiegeldPerVerpakking: 0,
+    voorraadloos: false,
+    ...velden,
+  };
+}
+
+const bier = product({ id: "p1", naam: "Fust Swinckels 20 L", categorie: "bier", inkoopprijs: 85, eenheid: "fust" });
+const wijn = product({ id: "p2", naam: "Witte wijn 0,7 L", categorie: "wijn", inkoopprijs: 6.5 });
 const producten = [bier, wijn];
 
 function mutatie(partial: Partial<Mutatie>): Mutatie {
@@ -277,5 +295,110 @@ describe("totaleBrutowinst", () => {
     );
     expect(evenementen).toHaveLength(2);
     expect(totaalBrutowinst).toBe(1500 - 4 * bier.inkoopprijs);
+  });
+});
+
+
+// ─── Koffie en water ──────────────────────────────────────────────────────────
+
+const koffie = product({ id: "p3", naam: "Koffie", categorie: "koffie", inkoopprijs: 0.12, eenheid: "kop", voorraadloos: true });
+const water = product({ id: "p4", naam: "Water koud", categorie: "water", inkoopprijs: 0, eenheid: "glas", voorraadloos: true });
+
+const machines: Machine[] = [
+  { id: "ma1", koppelingId: "k1", naam: "Koffiemachine HOS 1", productId: koffie.id, zaalId: "z1", actief: true },
+  { id: "ma2", koppelingId: "k1", naam: "Koffiemachine Lounge", productId: koffie.id, zaalId: "z2", actief: true },
+  { id: "ma3", koppelingId: "k2", naam: "Watertappunt HOS 1", productId: water.id, zaalId: "z1", actief: true },
+];
+
+function meting(partial: Partial<Meting> & Pick<Meting, "id" | "machineId" | "aantal">): Meting {
+  return { datum: "2026-09-11", bron: "handmatig", evenementId: "e1", ...partial };
+}
+
+describe("verbruikUitMetingen", () => {
+  it("telt metingen van verschillende machines op per product", () => {
+    const metingen = [
+      meting({ id: "x1", machineId: "ma1", aantal: 80 }),
+      meting({ id: "x2", machineId: "ma2", aantal: 40 }),
+      meting({ id: "x3", machineId: "ma3", aantal: 25 }),
+    ];
+    const verbruik = verbruikUitMetingen(metingen, machines, [koffie, water]);
+    expect(verbruik).toEqual([
+      { productId: koffie.id, aantal: 120, waarde: 120 * 0.12 },
+      { productId: water.id, aantal: 25, waarde: 0 },
+    ]);
+  });
+
+  it("negeert een meting van een machine die niet meer bestaat", () => {
+    const verbruik = verbruikUitMetingen([meting({ id: "x1", machineId: "weg", aantal: 5 })], machines, [koffie]);
+    expect(verbruik).toEqual([]);
+  });
+
+  it("rekent met € 0,00 zolang de inkoopprijs ontbreekt", () => {
+    // Geen fout maar een ontbrekend getal: het verbruik wordt wél geteld.
+    expect(kostprijsMetingen([meting({ id: "x1", machineId: "ma3", aantal: 100 })], machines, [water])).toBe(0);
+  });
+});
+
+describe("berekenMarge met kosten buiten de voorraad", () => {
+  it("telt koffie en water mee in de kostprijs", () => {
+    const mutaties = [uitgifte({ id: "m1", aantal: 10 })]; // 10 × 85 = 850
+    const marge = berekenMarge(2000, mutaties, producten, 14.4);
+    expect(marge.kostprijsVerbruik).toBeCloseTo(864.4, 5);
+    expect(marge.brutowinst).toBeCloseTo(1135.6, 5);
+  });
+
+  it("blijft zonder machineverbruik precies hetzelfde als voorheen", () => {
+    const mutaties = [uitgifte({ id: "m1", aantal: 10 })];
+    expect(berekenMarge(2000, mutaties, producten)).toEqual(berekenMarge(2000, mutaties, producten, 0));
+  });
+});
+
+// ─── Personeelsverbruik ───────────────────────────────────────────────────────
+
+const kantine: Locatie = { id: "l9", naam: "Kantine", type: "kantine", merk: "NBC", voorPersoneel: true };
+const magazijn: Locatie = { id: "l0", naam: "Hoofdmagazijn", type: "magazijn", merk: null, voorPersoneel: false };
+
+describe("personeelsverbruik", () => {
+  const mutaties = [
+    mutatie({ id: "a1", type: "magazijn-naar-magazijn", productId: wijn.id, aantal: 24, vanLocatieId: magazijn.id, naarLocatieId: kantine.id, evenementId: undefined, datumTijd: "2026-09-02T09:00:00.000Z" }),
+    mutatie({ id: "v1", type: "personeelsverbruik", productId: wijn.id, aantal: 6, vanLocatieId: kantine.id, naarLocatieId: undefined, evenementId: undefined, datumTijd: "2026-09-05T17:00:00.000Z" }),
+    mutatie({ id: "v2", type: "personeelsverbruik", productId: wijn.id, aantal: 4, vanLocatieId: kantine.id, naarLocatieId: undefined, evenementId: undefined, datumTijd: "2026-10-01T17:00:00.000Z" }),
+    // Een gewone uitgifte naar een evenement mag hier nooit in terechtkomen.
+    uitgifte({ id: "e9", productId: bier.id, aantal: 3, vanLocatieId: magazijn.id }),
+  ];
+
+  it("scheidt wat er naartoe ging van wat er opging", () => {
+    const [regel] = personeelsverbruik(mutaties, producten, [magazijn, kantine]);
+    expect(regel.locatie.naam).toBe("Kantine");
+    expect(regel.aangevuld).toEqual([{ productId: wijn.id, aantal: 24, waarde: 156 }]);
+    expect(regel.verbruik).toEqual([{ productId: wijn.id, aantal: 10, waarde: 65 }]);
+    expect(regel.waardeVerbruik).toBe(65);
+    expect(regel.waardeAangevuld).toBe(156);
+  });
+
+  it("laat evenementverbruik er volledig buiten", () => {
+    const regels = personeelsverbruik(mutaties, producten, [magazijn, kantine]);
+    expect(regels).toHaveLength(1);
+    expect(regels[0].verbruik.some((r) => r.productId === bier.id)).toBe(false);
+  });
+
+  it("filtert op periode, inclusief de begin- en einddag", () => {
+    const [regel] = personeelsverbruik(mutaties, producten, [magazijn, kantine], {
+      vanaf: "2026-09-01",
+      tot: "2026-09-30",
+    });
+    expect(regel.verbruik).toEqual([{ productId: wijn.id, aantal: 6, waarde: 39 }]);
+
+    const [opDeDagZelf] = personeelsverbruik(mutaties, producten, [magazijn, kantine], {
+      vanaf: "2026-09-05",
+      tot: "2026-09-05",
+    });
+    expect(opDeDagZelf.verbruik).toEqual([{ productId: wijn.id, aantal: 6, waarde: 39 }]);
+  });
+
+  it("geeft een locatie zonder boekingen terug met nullen in plaats van weg te laten", () => {
+    const [regel] = personeelsverbruik([], producten, [magazijn, kantine]);
+    expect(regel.locatie.naam).toBe("Kantine");
+    expect(regel.waardeVerbruik).toBe(0);
   });
 });

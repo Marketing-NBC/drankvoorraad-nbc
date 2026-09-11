@@ -9,7 +9,14 @@ const typeOpties: { value: LocatieType; label: string }[] = [
   { value: "magazijn", label: "Magazijn" },
   { value: "koelcel", label: "Koelcel" },
   { value: "bar", label: "Bar" },
+  { value: "kantine", label: "Kantine (personeel)" },
+  { value: "kroeg", label: "Kroeg (personeel)" },
 ];
+
+/** Kantine en kroeg zijn per definitie voor personeel; de rest standaard niet. */
+function standaardVoorPersoneel(type: LocatieType): boolean {
+  return type === "kantine" || type === "kroeg";
+}
 
 const GEDEELD = "__gedeeld__";
 
@@ -26,6 +33,7 @@ export function LocatieForm({
   const [naam, setNaam] = useState("");
   const [type, setType] = useState<LocatieType>("magazijn");
   const [merkKeuze, setMerkKeuze] = useState<string>(GEDEELD);
+  const [voorPersoneel, setVoorPersoneel] = useState(false);
   const [fout, setFout] = useState<string | null>(null);
   const [bezig, setBezig] = useState(false);
 
@@ -34,6 +42,7 @@ export function LocatieForm({
     setNaam(locatie?.naam ?? "");
     setType(locatie?.type ?? "magazijn");
     setMerkKeuze(locatie ? (locatie.merk ?? GEDEELD) : GEDEELD);
+    setVoorPersoneel(locatie?.voorPersoneel ?? false);
     setFout(null);
   }, [open, locatie]);
 
@@ -47,8 +56,8 @@ export function LocatieForm({
 
     setBezig(true);
     try {
-      if (locatie) await wijzigLocatie(locatie.id, { naam: naam.trim(), type, merk });
-      else await voegLocatieToe({ naam: naam.trim(), type, merk });
+      if (locatie) await wijzigLocatie(locatie.id, { naam: naam.trim(), type, merk, voorPersoneel });
+      else await voegLocatieToe({ naam: naam.trim(), type, merk, voorPersoneel });
       onClose();
     } catch {
       setFout("Opslaan is niet gelukt. Controleer je verbinding en probeer opnieuw.");
@@ -74,10 +83,30 @@ export function LocatieForm({
           <Select
             aria-label="Type"
             value={type}
-            onChange={(e) => setType(e.target.value as LocatieType)}
+            onChange={(e) => {
+              const nieuw = e.target.value as LocatieType;
+              setType(nieuw);
+              /* Een kantine of kroeg is altijd voor personeel. Wie een ander
+                 type kiest houdt zijn eigen keuze; alleen deze twee zetten
+                 het vinkje zelf om. */
+              if (standaardVoorPersoneel(nieuw)) setVoorPersoneel(true);
+            }}
             options={typeOpties}
           />
         </div>
+        <label className="keuzevakje">
+          <input
+            type="checkbox"
+            checked={voorPersoneel}
+            onChange={(e) => setVoorPersoneel(e.target.checked)}
+          />
+          <span>
+            Voor personeel
+            <span className="field-group__hint">
+              wat hier opgaat telt nooit mee bij een evenement — de database weigert die koppeling
+            </span>
+          </span>
+        </label>
         <div className="field-group">
           <span className="field-group__label">
             Merk <span className="field-group__hint">gedeeld = beschikbaar voor beide merken</span>

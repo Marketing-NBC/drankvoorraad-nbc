@@ -14,6 +14,8 @@ import { TellingDetail } from "./screens/Tellingen/TellingDetail";
 import { Historie } from "./screens/Historie/Historie";
 import { Gebruikers } from "./screens/Gebruikers/Gebruikers";
 import { Dashboard } from "./screens/Dashboard/Dashboard";
+import { Koppelingen } from "./screens/Koppelingen/Koppelingen";
+import { Personeelsverbruik } from "./screens/Personeel/Personeelsverbruik";
 
 export function App() {
   return (
@@ -43,6 +45,15 @@ export function App() {
                   }
                 />
                 <Route path={ROUTES.dashboard} element={<Dashboard />} />
+                <Route path={ROUTES.personeel} element={<Personeelsverbruik />} />
+                <Route
+                  path={ROUTES.koppelingen}
+                  element={
+                    <RequireAuth rollen={["beheerder", "magazijnmedewerker"]}>
+                      <Koppelingen />
+                    </RequireAuth>
+                  }
+                />
               </Routes>
             </AppShell>
           </RequireAuth>

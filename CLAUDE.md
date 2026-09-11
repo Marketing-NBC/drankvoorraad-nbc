@@ -18,6 +18,18 @@ voorraadstand op rust:
 - **Rollen worden in de database afgedwongen**, niet alleen in het scherm. Een
   knop verbergen is geen beveiliging. De rollen zijn `beheerder`,
   `magazijnmedewerker` en `evenementmanager`.
+- **Voorraad rekent altijd in stuks.** Een verpakking bepaalt alleen hoe er
+  ingevoerd en getoond wordt: bij `alleen_per_verpakking` vult het magazijn
+  kratten in en rekent de app om (× `stuks_per_verpakking`). De omrekening zit
+  op één plek — `app/src/data/verpakking.ts` — en nergens anders. Reden: een
+  koelkast wordt met 12 flesjes gevuld, niet met een halve krat, dus het
+  product kán geen krat zijn.
+- **De kantine en de kroeg zijn voor personeel.** Wat daar opgaat telt nooit
+  mee bij een evenement. Een trigger weigert elke boeking die die twee mengt;
+  zie `supabase/migraties/011_personeelslocaties.sql`.
+- **Koffie en water hebben geen voorraad.** Franke en Aquablu leveren verbruik,
+  geen kratten. Een meting is daarom géén mutatie: `mutaties` blijft over
+  voorraadbewegingen gaan. Het verbruik telt wel mee in de marge.
 - **De basis-URL staat op één plek**: `base` in `app/vite.config.ts`. De router
   leest dezelfde waarde via `import.meta.env.BASE_URL` in `app/src/main.tsx`.
   Verander die twee nooit los van elkaar.
@@ -27,7 +39,7 @@ voorraadstand op rust:
 | | |
 |---|---|
 | **App** | React 18 + TypeScript, gebouwd met Vite. Alles in `app/` |
-| **Database** | Supabase (Postgres). Schema en migraties in `supabase/` |
+| **Database** | Supabase (Postgres). Schema in `supabase/`, wijzigingen in `supabase/migraties/` |
 | **Hosting** | GitHub Pages, workflows in `.github/workflows/` |
 | **Huisstijl** | NBC design system in `app/src/design-system/` |
 
@@ -41,7 +53,13 @@ de UI-typeschaal) én de herstyling van de basisklassen `.btn`, `.card`,
 Er is geen backend van onszelf: de browser praat rechtstreeks met Supabase,
 afgeschermd door RLS-policies. Serverlogica zit in Postgres, aangeroepen via
 RPC's: `start_telling`, `rond_telling_af`, `annuleer_telling`, `maak_pakbon`,
-`stel_min_voorraad`.
+`stel_min_voorraad`, `boek_meting`.
+
+`importeer_metingen` is de enige RPC die de app zelf niet aanroept. Dat is de
+poort waar de koppeling met Franke en Aquablu straks op aansluit: een Edge
+Function haalt hun dagtotalen op en gooit ze daarin. De vorm ligt vast en is
+idempotent, dus die functie kan geschreven worden zodra de koppeling er is,
+zonder dat er aan de app of de database iets verandert.
 
 `app/src/context/AppStateContext.tsx` is de enige datalaag. Die laadt alles bij
 het opstarten en abonneert zich op een realtime-kanaal (`drankvoorraad`) dat bij
@@ -51,6 +69,19 @@ of `pakbonnen` een stille herlaad doet.
 Inloggen gaat uitsluitend met e-mail en wachtwoord (`signInWithPassword`). Er is
 geen magic link, geen OAuth en geen wachtwoordherstel — dus ook geen
 redirect-URL's die in Supabase geconfigureerd moeten staan.
+
+## Databasewijzigingen
+
+Vanaf `010` gaat elke wijziging als genummerd bestand in `supabase/migraties/`;
+zie de README daar. De losse `faseN.sql`-bestanden één map hoger zijn de
+geschiedenis tot dat punt. Elke migratie is herhaalbaar (`if not exists`,
+`on conflict`, `create or replace`) en wordt eerst op een wegwerpkopie gedraaid.
+
+Lokaal uitproberen kan zonder Supabase: start een Postgres, draai
+`schema.sql`, `seed.sql`, de `faseN.sql`-bestanden en daarna de migraties. Er
+is één ding dat Supabase meebrengt en Postgres niet: het schema `auth` met
+`auth.users` en `auth.uid()`, plus de publicatie `supabase_realtime`. Een stub
+daarvan is genoeg om alles te laten draaien.
 
 ## De schermen zonder Supabase bekijken
 
@@ -94,14 +125,13 @@ afmaken ervan. Deze paragraaf mag weg zodra dat plan er ligt.
 Vier dingen die bij "van PoC naar af" waarschijnlijk terugkomen. Geen van deze is
 kapot — het zijn keuzes die passen bij een PoC en knellen zodra het menens wordt:
 
-- **Testdekking.** 38 tests, alleen over rekenlogica (`app/src/data/`) en de
+- **Testdekking.** 62 tests, alleen over rekenlogica (`app/src/data/`) en de
   Excel-export (`app/src/utils/`). Geen enkel scherm of gebruikersstroom is
   getest, terwijl daar de meeste code zit.
-- **Databasemigraties.** `supabase/` bevat losse bestanden `fase2.sql` t/m
-  `fase9.sql` die met de hand in de SQL-editor zijn uitgevoerd, plus een
-  `fase9-terugdraaien.sql`. Er is geen manier om vast te stellen wat er
-  daadwerkelijk op productie staat, en geen manier om iets terug te draaien. Dit
-  is het eerste dat je ter discussie stelt zodra V2 het datamodel raakt.
+- **Databasemigraties.** Half opgelost: nieuwe wijzigingen staan genummerd in
+  `supabase/migraties/`, maar van de oude `faseN.sql`-bestanden is nog steeds
+  niet vast te stellen wat er precies op productie staat. Er is ook geen
+  terugdraaipad.
 - **Zware schermen.** Ongeveer de helft van de code zit in `app/src/screens/`.
   Logica en weergave lopen door elkaar, wat testen en wijzigen duur maakt.
 - **Eén omgeving.** Er is geen test-Supabase naast productie, dus experimenteren

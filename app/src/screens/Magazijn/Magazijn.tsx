@@ -39,6 +39,7 @@ export function Magazijn() {
 
   const actieveLocatie = state.locaties.find((l) => l.id === actieveLocatieId) ?? null;
   const overigeLocaties = state.locaties.filter((l) => l.id !== hoofdmagazijn?.id);
+  const heeftPersoneelslocatie = state.locaties.some((l) => l.voorPersoneel);
 
   /**
    * Kerncijfers van het hoofdmagazijn, ook zichtbaar wanneer er een andere
@@ -126,6 +127,14 @@ export function Magazijn() {
                   { label: "Verplaatsen", onClick: () => setActie({ soort: "verplaatsen" }) },
                   { label: "Afschrijven", onClick: () => setActie({ soort: "beschadigd" }) },
                   { label: "Corrigeren", onClick: () => setActie({ soort: "correctie" }) },
+                  ...(heeftPersoneelslocatie
+                    ? [
+                        {
+                          label: "Personeelsverbruik boeken",
+                          onClick: () => setActie({ soort: "personeelsverbruik" as const }),
+                        },
+                      ]
+                    : []),
                   { label: "Exporteren naar Excel", onClick: () => void handleExport() },
                 ]}
               />
@@ -207,7 +216,7 @@ export function Magazijn() {
                   >
                     {locatie.naam}
                     <Badge variant={locatie.id === actieveLocatieId ? "op-donker" : "neutral"}>
-                      {locatie.merk ?? "gedeeld"}
+                      {locatie.voorPersoneel ? "personeel" : locatie.merk ?? "gedeeld"}
                     </Badge>
                   </button>
                 ))}
@@ -225,7 +234,11 @@ export function Magazijn() {
               <Card className="card--tabel">
                 <KaartKop
                   titel={actieveLocatie.naam}
-                  sub="voorraad, minimum en directe boekingen"
+                  sub={
+                    actieveLocatie.voorPersoneel
+                      ? "personeelsvoorraad — telt niet mee bij evenementen"
+                      : "voorraad, minimum en directe boekingen"
+                  }
                   rechts={
                     magLocatiesBeheren ? (
                       <ActieMenu

@@ -8,6 +8,7 @@ import {
   dervingWaarde,
   lageVoorraad,
   topProducten,
+  kostprijsMetingen,
   totaleBrutowinst,
   uitstaandPerEvenement,
 } from "../../data/calculations";
@@ -44,14 +45,24 @@ function StatKaart({
 }
 
 export function Dashboard() {
-  const { state, laden, mutatiesPerEvenement } = useAppState();
+  const { state, laden, mutatiesPerEvenement, metingenPerEvenement } = useAppState();
 
   if (laden) return <p className="app-laden">Bezig met laden…</p>;
+
+  /* Koffie en water komen niet uit het magazijn maar drukken wel op de marge.
+     Per evenement de waarde van wat de machines daar getapt hebben. */
+  const machineKosten = new Map(
+    Array.from(metingenPerEvenement.entries()).map(([evenementId, metingen]) => [
+      evenementId,
+      kostprijsMetingen(metingen, state.machines, state.producten),
+    ])
+  );
 
   const { totaalBrutowinst } = totaleBrutowinst(
     state.evenementen,
     mutatiesPerEvenement,
-    state.producten
+    state.producten,
+    machineKosten
   );
   const top5 = topProducten(state.mutaties, state.producten, 5);
   const derving = dervingWaarde(state.mutaties, state.producten);
