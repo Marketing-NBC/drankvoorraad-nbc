@@ -2,14 +2,12 @@ import { Badge, type BadgeProps } from "../../design-system";
 import type { Merk } from "../../data/types";
 
 /**
- * Single place to map merk -> badge variant. NBC uses the real brand teal
- * tint. Green Village has no supplied palette yet in the design system, so
- * it renders as a neutral badge with just the brand name until Abel provides
- * an actual Green Village color to plug in here.
+ * Eén plek waar merk op een badge-variant wordt gemapt: NBC in het petrol
+ * van de huisstijl, Green Village in de eigen groentint.
  */
 const merkVariant: Record<Merk, BadgeProps["variant"]> = {
   NBC: "tint",
-  "Green Village": "neutral",
+  "Green Village": "merk-gv",
 };
 
 export function BrandBadge({ merk }: { merk: Merk }) {

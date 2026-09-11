@@ -31,15 +31,15 @@ export function BarChart({ data, height = 220, formatValue = (v) => `${Math.roun
         role="img"
         aria-label="Brutomarge per evenement"
       >
-        <line x1={0} y1={height + labelSpace} x2={width} y2={height + labelSpace} stroke="var(--nbc-stone-200)" strokeWidth={1} />
+        <line x1={0} y1={height + labelSpace} x2={width} y2={height + labelSpace} stroke="var(--lijn)" strokeWidth={1} />
         {data.map((d, i) => {
           const barHeight = Math.max(2, (Math.abs(d.value) / max) * (height - 8));
           const x = i * (barWidth + gap);
           const y = labelSpace + (height - barHeight);
           return (
             <g key={d.label}>
-              <rect x={x} y={y} width={barWidth} height={barHeight} rx={6} fill="var(--nbc-blue)" />
-              <text x={x + barWidth / 2} y={y - 8} textAnchor="middle" fontSize={13} fill="var(--fg-primary)" fontFamily="var(--font-body)">
+              <rect x={x} y={y} width={barWidth} height={barHeight} rx={999} fill="var(--nbc-blue)"  />
+              <text x={x + barWidth / 2} y={y - 8} textAnchor="middle" fontSize={12} fontWeight={800} fill="var(--nbc-stone-800)" fontFamily="var(--font-body)">
                 {formatValue(d.value)}
               </text>
               <text
@@ -47,7 +47,8 @@ export function BarChart({ data, height = 220, formatValue = (v) => `${Math.roun
                 y={height + labelSpace + 20}
                 textAnchor="middle"
                 fontSize={12}
-                fill="var(--fg-secondary)"
+                fontWeight={600}
+                fill="var(--nbc-stone-500)"
                 fontFamily="var(--font-body)"
               >
                 {d.label.length > 12 ? `${d.label.slice(0, 11)}…` : d.label}

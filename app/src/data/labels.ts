@@ -10,14 +10,18 @@ export const mutatieLabels: Record<MutatieType, string> = {
   correctie: "Correctie",
 };
 
-/** Badge-variant per mutatietype, zodat de kleur overal hetzelfde betekent. */
-export const mutatieVariant: Record<MutatieType, "tint" | "neutral" | "gold" | "success" | "outline"> = {
+/**
+ * Badge-variant per mutatietype, zodat de kleur overal hetzelfde betekent.
+ * Petrol = voorraad gaat de deur uit of komt binnen, groen = komt terug,
+ * geel = je raakt het kwijt, neutraal = het schuift alleen op papier.
+ */
+export const mutatieVariant: Record<MutatieType, "tint" | "neutral" | "gold" | "success"> = {
   "magazijn-naar-evenement": "tint",
   "evenement-naar-magazijn": "success",
   "magazijn-naar-magazijn": "neutral",
-  inkoop: "success",
+  inkoop: "tint",
   beschadigd: "gold",
-  correctie: "outline",
+  correctie: "neutral",
 };
 
 export const mutatieTypeOpties = (Object.keys(mutatieLabels) as MutatieType[]).map((type) => ({

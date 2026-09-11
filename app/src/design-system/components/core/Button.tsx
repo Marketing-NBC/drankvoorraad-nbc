@@ -4,7 +4,7 @@ import { Icon, type IconName } from "./Icon";
 export interface ButtonProps
   extends Omit<ButtonHTMLAttributes<HTMLButtonElement> & AnchorHTMLAttributes<HTMLAnchorElement>, "type"> {
   children: ReactNode;
-  variant?: "primary" | "ghost-dark" | "ghost-light";
+  variant?: "primary" | "ghost-dark" | "ghost-light" | "zacht";
   size?: "sm" | "md" | "lg";
   icon?: IconName | null;
   iconPosition?: "leading" | "trailing";
@@ -16,8 +16,9 @@ export interface ButtonProps
 
 /**
  * NBC button. Primary is solid ink with white text; ghost variants are
- * outline-only (dark on light, light on dark). Always a pill. Optional
- * trailing/leading arrow. Hover lightens, press scales to 0.98.
+ * outline-only (dark on light, light on dark); zacht is the third rank —
+ * a soft outline that does not compete with the two buttons next to it.
+ * Always a pill. Optional trailing/leading arrow. Press scales to 0.98.
  */
 export function Button({
   children,

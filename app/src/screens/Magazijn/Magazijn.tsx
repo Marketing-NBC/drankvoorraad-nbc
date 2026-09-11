@@ -1,9 +1,10 @@
 import { useEffect, useState } from "react";
-import { Badge, Button, Card, Link } from "../../design-system";
+import { Badge, Button, Card } from "../../design-system";
 import { PageHeader } from "../../components/layout/PageHeader";
 import { ActieMenu } from "../../components/ui/ActieMenu";
 import { EmptyState } from "../../components/ui/EmptyState";
 import { FoutMelding } from "../../components/ui/FoutMelding";
+import { KaartKop } from "../../components/ui/KaartKop";
 import { LageVoorraadMelding } from "../../components/ui/LageVoorraadMelding";
 import { useAppState } from "../../context/AppStateContext";
 import { useAuth } from "../../context/AuthContext";
@@ -23,7 +24,7 @@ export function Magazijn() {
     open: false,
     locatie: null,
   });
-  const [actie, setActie] = useState<MagazijnActie | null>(null);
+  const [actie, setActie] = useState<{ soort: MagazijnActie; productId?: string } | null>(null);
   const [actieFout, setActieFout] = useState<string | null>(null);
   const [nieuweBarcode, setNieuweBarcode] = useState<string | null>(null);
 
@@ -37,7 +38,6 @@ export function Magazijn() {
   }, [state.locaties, actieveLocatieId]);
 
   const actieveLocatie = state.locaties.find((l) => l.id === actieveLocatieId) ?? null;
-
   const overigeLocaties = state.locaties.filter((l) => l.id !== hoofdmagazijn?.id);
 
   /**
@@ -113,17 +113,19 @@ export function Magazijn() {
       <PageHeader
         eyebrow="centrale voorraad"
         title="Magazijn"
+        toelichting="Het hoofdmagazijn vult alle andere locaties. Minimumvoorraad pas je in de tabel aan; hij bewaart bij verlaten van het veld."
         actions={
           magBeheren ? (
             <>
-              <Button icon="plus" iconPosition="leading" onClick={() => setActie("inkoop")}>
+              <Button icon="plus" iconPosition="leading" onClick={() => setActie({ soort: "inkoop" })}>
                 Inboeken
               </Button>
               <ActieMenu
+                label="Beheren"
                 items={[
-                  { label: "Verplaatsen", onClick: () => setActie("verplaatsen") },
-                  { label: "Afschrijven", onClick: () => setActie("beschadigd") },
-                  { label: "Corrigeren", onClick: () => setActie("correctie") },
+                  { label: "Verplaatsen", onClick: () => setActie({ soort: "verplaatsen" }) },
+                  { label: "Afschrijven", onClick: () => setActie({ soort: "beschadigd" }) },
+                  { label: "Corrigeren", onClick: () => setActie({ soort: "correctie" }) },
                   { label: "Exporteren naar Excel", onClick: () => void handleExport() },
                 ]}
               />
@@ -163,14 +165,26 @@ export function Magazijn() {
               aria-pressed={hoofdmagazijn.id === actieveLocatieId}
               onClick={() => setActieveLocatieId(hoofdmagazijn.id)}
             >
-              <span className="magazijn-hoofd__kop">
-                <span className="magazijn-hoofd__naam">{hoofdmagazijn.naam}</span>
-                <Badge variant="gold">gedeeld</Badge>
+              <span>
+                <span className="magazijn-hoofd__kop">
+                  <span className="magazijn-hoofd__naam">{hoofdmagazijn.naam}</span>
+                  <Badge variant="op-donker">gedeeld</Badge>
+                </span>
+                <span className="magazijn-hoofd__sub">bron voor NBC en Green Village</span>
               </span>
               <span className="magazijn-hoofd__cijfers">
-                <span><strong>{formatNumber(hoofdCijfers.stuks)}</strong> stuks</span>
-                <span><strong>{formatNumber(hoofdCijfers.producten)}</strong> producten</span>
-                <span><strong>{formatCurrency(hoofdCijfers.waarde)}</strong> voorraadwaarde</span>
+                <span className="magazijn-hoofd__cijfer">
+                  <strong>{formatNumber(hoofdCijfers.stuks)}</strong>
+                  <span>stuks</span>
+                </span>
+                <span className="magazijn-hoofd__cijfer">
+                  <strong>{formatNumber(hoofdCijfers.producten)}</strong>
+                  <span>producten</span>
+                </span>
+                <span className="magazijn-hoofd__cijfer">
+                  <strong>{formatCurrency(hoofdCijfers.waarde)}</strong>
+                  <span>voorraadwaarde</span>
+                </span>
               </span>
             </button>
           ) : null}
@@ -192,7 +206,7 @@ export function Magazijn() {
                     onClick={() => setActieveLocatieId(locatie.id)}
                   >
                     {locatie.naam}
-                    <Badge variant={locatie.merk === null ? "gold" : "neutral"}>
+                    <Badge variant={locatie.id === actieveLocatieId ? "op-donker" : "neutral"}>
                       {locatie.merk ?? "gedeeld"}
                     </Badge>
                   </button>
@@ -203,26 +217,35 @@ export function Magazijn() {
 
           {actieveLocatie ? (
             <>
-              <div className="section-title section-title--compact">
-                <h3>{actieveLocatie.naam}</h3>
-                {magLocatiesBeheren ? (
-                  <ActieMenu
-                    label="Beheren"
-                    items={[
-                      { label: "Nieuwe locatie", onClick: () => setLocatieForm({ open: true, locatie: null }) },
-                      { label: "Locatie wijzigen", onClick: () => setLocatieForm({ open: true, locatie: actieveLocatie }) },
-                      { label: "Locatie verwijderen", onClick: () => void handleVerwijderLocatie(actieveLocatie) },
-                    ]}
-                  />
-                ) : null}
-              </div>
-              <LageVoorraadMelding locatieId={actieveLocatie.id} />
-              <Card>
+              <LageVoorraadMelding
+                locatieId={actieveLocatie.id}
+                locatieNaam={actieveLocatie.naam}
+                onBijbestellen={magBeheren ? () => setActie({ soort: "inkoop" }) : undefined}
+              />
+              <Card className="card--tabel">
+                <KaartKop
+                  titel={actieveLocatie.naam}
+                  sub="voorraad, minimum en directe boekingen"
+                  rechts={
+                    magLocatiesBeheren ? (
+                      <ActieMenu
+                        label="Beheren"
+                        items={[
+                          { label: "Nieuwe locatie", onClick: () => setLocatieForm({ open: true, locatie: null }) },
+                          { label: "Locatie wijzigen", onClick: () => setLocatieForm({ open: true, locatie: actieveLocatie }) },
+                          { label: "Locatie verwijderen", onClick: () => void handleVerwijderLocatie(actieveLocatie) },
+                        ]}
+                      />
+                    ) : null
+                  }
+                />
                 <VoorraadTabel
                   locatieId={actieveLocatie.id}
                   producten={state.producten}
                   voorraad={state.voorraad}
                   magBeheren={magBeheren}
+                  onInboeken={(product) => setActie({ soort: "inkoop", productId: product.id })}
+                  onVerplaatsen={(product) => setActie({ soort: "verplaatsen", productId: product.id })}
                 />
               </Card>
             </>
@@ -237,8 +260,9 @@ export function Magazijn() {
       />
       <VoorraadMutatieModal
         open={actie !== null}
-        actie={actie ?? "inkoop"}
+        actie={actie?.soort ?? "inkoop"}
         standaardLocatieId={actieveLocatieId ?? undefined}
+        standaardProductId={actie?.productId}
         onClose={() => setActie(null)}
         onNieuwProduct={
           magBeheren

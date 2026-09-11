@@ -20,6 +20,7 @@
 # maken zonder dat het iets toevoegt.
 node_modules/
 dist/
+dist-preview/
 .vite/
 
 # ─── Netlify ──────────────────────────────────────────────────────

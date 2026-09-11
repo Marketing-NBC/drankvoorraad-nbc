@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { Badge, Button, Card } from "../../design-system";
+import { KaartKop } from "../../components/ui/KaartKop";
 import { Table } from "../../components/ui/Table";
 import { useAppState } from "../../context/AppStateContext";
 import {
@@ -135,90 +136,98 @@ export function Rapporten() {
 
   return (
     <>
-      <div className="section-title">
-        <h3>Rapportages</h3>
-        <div className="button-row no-print">
-          <Button variant="ghost-dark" icon={null} onClick={() => void exporteer()} disabled={exporteert}>
-            {exporteert ? "Bezig…" : "Exporteren (Excel)"}
-          </Button>
+      <Card className="card--tabel">
+        <KaartKop
+          titel="Rapportages"
+          sub="één rapport tegelijk — exporteerbaar naar Excel"
+          rechts={
+            <Button
+              variant="ghost-dark"
+              size="sm"
+              icon={null}
+              className="no-print"
+              onClick={() => void exporteer()}
+              disabled={exporteert}
+            >
+              {exporteert ? "Bezig…" : "Exporteren (Excel)"}
+            </Button>
+          }
+        />
+
+        {/* Eén rapport tegelijk: drie tabellen onder elkaar is op een telefoon
+            eindeloos scrollen, en je kijkt toch naar één vraag per keer. */}
+        <div className="rapport-kiezer no-print" role="tablist" aria-label="Rapportage kiezen">
+          {rapporten.map((rapport) => (
+            <button
+              key={rapport.id}
+              type="button"
+              role="tab"
+              aria-selected={actief === rapport.id}
+              className={["rapport-tab", actief === rapport.id && "rapport-tab--actief"]
+                .filter(Boolean).join(" ")}
+              onClick={() => setActief(rapport.id)}
+            >
+              {rapport.label}
+            </button>
+          ))}
         </div>
-      </div>
 
-      {/* Eén rapport tegelijk: drie tabellen onder elkaar is op een telefoon
-          eindeloos scrollen, en je kijkt toch naar één vraag per keer. */}
-      <div className="rapport-kiezer no-print" role="tablist" aria-label="Rapportage kiezen">
-        {rapporten.map((rapport) => (
-          <button
-            key={rapport.id}
-            type="button"
-            role="tab"
-            aria-selected={actief === rapport.id}
-            className={["rapport-tab", actief === rapport.id && "rapport-tab--actief"]
-              .filter(Boolean).join(" ")}
-            onClick={() => setActief(rapport.id)}
-          >
-            {rapport.label}
-          </button>
-        ))}
-      </div>
+        <p className="scherm-toelichting" style={{ marginBottom: 14 }}>{huidig.toelichting}</p>
 
-      <p className="scherm-toelichting">{huidig.toelichting}</p>
-
-      <Card>
         {actief === "uitstaand" ? (
-          <Table<EvenementUitstaand>
-            rows={uitstaand}
-            rowKey={(r) => r.evenement.id}
-            emptyMessage="Er is nog niets naar een evenement uitgegeven."
-            columns={[
-              { header: "Evenement", primair: true, render: (r) => r.evenement.naam },
-              { header: "Datum", verbergOpMobiel: true, render: (r) => formatDate(r.evenement.datum) },
-              { header: "Status", render: (r) => r.evenement.status },
-              { header: "Uitgegeven", align: "right", verbergOpMobiel: true, render: (r) => formatNumber(r.aantalUitgegeven) },
-              { header: "Retour", align: "right", verbergOpMobiel: true, render: (r) => formatNumber(r.aantalRetour) },
-              { header: "Uitstaand", align: "right", render: (r) => formatNumber(r.aantalUitstaand) },
-              { header: "Waarde", align: "right", render: (r) => formatCurrency(r.waardeUitstaand) },
-            ]}
-          />
-        ) : null}
+            <Table<EvenementUitstaand>
+              rows={uitstaand}
+              rowKey={(r) => r.evenement.id}
+              emptyMessage="Er is nog niets naar een evenement uitgegeven."
+              columns={[
+                { header: "Evenement", primair: true, render: (r) => r.evenement.naam },
+                { header: "Datum", verbergOpMobiel: true, render: (r) => formatDate(r.evenement.datum) },
+                { header: "Status", render: (r) => r.evenement.status },
+                { header: "Uitgegeven", align: "right", verbergOpMobiel: true, render: (r) => formatNumber(r.aantalUitgegeven) },
+                { header: "Retour", align: "right", verbergOpMobiel: true, render: (r) => formatNumber(r.aantalRetour) },
+                { header: "Uitstaand", align: "right", render: (r) => formatNumber(r.aantalUitstaand) },
+                { header: "Waarde", align: "right", render: (r) => formatCurrency(r.waardeUitstaand) },
+              ]}
+            />
+          ) : null}
 
-        {actief === "verschillen" ? (
-          <Table<Voorraadverschil>
-            rows={verschillen}
-            rowKey={(r) => r.mutatieId}
-            emptyMessage="Nog geen tellingen afgerond, of alle tellingen kwamen precies uit."
-            columns={[
-              { header: "Product", primair: true, render: (r) => productNaam.get(r.productId) ?? r.productId },
-              { header: "Locatie", render: (r) => (r.locatieId ? locatieNaam.get(r.locatieId) ?? "—" : "—") },
-              {
-                header: "Verschil",
-                align: "right",
-                render: (r) => (
-                  <Badge variant={r.verschil > 0 ? "success" : "gold"}>
-                    {r.verschil > 0 ? "+" : "−"}
-                    {formatNumber(Math.abs(r.verschil))}
-                  </Badge>
-                ),
-              },
-              { header: "Waarde", align: "right", render: (r) => formatCurrency(r.waarde) },
-              { header: "Geteld op", verbergOpMobiel: true, render: (r) => formatDateTime(r.datumTijd) },
-            ]}
-          />
-        ) : null}
+          {actief === "verschillen" ? (
+            <Table<Voorraadverschil>
+              rows={verschillen}
+              rowKey={(r) => r.mutatieId}
+              emptyMessage="Nog geen tellingen afgerond, of alle tellingen kwamen precies uit."
+              columns={[
+                { header: "Product", primair: true, render: (r) => productNaam.get(r.productId) ?? r.productId },
+                { header: "Locatie", render: (r) => (r.locatieId ? locatieNaam.get(r.locatieId) ?? "—" : "—") },
+                {
+                  header: "Verschil",
+                  align: "right",
+                  render: (r) => (
+                    <Badge variant={r.verschil > 0 ? "success" : "gold"}>
+                      {r.verschil > 0 ? "+" : "−"}
+                      {formatNumber(Math.abs(r.verschil))}
+                    </Badge>
+                  ),
+                },
+                { header: "Waarde", align: "right", render: (r) => formatCurrency(r.waarde) },
+                { header: "Geteld op", verbergOpMobiel: true, render: (r) => formatDateTime(r.datumTijd) },
+              ]}
+            />
+          ) : null}
 
-        {actief === "derving" ? (
-          <Table<DervingRegel>
-            rows={derving}
-            rowKey={(r) => r.product.id}
-            emptyMessage="Er is nog niets als beschadigd afgeboekt."
-            columns={[
-              { header: "Product", primair: true, render: (r) => r.product.naam },
-              { header: "Aantal", align: "right", render: (r) => `${formatNumber(r.aantal)} ${r.product.eenheid}` },
-              { header: "Inkoopprijs", align: "right", verbergOpMobiel: true, render: (r) => formatCurrency(r.product.inkoopprijs) },
-              { header: "Waarde", align: "right", render: (r) => formatCurrency(r.waarde) },
-            ]}
-          />
-        ) : null}
+          {actief === "derving" ? (
+            <Table<DervingRegel>
+              rows={derving}
+              rowKey={(r) => r.product.id}
+              emptyMessage="Er is nog niets als beschadigd afgeboekt."
+              columns={[
+                { header: "Product", primair: true, render: (r) => r.product.naam },
+                { header: "Aantal", align: "right", render: (r) => `${formatNumber(r.aantal)} ${r.product.eenheid}` },
+                { header: "Inkoopprijs", align: "right", verbergOpMobiel: true, render: (r) => formatCurrency(r.product.inkoopprijs) },
+                { header: "Waarde", align: "right", render: (r) => formatCurrency(r.waarde) },
+              ]}
+            />
+          ) : null}
       </Card>
     </>
   );

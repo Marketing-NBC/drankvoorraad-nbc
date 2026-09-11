@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Navigate, useParams } from "react-router-dom";
 import { Button, Logo } from "../../design-system";
+import { AppIcon } from "../../components/ui/AppIcon";
 import { FoutMelding } from "../../components/ui/FoutMelding";
 import { useAppState } from "../../context/AppStateContext";
 import type { Pakbon } from "../../data/types";
@@ -53,16 +54,19 @@ export function PakbonWeergave() {
 
   return (
     <>
-      <div className="pakbon-acties no-print">
-        <Button variant="ghost-dark" icon="arrow-left" iconPosition="leading" onClick={() => window.history.back()}>
+      <div className="actiebalk no-print">
+        <button type="button" className="actiebalk__terug" onClick={() => window.history.back()}>
+          <AppIcon name="arrow-left" size={16} />
           Terug
-        </Button>
-        <Button icon={null} onClick={() => window.print()}>Afdrukken of opslaan als PDF</Button>
+        </button>
+        <div className="actiebalk__acties">
+          <Button icon={null} onClick={() => window.print()}>Afdrukken of opslaan als PDF</Button>
+        </div>
       </div>
 
       <article className="pakbon">
         <header className="pakbon__kop">
-          <Logo height={44} />
+          <Logo variant="mark-color" height={44} />
           <div className="pakbon__nummer">
             <span className="pakbon__label">Pakbon</span>
             {/* De eerste acht tekens van de uuid: kort genoeg om over te nemen
@@ -112,7 +116,7 @@ export function PakbonWeergave() {
               return (
                 <tr key={regel.id}>
                   <td>{product?.naam ?? "Onbekend product"}</td>
-                  <td>{product?.eenheid ?? ""}</td>
+                  <td className="tekst-zwak">{product?.eenheid ?? ""}</td>
                   <td className="pakbon__tabel-getal">{formatNumber(regel.aantal)}</td>
                 </tr>
               );
@@ -126,11 +130,11 @@ export function PakbonWeergave() {
           </tfoot>
         </table>
 
-
         <div className="pakbon__ondertekening">
           <div className="pakbon__partij">
             <span className="pakbon__label">Uitgegeven door</span>
             <span className="pakbon__naam">{uitgegevenDoor?.naam ?? "onbekend"}</span>
+            <span className="pakbon__streep" />
           </div>
           <div className="pakbon__partij">
             <span className="pakbon__label">Ontvangen door</span>
@@ -144,6 +148,7 @@ export function PakbonWeergave() {
             ) : (
               <span className="pakbon__geen-handtekening">Niet ondertekend</span>
             )}
+            <span className="pakbon__streep" />
           </div>
         </div>
 

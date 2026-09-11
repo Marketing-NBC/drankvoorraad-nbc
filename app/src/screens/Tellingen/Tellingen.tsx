@@ -4,6 +4,7 @@ import { Badge, Button, Card } from "../../design-system";
 import { PageHeader } from "../../components/layout/PageHeader";
 import { EmptyState } from "../../components/ui/EmptyState";
 import { FoutMelding } from "../../components/ui/FoutMelding";
+import { KaartKop } from "../../components/ui/KaartKop";
 import { Modal } from "../../components/ui/Modal";
 import { Select } from "../../components/ui/Select";
 import { useAppState } from "../../context/AppStateContext";
@@ -24,6 +25,7 @@ export function Tellingen() {
   const [bezig, setBezig] = useState(false);
 
   const magTellen = mag("beheerder", "magazijnmedewerker");
+  const lopend = state.tellingen.filter((t) => t.status === "open").length;
   const locatieNaam = new Map(state.locaties.map((l) => [l.id, l.naam]));
   const gebruikerNaam = new Map(state.profielen.map((p) => [p.id, p.naam]));
 
@@ -53,6 +55,7 @@ export function Tellingen() {
       <PageHeader
         eyebrow="inventarisatie"
         title="Tellingen"
+        toelichting="Tel een locatie door de producten te scannen of de aantallen in te typen. Bij het afronden worden de verschillen automatisch als correctie geboekt, zodat de voorraad klopt met wat er werkelijk staat."
         actions={
           magTellen ? (
             <Button
@@ -73,44 +76,40 @@ export function Tellingen() {
       {fout ? <FoutMelding melding={fout} onOpnieuw={() => void herlaad()} /> : null}
       {routeState?.melding ? <p className="melding-goed">{routeState.melding}</p> : null}
 
-      <p className="scherm-toelichting">
-        Tel een locatie door de producten te scannen of de aantallen in te typen. Bij het afronden
-        worden de verschillen automatisch als correctie geboekt, zodat de voorraad klopt met wat er
-        werkelijk staat.
-      </p>
-
       {state.tellingen.length === 0 ? (
         <EmptyState
           title="Nog geen tellingen"
           body="Start een telling om de voorraad van een locatie te controleren."
         />
       ) : (
-        <div className="event-list">
-          {state.tellingen.map((telling) => (
-            <RouterLink
-              key={telling.id}
-              to={ROUTES.tellingDetail(telling.id)}
-              style={{ display: "block", textDecoration: "none", color: "inherit" }}
-            >
-              <Card hover>
-                <div className="event-row">
-                  <div className="event-row__main">
-                    <span className="event-row__title">{locatieNaam.get(telling.locatieId) ?? "Onbekende locatie"}</span>
-                    <span className="event-row__meta">
-                      <span>{formatDateTime(telling.aangemaaktOp)}</span>
-                      <span>door {gebruikerNaam.get(telling.gebruikerId) ?? "onbekend"}</span>
-                    </span>
-                  </div>
-                  <div className="event-row__marge">
+        <Card>
+          <KaartKop
+            titel={`${state.tellingen.length} ${state.tellingen.length === 1 ? "telling" : "tellingen"}`}
+            sub="nieuwste eerst"
+            rechts={
+              lopend > 0 ? <Badge>{lopend} {lopend === 1 ? "loopt" : "lopen"} nog</Badge> : null
+            }
+          />
+          <div className="lijst">
+            {state.tellingen.map((telling) => (
+              <RouterLink key={telling.id} className="event-rij" to={ROUTES.tellingDetail(telling.id)}>
+                <span className="event-rij__main">
+                  <span className="event-rij__titel">
+                    {locatieNaam.get(telling.locatieId) ?? "Onbekende locatie"}
+                  </span>
+                  <span className="event-rij__meta">
+                    {formatDateTime(telling.aangemaaktOp)}
+                    <span>door {gebruikerNaam.get(telling.gebruikerId) ?? "onbekend"}</span>
                     <Badge variant={telling.status === "open" ? "tint" : "success"}>
                       {telling.status === "open" ? "Bezig" : "Afgerond"}
                     </Badge>
-                  </div>
-                </div>
-              </Card>
-            </RouterLink>
-          ))}
-        </div>
+                  </span>
+                </span>
+                <span className="event-rij__openen" aria-hidden="true">Openen</span>
+              </RouterLink>
+            ))}
+          </div>
+        </Card>
       )}
 
       <Modal open={startOpen} onClose={() => setStartOpen(false)} title="Nieuwe telling">

@@ -14,6 +14,11 @@ export interface TableProps<T> {
   columns: TableColumn<T>[];
   rows: T[];
   rowKey: (row: T) => string;
+  /**
+   * Totaalregel onder de tabel, één waarde per kolom (null = leeg). Moet
+   * even lang zijn als `columns`; kortere arrays worden met leegte aangevuld.
+   */
+  totaal?: (ReactNode | null)[];
   className?: string;
   emptyMessage?: string;
 }
@@ -24,9 +29,24 @@ export interface TableProps<T> {
  * kolomkoppen als labels vóór de waarden verschijnen (`data-label`).
  * Zo blijft er één DOM-structuur — geen dubbele markup die uit elkaar loopt.
  */
-export function Table<T>({ columns, rows, rowKey, className = "", emptyMessage = "Geen gegevens." }: TableProps<T>) {
+export function Table<T>({
+  columns,
+  rows,
+  rowKey,
+  totaal,
+  className = "",
+  emptyMessage = "Geen gegevens.",
+}: TableProps<T>) {
   if (rows.length === 0) {
     return <p className="data-table__empty">{emptyMessage}</p>;
+  }
+
+  function celKlassen(col: TableColumn<T>): string | undefined {
+    return (
+      [col.align === "right" && "num", col.primair && "cel-primair", col.verbergOpMobiel && "verberg-mobiel"]
+        .filter(Boolean)
+        .join(" ") || undefined
+    );
   }
 
   return (
@@ -49,21 +69,24 @@ export function Table<T>({ columns, rows, rowKey, className = "", emptyMessage =
           {rows.map((row) => (
             <tr key={rowKey(row)}>
               {columns.map((col) => (
-                <td
-                  key={col.header}
-                  data-label={col.header}
-                  className={[
-                    col.align === "right" && "num",
-                    col.primair && "cel-primair",
-                    col.verbergOpMobiel && "verberg-mobiel",
-                  ].filter(Boolean).join(" ") || undefined}
-                >
+                <td key={col.header} data-label={col.header} className={celKlassen(col)}>
                   {col.render(row)}
                 </td>
               ))}
             </tr>
           ))}
         </tbody>
+        {totaal ? (
+          <tfoot>
+            <tr>
+              {columns.map((col, i) => (
+                <td key={col.header} data-label={col.header} className={celKlassen(col)}>
+                  {totaal[i] ?? null}
+                </td>
+              ))}
+            </tr>
+          </tfoot>
+        ) : null}
       </table>
     </div>
   );

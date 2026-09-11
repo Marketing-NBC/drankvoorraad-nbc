@@ -27,12 +27,15 @@ export function VoorraadMutatieModal({
   onClose,
   actie,
   standaardLocatieId,
+  standaardProductId,
   onNieuwProduct,
 }: {
   open: boolean;
   onClose: () => void;
   actie: MagazijnActie;
   standaardLocatieId?: string;
+  /** Vooraf gekozen product — gezet door de snelknoppen in de voorraadtabel. */
+  standaardProductId?: string;
   /** Onbekende barcode gescand — opent het productformulier met de code alvast ingevuld. */
   onNieuwProduct?: (barcode: string) => void;
 }) {
@@ -47,13 +50,13 @@ export function VoorraadMutatieModal({
 
   useEffect(() => {
     if (!open) return;
-    setProductId(state.producten[0]?.id ?? "");
+    setProductId(standaardProductId ?? state.producten[0]?.id ?? "");
     setVanLocatieId(standaardLocatieId ?? state.locaties[0]?.id ?? "");
     setNaarLocatieId(state.locaties.find((l) => l.id !== standaardLocatieId)?.id ?? "");
     setAantal("");
     setNotitie("");
     setFout(null);
-  }, [open, actie, standaardLocatieId, state.producten, state.locaties]);
+  }, [open, actie, standaardLocatieId, standaardProductId, state.producten, state.locaties]);
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
