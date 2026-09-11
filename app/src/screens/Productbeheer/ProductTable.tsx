@@ -1,7 +1,8 @@
 import { Link } from "../../design-system";
 import { Table } from "../../components/ui/Table";
 import type { Product, Voorraad } from "../../data/types";
-import { formatCurrency, formatNumber } from "../../utils/format";
+import { formatCurrency } from "../../utils/format";
+import { eenheidLabel, heeftVerpakking, omschrijfAantal, verpakkingLabel } from "../../data/verpakking";
 
 export function ProductTable({
   producten,
@@ -31,9 +32,24 @@ export function ProductTable({
       rows={producten}
       emptyMessage="Geen producten gevonden."
       columns={[
-        { header: "Naam", primair: true, render: (p) => p.naam },
+        {
+          header: "Naam",
+          primair: true,
+          render: (p) => (
+            <span className="product-naam">
+              {p.naam}
+              {p.alleenPerVerpakking ? (
+                <span className="product-naam__hint">alleen per {p.verpakking}</span>
+              ) : null}
+            </span>
+          ),
+        },
         { header: "Categorie", verbergOpMobiel: true, render: (p) => p.categorie },
-        { header: "Eenheid", verbergOpMobiel: true, render: (p) => p.eenheid },
+        {
+          header: "Verpakking",
+          verbergOpMobiel: true,
+          render: (p) => (heeftVerpakking(p) ? verpakkingLabel(p) : eenheidLabel(p)),
+        },
         {
           header: "Barcode",
           verbergOpMobiel: true,
@@ -44,18 +60,41 @@ export function ProductTable({
           header: "Voorraad",
           align: "right",
           render: (p) => {
+            /* Koffie en water hebben geen voorraad; een 0 zou daar lezen als
+               "op" in plaats van "niet van toepassing". */
+            if (p.voorraadloos) return <span className="tekst-leeg">uit de machine</span>;
             const totaal = totaalPerProduct.get(p.id) ?? 0;
             const min = minPerProduct.get(p.id) ?? 0;
             const laag = min > 0 && totaal < min;
             return (
               <span className={laag ? "voorraad-laag" : undefined} title={laag ? "Onder de minimumvoorraad" : undefined}>
-                {formatNumber(totaal)}
+                {omschrijfAantal(p, totaal)}
               </span>
             );
           },
         },
-        { header: "Inkoop", align: "right", render: (p) => formatCurrency(p.inkoopprijs) },
-        { header: "Verkoop", align: "right", verbergOpMobiel: true, render: (p) => formatCurrency(p.verkoopprijs) },
+        {
+          header: "Inkoop",
+          align: "right",
+          render: (p) =>
+            p.inkoopprijs > 0 ? (
+              formatCurrency(p.inkoopprijs)
+            ) : (
+              <span className="tekst-leeg" title="Nog geen inkoopprijs ingevuld">nog invullen</span>
+            ),
+        },
+        {
+          header: "Statiegeld",
+          align: "right",
+          verbergOpMobiel: true,
+          render: (p) => {
+            if (p.statiegeldPerVerpakking > 0) {
+              return `${formatCurrency(p.statiegeldPerVerpakking)} / ${p.verpakking}`;
+            }
+            if (p.statiegeldPerStuk > 0) return `${formatCurrency(p.statiegeldPerStuk)} / ${p.eenheid}`;
+            return <span className="tekst-leeg">—</span>;
+          },
+        },
         ...(magBeheren
           ? [
               {

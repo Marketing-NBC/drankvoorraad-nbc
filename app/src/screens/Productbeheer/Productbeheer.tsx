@@ -8,6 +8,7 @@ import { useAuth } from "../../context/AuthContext";
 import type { Product } from "../../data/types";
 import { exporteerNaarExcel } from "../../utils/excel";
 import { formatCurrency } from "../../utils/format";
+import { heeftVerpakking, verpakkingLabel } from "../../data/verpakking";
 import { ActieMenu } from "../../components/ui/ActieMenu";
 import { ProductFilters, type ProductFiltersValue } from "./ProductFilters";
 import { ProductForm } from "./ProductForm";
@@ -45,7 +46,7 @@ export function Productbeheer() {
   }, [state.producten, filters]);
 
   const totaleWaarde = zichtbaar.reduce(
-    (som, p) => som + (voorraadPerProduct.get(p.id) ?? 0) * p.inkoopprijs,
+    (som, p) => som + (p.voorraadloos ? 0 : (voorraadPerProduct.get(p.id) ?? 0) * p.inkoopprijs),
     0
   );
 
@@ -58,19 +59,26 @@ export function Productbeheer() {
       kolommen: [
         { header: "Naam", value: (p) => p.naam },
         { header: "Categorie", value: (p) => p.categorie },
+        { header: "Inhoud", value: (p) => p.inhoud ?? "" },
         { header: "Eenheid", value: (p) => p.eenheid },
+        { header: "Verpakking", value: (p) => (heeftVerpakking(p) ? verpakkingLabel(p) : "") },
         { header: "Barcode", value: (p) => p.barcode ?? "" },
         { header: "Leverancier", value: (p) => p.leverancier ?? "" },
-        { header: "Voorraad", opmaak: "getal", value: (p) => voorraadPerProduct.get(p.id) ?? 0 },
+        {
+          header: "Voorraad",
+          opmaak: "getal",
+          value: (p) => (p.voorraadloos ? 0 : voorraadPerProduct.get(p.id) ?? 0),
+        },
         { header: "Inkoopprijs", opmaak: "bedrag", value: (p) => p.inkoopprijs },
-        { header: "Verkoopprijs", opmaak: "bedrag", value: (p) => p.verkoopprijs },
+        { header: "Statiegeld per stuk", opmaak: "bedrag", value: (p) => p.statiegeldPerStuk },
+        { header: "Statiegeld per verpakking", opmaak: "bedrag", value: (p) => p.statiegeldPerVerpakking },
         {
           header: "Voorraadwaarde",
           opmaak: "bedrag",
           value: (p) => (voorraadPerProduct.get(p.id) ?? 0) * p.inkoopprijs,
         },
       ],
-      totalen: { 0: "Totale voorraadwaarde", 8: totaleWaarde },
+      totalen: { 0: "Totale voorraadwaarde", 11: totaleWaarde },
     });
   }
 

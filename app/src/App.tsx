@@ -14,6 +14,10 @@ import { TellingDetail } from "./screens/Tellingen/TellingDetail";
 import { Historie } from "./screens/Historie/Historie";
 import { Gebruikers } from "./screens/Gebruikers/Gebruikers";
 import { Dashboard } from "./screens/Dashboard/Dashboard";
+import { Koppelingen } from "./screens/Koppelingen/Koppelingen";
+import { Leveringen } from "./screens/Leveringen/Leveringen";
+import { LeveringNieuw } from "./screens/Leveringen/LeveringNieuw";
+import { Personeelsverbruik } from "./screens/Personeel/Personeelsverbruik";
 
 export function App() {
   return (
@@ -43,6 +47,24 @@ export function App() {
                   }
                 />
                 <Route path={ROUTES.dashboard} element={<Dashboard />} />
+                <Route path={ROUTES.personeel} element={<Personeelsverbruik />} />
+                <Route path={ROUTES.leveringen} element={<Leveringen />} />
+                <Route
+                  path={ROUTES.leveringNieuw}
+                  element={
+                    <RequireAuth rollen={["beheerder", "magazijnmedewerker"]}>
+                      <LeveringNieuw />
+                    </RequireAuth>
+                  }
+                />
+                <Route
+                  path={ROUTES.koppelingen}
+                  element={
+                    <RequireAuth rollen={["beheerder", "magazijnmedewerker"]}>
+                      <Koppelingen />
+                    </RequireAuth>
+                  }
+                />
               </Routes>
             </AppShell>
           </RequireAuth>

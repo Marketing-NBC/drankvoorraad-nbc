@@ -14,6 +14,7 @@ import { useAuth } from "../../context/AuthContext";
 import {
   berekenMarge,
   productVerbruikPerEvenement,
+  verbruikUitMetingen,
   type ProductVerbruik,
 } from "../../data/calculations";
 import { formatCurrency, formatDate, formatDateTime, formatNumber } from "../../utils/format";
@@ -24,10 +25,12 @@ import { BookingTable } from "./BookingTable";
 import { MargeSummary } from "./MargeSummary";
 import { OmzetInput } from "./OmzetInput";
 import { StatusKiezer } from "./StatusKiezer";
+import { ZaalKiezer } from "./ZaalKiezer";
 
 export function EvenementDetail() {
   const { id } = useParams<{ id: string }>();
-  const { state, laden, wijzigEvenement, verwijderEvenement, mutatiesPerEvenement } = useAppState();
+  const { state, laden, wijzigEvenement, verwijderEvenement, mutatiesPerEvenement, metingenPerEvenement } =
+    useAppState();
   const { mag } = useAuth();
   const navigate = useNavigate();
   const evenement = useEvenement(id);
@@ -42,8 +45,15 @@ export function EvenementDetail() {
   const pakbonnen = state.pakbonnen.filter((p) => p.evenementId === evenement.id);
   const magPakbon = mag("beheerder", "magazijnmedewerker");
   const magBoeken = mag("beheerder", "magazijnmedewerker");
-  const marge = berekenMarge(evenement.omzet, mutaties, state.producten);
   const productenById = new Map(state.producten.map((p) => [p.id, p]));
+
+  /* Koffie en water komen niet uit het magazijn maar wel op de rekening: de
+     machines in de zalen van dit evenement hebben geteld wat er getapt is. */
+  const metingen = metingenPerEvenement.get(evenement.id) ?? [];
+  const machineVerbruik = verbruikUitMetingen(metingen, state.machines, state.producten);
+  const machineKosten = machineVerbruik.reduce((som, r) => som + r.waarde, 0);
+
+  const marge = berekenMarge(evenement.omzet, mutaties, state.producten, machineKosten);
 
   /* De drie cijfers boven het scherm: wat er heen ging, wat er terugkwam en
      wat er dus werkelijk doorheen is. */
@@ -280,7 +290,37 @@ export function EvenementDetail() {
           <Card>
             <KaartKop titel="Marge" />
             <MargeSummary marge={marge} />
+            {machineKosten > 0 ? (
+              <p className="veld-toelichting">
+                Inclusief {formatCurrency(machineKosten)} aan koffie en water uit de machines.
+              </p>
+            ) : null}
           </Card>
+
+          <Card>
+            <KaartKop titel="Zalen" sub="waar dit evenement zit" />
+            <ZaalKiezer evenementId={evenement.id} />
+          </Card>
+
+          {machineVerbruik.length > 0 ? (
+            <Card className="card--tabel">
+              <KaartKop
+                titel="Koffie en water"
+                sub="geteld door de machines in de zalen van dit evenement"
+              />
+              <div className="regellijst">
+                {machineVerbruik.map((regel) => (
+                  <div className="regellijst__regel" key={regel.productId}>
+                    <span>{productenById.get(regel.productId)?.naam ?? "Onbekend"}</span>
+                    <span>
+                      {formatNumber(regel.aantal)}
+                      {regel.waarde > 0 ? ` · ${formatCurrency(regel.waarde)}` : ""}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </Card>
+          ) : null}
 
           {/* Wat er nog buiten staat is geld dat je kwijtraakt als niemand
               het terugboekt — vandaar het gele vlak en één directe actie. */}

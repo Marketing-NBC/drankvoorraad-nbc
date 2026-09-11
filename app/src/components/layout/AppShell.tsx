@@ -3,8 +3,10 @@ import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import { Logo } from "../../design-system";
 import { AppIcon, type AppIconName } from "../ui/AppIcon";
 import { useAppState } from "../../context/AppStateContext";
+import type { GebruikerRol } from "../../data/types";
 import { useAuth } from "../../context/AuthContext";
 import { ROUTES } from "../../routes/routes";
+import { Wachtbalk } from "./Wachtbalk";
 import { Zoekbalk } from "./Zoekbalk";
 
 interface NavItem {
@@ -14,6 +16,8 @@ interface NavItem {
   tabLabel?: string;
   icon: AppIconName;
   alleenBeheerder?: boolean;
+  /** Beperkt het item tot deze rollen — houd gelijk aan de guard in App.tsx. */
+  rollen?: GebruikerRol[];
   /** Niet in de mobiele onderbalk — die wordt anders te vol. */
   buitenTabbalk?: boolean;
 }
@@ -23,14 +27,30 @@ const navItems: NavItem[] = [
   { to: ROUTES.dashboard, label: "Dashboard", tabLabel: "Cijfers", icon: "grafiek" },
   { to: ROUTES.overzicht, label: "Evenementen", tabLabel: "Events", icon: "calendar" },
   { to: ROUTES.magazijn, label: "Magazijn", icon: "building" },
+  { to: ROUTES.leveringen, label: "Leveringen", tabLabel: "Binnen", icon: "doos" },
   { to: ROUTES.tellingen, label: "Tellingen", tabLabel: "Tellen", icon: "scan" },
   { to: ROUTES.producten, label: "Producten", icon: "doos" },
   { to: ROUTES.historie, label: "Mutaties", icon: "clock" },
+  /* Koffie, water en personeel zijn beheerwerk dat niet dagelijks op de vloer
+     gebeurt. Ze horen in de zijbalk en het accountmenu, niet in de zes vakken
+     van de onderbalk — die is voor wat je met een kar in je hand doet. */
+  {
+    to: ROUTES.koppelingen,
+    label: "Koffie en water",
+    tabLabel: "Koffie",
+    icon: "doos",
+    buitenTabbalk: true,
+    rollen: ["beheerder", "magazijnmedewerker"],
+  },
+  { to: ROUTES.personeel, label: "Personeel", icon: "gebruikers", buitenTabbalk: true },
   { to: ROUTES.gebruikers, label: "Gebruikers", icon: "gebruikers", alleenBeheerder: true, buitenTabbalk: true },
 ];
 
 /** Volgorde in de onderbalk — zes gelijke vakken, duim-eerst. */
-const tabVolgorde = [ROUTES.overzicht, ROUTES.magazijn, ROUTES.tellingen, ROUTES.producten, ROUTES.historie, ROUTES.dashboard];
+/* Zes vakken, duim-eerst. Leveringen staat erin omdat dat dagelijks werk op
+   de vloer is; Mutaties niet, want dat lees je achteraf op een groot scherm —
+   die staat in de zijbalk en het accountmenu. */
+const tabVolgorde = [ROUTES.overzicht, ROUTES.magazijn, ROUTES.leveringen, ROUTES.tellingen, ROUTES.producten, ROUTES.dashboard];
 
 /**
  * Naam van het scherm in de mobiele kop, plus of er een pijl terug hoort.
@@ -43,6 +63,7 @@ function schermNaam(pad: string): { label: string; terug: boolean } {
   if (pad.startsWith("/evenementen/")) return { label: "Evenement", terug: true };
   if (pad.startsWith("/pakbonnen/")) return { label: "Pakbon", terug: true };
   if (pad.startsWith("/tellingen/")) return { label: "Telling", terug: true };
+  if (pad === ROUTES.leveringNieuw) return { label: "Levering aannemen", terug: true };
   const item = navItems.find((n) => n.to === pad);
   return { label: item?.label ?? "Drankvoorraad", terug: false };
 }
@@ -56,7 +77,10 @@ export function AppShell({ children }: { children: ReactNode }) {
   const pad = useLocation().pathname;
   const [accountOpen, setAccountOpen] = useState(false);
 
-  const zichtbareNav = navItems.filter((item) => !item.alleenBeheerder || mag("beheerder"));
+  const zichtbareNav = navItems.filter(
+    (item) =>
+      (!item.alleenBeheerder || mag("beheerder")) && (!item.rollen || mag(...item.rollen))
+  );
   const menuNav = zichtbareNav.filter((item) => item.buitenTabbalk);
   const gebruikersItem = navItems.find((item) => item.to === ROUTES.gebruikers)!;
 
@@ -205,6 +229,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         </header>
 
         <main className="app-shell__main">
+          <Wachtbalk />
           {profielFout ? <p className="form-error rol-waarschuwing">{profielFout}</p> : null}
           {children}
         </main>

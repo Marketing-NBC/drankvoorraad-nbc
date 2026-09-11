@@ -3,6 +3,7 @@ import { Table } from "../../components/ui/Table";
 import { useAppState } from "../../context/AppStateContext";
 import type { Product, Voorraad } from "../../data/types";
 import { formatNumber } from "../../utils/format";
+import { heeftVerpakking, omschrijfAantal, verpakkingLabel } from "../../data/verpakking";
 
 export interface VoorraadRegel {
   product: Product;
@@ -72,7 +73,9 @@ export function VoorraadTabel({
 }) {
   const perProduct = new Map(voorraad.filter((v) => v.locatieId === locatieId).map((v) => [v.productId, v]));
 
-  const regels: VoorraadRegel[] = producten.map((product) => {
+  /* Koffie en water staan nergens op een plank; die horen niet in een
+     voorraadtabel thuis. */
+  const regels: VoorraadRegel[] = producten.filter((p) => !p.voorraadloos).map((product) => {
     const v = perProduct.get(product.id);
     return { product, aantal: v?.aantal ?? 0, minVoorraad: v?.minVoorraad ?? 0 };
   });
@@ -88,7 +91,12 @@ export function VoorraadTabel({
       totaal={["Totaal", null, formatNumber(totaal), null, ...(snelBoeken ? [null] : [])]}
       columns={[
         { header: "Product", primair: true, render: (r) => r.product.naam },
-        { header: "Eenheid", verbergOpMobiel: true, render: (r) => r.product.eenheid },
+        {
+          header: "Eenheid",
+          verbergOpMobiel: true,
+          render: (r) =>
+            heeftVerpakking(r.product) ? verpakkingLabel(r.product) : r.product.eenheid,
+        },
         {
           header: "Voorraad",
           align: "right",
@@ -96,7 +104,8 @@ export function VoorraadTabel({
             const laag = r.minVoorraad > 0 && r.aantal < r.minVoorraad;
             return (
               <span className={laag ? "voorraad-laag" : undefined} title={laag ? "Onder de minimumvoorraad" : undefined}>
-                {formatNumber(r.aantal)} {laag ? <span className="voorraad-laag-label">te laag</span> : null}
+                {omschrijfAantal(r.product, r.aantal)}{" "}
+                {laag ? <span className="voorraad-laag-label">te laag</span> : null}
               </span>
             );
           },

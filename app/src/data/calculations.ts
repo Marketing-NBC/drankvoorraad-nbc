@@ -1,5 +1,14 @@
-import type { Evenement, Mutatie, Product, Voorraad } from "./types";
-import { RETOUR_TYPES, UITGIFTE_TYPES } from "./types";
+import type {
+  Evenement,
+  Locatie,
+  Machine,
+  Meting,
+  Mutatie,
+  Product,
+  Telling,
+  Voorraad,
+} from "./types";
+import { PERSONEELSVERBRUIK, RETOUR_TYPES, UITGIFTE_TYPES } from "./types";
 
 function isUitgifte(m: Mutatie): boolean {
   return UITGIFTE_TYPES.includes(m.type);
@@ -102,17 +111,193 @@ export interface EvenementMarge {
   brutomarge: number | null;
 }
 
-/** Convenience wrapper computing the full marge block for one event's mutations + omzet. */
-export function berekenMarge(omzet: number, mutaties: Mutatie[], producten: Product[]): EvenementMarge {
-  const kostprijs = kostprijsVerbruik(mutaties, producten);
+/**
+ * De volledige margeberekening voor één evenement.
+ *
+ * `kostenBuitenVoorraad` is wat er verbruikt is zonder dat het uit het
+ * magazijn kwam: koffie en water uit de machines. Dat telt net zo hard mee in
+ * de kostprijs als bier — het staat alleen niet in `mutaties`, omdat er geen
+ * voorraad van bijgehouden wordt.
+ */
+export function berekenMarge(
+  omzet: number,
+  mutaties: Mutatie[],
+  producten: Product[],
+  kostenBuitenVoorraad = 0
+): EvenementMarge {
+  const kostprijs = kostprijsVerbruik(mutaties, producten) + kostenBuitenVoorraad;
   const winst = brutowinst(omzet, kostprijs);
   return {
     kostprijsVerbruik: kostprijs,
-    waardeUitgegeven: waardeUitgegeven(mutaties, producten),
+    waardeUitgegeven: waardeUitgegeven(mutaties, producten) + kostenBuitenVoorraad,
     waardeRetour: waardeRetour(mutaties, producten),
     brutowinst: winst,
     brutomarge: brutomarge(omzet, winst),
   };
+}
+
+// ─── Koffie en water ──────────────────────────────────────────────────────────
+
+export interface MachineVerbruik {
+  productId: string;
+  aantal: number;
+  waarde: number;
+}
+
+/**
+ * Verbruik uit de machines, opgeteld per product.
+ *
+ * Een meting hangt aan een machine en die hangt aan een product — een
+ * koffiemachine levert koppen koffie. Zolang de inkoopprijs van dat product
+ * nog op 0 staat komt de waarde op € 0,00 uit; dat is geen fout maar een
+ * ontbrekend getal, en de schermen zeggen dat er ook bij.
+ */
+export function verbruikUitMetingen(
+  metingen: Meting[],
+  machines: Machine[],
+  producten: Product[]
+): MachineVerbruik[] {
+  const productVanMachine = new Map(machines.map((m) => [m.id, m.productId]));
+  const productenById = new Map(producten.map((p) => [p.id, p]));
+  const perProduct = new Map<string, number>();
+
+  for (const meting of metingen) {
+    const productId = productVanMachine.get(meting.machineId);
+    if (!productId) continue;
+    perProduct.set(productId, (perProduct.get(productId) ?? 0) + meting.aantal);
+  }
+
+  return Array.from(perProduct.entries())
+    .map(([productId, aantal]) => ({
+      productId,
+      aantal,
+      waarde: aantal * (productenById.get(productId)?.inkoopprijs ?? 0),
+    }))
+    .sort((a, b) => b.aantal - a.aantal);
+}
+
+/** Kostprijs van wat de machines geleverd hebben. */
+export function kostprijsMetingen(
+  metingen: Meting[],
+  machines: Machine[],
+  producten: Product[]
+): number {
+  return verbruikUitMetingen(metingen, machines, producten).reduce((som, r) => som + r.waarde, 0);
+}
+
+// ─── Personeelsverbruik ───────────────────────────────────────────────────────
+
+export interface PersoneelProductRegel {
+  productId: string;
+  aantal: number;
+  waarde: number;
+}
+
+/**
+ * De laatste afgeronde telling van een locatie.
+ *
+ * In de kantine en de kroeg is dat het moment waarop het verbruik gemeten is:
+ * wat er sindsdien bijgevuld is, staat er nog of is al op zonder dat iemand
+ * het weet. Vandaar dat die datum op het scherm hoort.
+ */
+export function laatsteTelling(tellingen: Telling[], locatieId: string): Telling | undefined {
+  return tellingen
+    .filter((t) => t.locatieId === locatieId && t.status === "afgerond" && t.afgerondOp)
+    .sort((a, b) => (a.afgerondOp! < b.afgerondOp! ? 1 : -1))[0];
+}
+
+export interface PersoneelsverbruikPerLocatie {
+  locatie: Locatie;
+  /** Wat er opgegaan is. */
+  verbruik: PersoneelProductRegel[];
+  /** Wat er vanuit het magazijn naartoe gebracht is. */
+  aangevuld: PersoneelProductRegel[];
+  waardeVerbruik: number;
+  waardeAangevuld: number;
+}
+
+export interface Periode {
+  /** ISO-datum, inclusief. */
+  vanaf?: string;
+  /** ISO-datum, inclusief — de hele dag telt mee. */
+  tot?: string;
+}
+
+function binnenPeriode(datumTijd: string, periode?: Periode): boolean {
+  if (!periode) return true;
+  const dag = datumTijd.slice(0, 10);
+  if (periode.vanaf && dag < periode.vanaf) return false;
+  if (periode.tot && dag > periode.tot) return false;
+  return true;
+}
+
+function telOp(
+  regels: Map<string, number>,
+  producten: Map<string, Product>
+): PersoneelProductRegel[] {
+  return Array.from(regels.entries())
+    .map(([productId, aantal]) => ({
+      productId,
+      aantal,
+      waarde: aantal * (producten.get(productId)?.inkoopprijs ?? 0),
+    }))
+    .sort((a, b) => b.waarde - a.waarde);
+}
+
+/**
+ * Wat het personeel in de kantine en de kroeg opmaakt, per locatie.
+ *
+ * Twee getallen die niet hetzelfde zijn en allebei nodig: wat er naartoe
+ * gebracht is (aangevuld) en wat er daadwerkelijk afgeboekt is als verbruik.
+ * Loopt het eerste ver voor op het tweede, dan staat er voorraad die nog niet
+ * afgeboekt is — of is er niet geboekt wat er opging.
+ *
+ * Evenementen komen hier niet in voor: de database weigert een boeking die
+ * een personeelslocatie aan een evenement koppelt.
+ */
+export function personeelsverbruik(
+  mutaties: Mutatie[],
+  producten: Product[],
+  locaties: Locatie[],
+  periode?: Periode
+): PersoneelsverbruikPerLocatie[] {
+  const productenById = new Map(producten.map((p) => [p.id, p]));
+  const personeelslocaties = locaties.filter((l) => l.voorPersoneel);
+  const isPersoneel = new Set(personeelslocaties.map((l) => l.id));
+
+  const verbruikPer = new Map<string, Map<string, number>>();
+  const aanvulPer = new Map<string, Map<string, number>>();
+
+  for (const m of mutaties) {
+    if (!binnenPeriode(m.datumTijd, periode)) continue;
+
+    if (m.type === PERSONEELSVERBRUIK && m.vanLocatieId && isPersoneel.has(m.vanLocatieId)) {
+      const perProduct = verbruikPer.get(m.vanLocatieId) ?? new Map<string, number>();
+      perProduct.set(m.productId, (perProduct.get(m.productId) ?? 0) + m.aantal);
+      verbruikPer.set(m.vanLocatieId, perProduct);
+      continue;
+    }
+
+    if (m.naarLocatieId && isPersoneel.has(m.naarLocatieId)) {
+      const perProduct = aanvulPer.get(m.naarLocatieId) ?? new Map<string, number>();
+      perProduct.set(m.productId, (perProduct.get(m.productId) ?? 0) + m.aantal);
+      aanvulPer.set(m.naarLocatieId, perProduct);
+    }
+  }
+
+  return personeelslocaties
+    .map((locatie) => {
+      const verbruik = telOp(verbruikPer.get(locatie.id) ?? new Map(), productenById);
+      const aangevuld = telOp(aanvulPer.get(locatie.id) ?? new Map(), productenById);
+      return {
+        locatie,
+        verbruik,
+        aangevuld,
+        waardeVerbruik: verbruik.reduce((s, r) => s + r.waarde, 0),
+        waardeAangevuld: aangevuld.reduce((s, r) => s + r.waarde, 0),
+      };
+    })
+    .sort((a, b) => b.waardeVerbruik - a.waardeVerbruik);
 }
 
 export interface TopProduct {
@@ -298,12 +483,18 @@ export interface EvenementMargeSamenvatting {
 export function totaleBrutowinst(
   evenementen: Evenement[],
   mutatiesPerEvenement: Map<string, Mutatie[]>,
-  producten: Product[]
+  producten: Product[],
+  kostenBuitenVoorraad?: Map<string, number>
 ): { totaalBrutowinst: number; evenementen: EvenementMargeSamenvatting[] } {
   const meetellend = evenementen.filter((e) => e.status === "Actief" || e.status === "Afgerond");
   const samenvattingen = meetellend.map((evenement) => ({
     evenement,
-    marge: berekenMarge(evenement.omzet, mutatiesPerEvenement.get(evenement.id) ?? [], producten),
+    marge: berekenMarge(
+      evenement.omzet,
+      mutatiesPerEvenement.get(evenement.id) ?? [],
+      producten,
+      kostenBuitenVoorraad?.get(evenement.id) ?? 0
+    ),
   }));
   const totaalBrutowinst = samenvattingen.reduce((sum, s) => sum + s.marge.brutowinst, 0);
   return { totaalBrutowinst, evenementen: samenvattingen };

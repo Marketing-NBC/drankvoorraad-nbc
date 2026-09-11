@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Badge, Link } from "../../design-system";
 import type { Product } from "../../data/types";
+import { eenheidLabel, heeftVerpakking, verpakkingLabel } from "../../data/verpakking";
 import { BarcodeInvoer, BarcodeScanner } from "./BarcodeScanner";
 import { Select } from "./Select";
 
@@ -92,9 +93,13 @@ export function ProductKiezer({
             onProductIdChange(e.target.value);
             setLaatstGescand(null);
           }}
+          /* Bij een product dat nooit los gaat hoort de verpakking in de naam:
+             wie "Swinckels 0,3 L (fles)" leest, vult flesjes in. */
           options={producten.map((p) => ({
             value: p.id,
-            label: `${p.naam} (${p.eenheid})`,
+            label: `${p.naam} (${
+              p.alleenPerVerpakking && heeftVerpakking(p) ? verpakkingLabel(p) : eenheidLabel(p)
+            })`,
           }))}
         />
       )}

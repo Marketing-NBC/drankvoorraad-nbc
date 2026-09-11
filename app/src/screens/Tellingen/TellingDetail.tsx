@@ -9,6 +9,7 @@ import { KaartKop } from "../../components/ui/KaartKop";
 import { useAppState } from "../../context/AppStateContext";
 import type { Product, Tellingregel } from "../../data/types";
 import { formatCurrency, formatNumber } from "../../utils/format";
+import { invoer, omschrijfAantal, verpakkingLabel, heeftVerpakking } from "../../data/verpakking";
 import { ROUTES } from "../../routes/routes";
 
 interface Regel extends Tellingregel {
@@ -94,9 +95,17 @@ export function TellingDetail() {
 
   const percentage = voortgang.totaal === 0 ? 0 : Math.round((voortgang.geteld / voortgang.totaal) * 100);
 
+  /**
+   * Het getelde aantal opslaan.
+   *
+   * Bij een product dat nooit los gaat telt de vloer kratten; de voorraad
+   * blijft in stuks staan. De omrekening zit hier en nergens anders — zie
+   * src/data/verpakking.ts.
+   */
   async function bewaarAantal(regel: Regel, waarde: string) {
-    const aantal = waarde.trim() === "" ? null : Number(waarde);
-    if (aantal !== null && (Number.isNaN(aantal) || aantal < 0)) return;
+    const ingevoerd = waarde.trim() === "" ? null : Number(waarde);
+    if (ingevoerd !== null && (Number.isNaN(ingevoerd) || ingevoerd < 0)) return;
+    const aantal = ingevoerd === null ? null : ingevoerd * invoer(regel.product).factor;
 
     setRegels((huidig) => huidig.map((r) => (r.id === regel.id ? { ...r, geteldAantal: aantal } : r)));
     try {
@@ -125,16 +134,23 @@ export function TellingDetail() {
   }
 
   async function afronden() {
+    const wat = locatie?.voorPersoneel ? "boeking(en)" : "correctie(s)";
     const bevestiging =
       voortgang.nietGeteld > 0
-        ? `${voortgang.nietGeteld} product(en) zijn niet geteld en blijven ongewijzigd. ${voortgang.afwijkend} correctie(s) worden geboekt. Doorgaan?`
-        : `${voortgang.afwijkend} correctie(s) worden geboekt. Doorgaan?`;
+        ? `${voortgang.nietGeteld} product(en) zijn niet geteld en blijven ongewijzigd. ${voortgang.afwijkend} ${wat} worden geboekt. Doorgaan?`
+        : `${voortgang.afwijkend} ${wat} worden geboekt. Doorgaan?`;
     if (!window.confirm(bevestiging)) return;
 
     setBezig(true);
     try {
       const aantal = await rondTellingAf(id!);
-      navigate(ROUTES.tellingen, { state: { melding: `Telling afgerond met ${aantal} correctie(s).` } });
+      navigate(ROUTES.tellingen, {
+        state: {
+          melding: locatie?.voorPersoneel
+            ? `Telling afgerond. ${aantal} product(en) geboekt als personeelsverbruik.`
+            : `Telling afgerond met ${aantal} correctie(s).`,
+        },
+      });
     } catch {
       setFout("De telling kon niet afgerond worden. Probeer het opnieuw.");
       setBezig(false);
@@ -163,9 +179,13 @@ export function TellingDetail() {
         eyebrow={afgerond ? "afgeronde telling" : "telling bezig"}
         title={locatie?.naam ?? "Telling"}
         toelichting={
-          afgerond
-            ? "Deze telling is afgerond. De verschillen zijn als correctie geboekt en staan in Mutaties."
-            : "Tel door te scannen of in te typen. Bij afronden worden de verschillen automatisch als correctie geboekt."
+          locatie?.voorPersoneel
+            ? afgerond
+              ? "Deze telling is afgerond. Wat er minder stond dan verwacht is geboekt als personeelsverbruik en staat bij Personeel."
+              : "Tel door te scannen of in te typen. Wat er minder staat dan verwacht wordt bij afronden geboekt als personeelsverbruik — dit is de meting."
+            : afgerond
+              ? "Deze telling is afgerond. De verschillen zijn als correctie geboekt en staan in Mutaties."
+              : "Tel door te scannen of in te typen. Bij afronden worden de verschillen automatisch als correctie geboekt."
         }
         actions={
           afgerond ? null : (
@@ -246,7 +266,10 @@ export function TellingDetail() {
                         {geteld ? <Icon name="check-circle" size={16} className="telling-regel__vink" /> : null}
                       </span>
                       <span className="telling-regel__verwacht">
-                        verwacht <strong>{formatNumber(basis)}</strong> {regel.product.eenheid}
+                        verwacht <strong>{omschrijfAantal(regel.product, basis)}</strong>{" "}
+                        {heeftVerpakking(regel.product) && regel.product.alleenPerVerpakking
+                          ? verpakkingLabel(regel.product)
+                          : regel.product.eenheid}
                         {verschil !== null && verschil !== 0 ? (
                           <>
                             {" · "}
@@ -275,7 +298,13 @@ export function TellingDetail() {
                       inputMode="numeric"
                       placeholder="—"
                       disabled={afgerond}
-                      defaultValue={regel.geteldAantal ?? ""}
+                      /* In kratten invullen bij een product dat nooit los
+                         gaat; de opslag blijft in stuks. */
+                      defaultValue={
+                        regel.geteldAantal === null
+                          ? ""
+                          : regel.geteldAantal / invoer(regel.product).factor
+                      }
                       onFocus={(e) => e.target.select()}
                       onBlur={(e) => void bewaarAantal(regel, e.target.value)}
                       onKeyDown={(e) => {

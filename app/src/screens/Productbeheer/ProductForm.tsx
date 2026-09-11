@@ -12,6 +12,8 @@ const categorieOptions: { value: ProductCategorie; label: string }[] = [
   { value: "wijn", label: "Wijn" },
   { value: "fris", label: "Fris" },
   { value: "sterke drank", label: "Sterke drank" },
+  { value: "koffie", label: "Koffie en thee" },
+  { value: "water", label: "Water uit de tap" },
   { value: "overig", label: "Overig" },
 ];
 
@@ -30,8 +32,14 @@ export function ProductForm({
   const [naam, setNaam] = useState("");
   const [categorie, setCategorie] = useState<ProductCategorie>("bier");
   const [inkoopprijs, setInkoopprijs] = useState("");
-  const [verkoopprijs, setVerkoopprijs] = useState("");
   const [eenheid, setEenheid] = useState("");
+  const [inhoud, setInhoud] = useState("");
+  const [verpakking, setVerpakking] = useState("");
+  const [stuksPerVerpakking, setStuksPerVerpakking] = useState("1");
+  const [alleenPerVerpakking, setAlleenPerVerpakking] = useState(false);
+  const [statiegeldPerStuk, setStatiegeldPerStuk] = useState("0");
+  const [statiegeldPerVerpakking, setStatiegeldPerVerpakking] = useState("0");
+  const [voorraadloos, setVoorraadloos] = useState(false);
   const [barcode, setBarcode] = useState("");
   const [leverancier, setLeverancier] = useState("");
   const [fout, setFout] = useState<string | null>(null);
@@ -43,8 +51,14 @@ export function ProductForm({
     setNaam(product?.naam ?? "");
     setCategorie(product?.categorie ?? "bier");
     setInkoopprijs(product ? String(product.inkoopprijs) : "");
-    setVerkoopprijs(product ? String(product.verkoopprijs) : "");
     setEenheid(product?.eenheid ?? "");
+    setInhoud(product?.inhoud ?? "");
+    setVerpakking(product?.verpakking ?? "");
+    setStuksPerVerpakking(String(product?.stuksPerVerpakking ?? 1));
+    setAlleenPerVerpakking(product?.alleenPerVerpakking ?? false);
+    setStatiegeldPerStuk(String(product?.statiegeldPerStuk ?? 0));
+    setStatiegeldPerVerpakking(String(product?.statiegeldPerVerpakking ?? 0));
+    setVoorraadloos(product?.voorraadloos ?? false);
     setBarcode(product?.barcode ?? barcodeVooraf ?? "");
     setLeverancier(product?.leverancier ?? "");
     setFout(null);
@@ -62,9 +76,19 @@ export function ProductForm({
       return;
     }
     const inkoop = Number(inkoopprijs);
-    const verkoop = Number(verkoopprijs);
-    if (Number.isNaN(inkoop) || Number.isNaN(verkoop) || inkoop < 0 || verkoop < 0) {
-      setFout("Vul geldige prijzen in.");
+    const perStuk = Number(statiegeldPerStuk);
+    const perVerpakking = Number(statiegeldPerVerpakking);
+    const stuks = Number(stuksPerVerpakking);
+    if ([inkoop, perStuk, perVerpakking].some((n) => Number.isNaN(n) || n < 0)) {
+      setFout("Vul geldige bedragen in.");
+      return;
+    }
+    if (!Number.isInteger(stuks) || stuks < 1) {
+      setFout("Het aantal stuks per verpakking is een heel getal van 1 of hoger.");
+      return;
+    }
+    if (alleenPerVerpakking && (!verpakking.trim() || stuks < 2)) {
+      setFout("Alleen per verpakking boeken kan pas met een verpakkingsnaam en meer dan één stuk erin.");
       return;
     }
 
@@ -72,8 +96,14 @@ export function ProductForm({
       naam: naam.trim(),
       categorie,
       inkoopprijs: inkoop,
-      verkoopprijs: verkoop,
       eenheid: eenheid.trim(),
+      inhoud: inhoud.trim() || undefined,
+      verpakking: verpakking.trim() || undefined,
+      stuksPerVerpakking: stuks,
+      alleenPerVerpakking,
+      statiegeldPerStuk: perStuk,
+      statiegeldPerVerpakking: perVerpakking,
+      voorraadloos,
       barcode: barcode.trim() || undefined,
       leverancier: leverancier.trim() || undefined,
     };
@@ -87,7 +117,7 @@ export function ProductForm({
       const bericht = foutBericht(err);
       setFout(
         bericht.includes("duplicate") || bericht.includes("unique")
-          ? "Deze barcode is al aan een ander product gekoppeld."
+          ? "Deze naam of barcode is al aan een ander product gekoppeld."
           : "Opslaan is niet gelukt. Controleer je verbinding en probeer opnieuw."
       );
     } finally {
@@ -114,19 +144,75 @@ export function ProductForm({
           </div>
           <div className="field-group">
             <label className="field-group__label" htmlFor="product-eenheid">Eenheid</label>
-            <Input id="product-eenheid" placeholder="fles, blik, fust…" value={eenheid} onChange={(e) => setEenheid(e.target.value)} />
+            <Input id="product-eenheid" placeholder="fles, fust, kop…" value={eenheid} onChange={(e) => setEenheid(e.target.value)} />
           </div>
         </div>
         <div className="field-row">
           <div className="field-group">
-            <label className="field-group__label" htmlFor="product-inkoop">Inkoopprijs</label>
-            <Input id="product-inkoop" type="number" min={0} step="0.01" value={inkoopprijs} onChange={(e) => setInkoopprijs(e.target.value)} />
+            <label className="field-group__label" htmlFor="product-inhoud">
+              Inhoud <span className="field-group__hint">per stuk</span>
+            </label>
+            <Input id="product-inhoud" placeholder="0,2 L" value={inhoud} onChange={(e) => setInhoud(e.target.value)} />
           </div>
           <div className="field-group">
-            <label className="field-group__label" htmlFor="product-verkoop">Verkoopprijs</label>
-            <Input id="product-verkoop" type="number" min={0} step="0.01" value={verkoopprijs} onChange={(e) => setVerkoopprijs(e.target.value)} />
+            <label className="field-group__label" htmlFor="product-inkoop">
+              Inkoopprijs <span className="field-group__hint">ex btw, per stuk</span>
+            </label>
+            <Input id="product-inkoop" type="number" min={0} step="0.01" value={inkoopprijs} onChange={(e) => setInkoopprijs(e.target.value)} />
           </div>
         </div>
+
+        {/* Verpakking bepaalt niet wát er geteld wordt — dat blijven stuks —
+            maar hoe er ingevoerd wordt. Zie src/data/verpakking.ts. */}
+        <fieldset className="veldgroep-kader">
+          <legend>Verpakking</legend>
+          <div className="field-row">
+            <div className="field-group">
+              <label className="field-group__label" htmlFor="product-verpakking">
+                Naam <span className="field-group__hint">leeg = gaat los</span>
+              </label>
+              <Input id="product-verpakking" placeholder="krat" value={verpakking} onChange={(e) => setVerpakking(e.target.value)} />
+            </div>
+            <div className="field-group">
+              <label className="field-group__label" htmlFor="product-stuks">Stuks per verpakking</label>
+              <Input id="product-stuks" type="number" min={1} step={1} value={stuksPerVerpakking} onChange={(e) => setStuksPerVerpakking(e.target.value)} />
+            </div>
+          </div>
+          <label className="keuzevakje">
+            <input
+              type="checkbox"
+              checked={alleenPerVerpakking}
+              onChange={(e) => setAlleenPerVerpakking(e.target.checked)}
+            />
+            <span>
+              Nooit los boeken
+              <span className="field-group__hint">
+                het magazijn vult kratten in, de app rekent naar stuks — voor de flesjes van 0,2 L
+              </span>
+            </span>
+          </label>
+          <div className="field-row">
+            <div className="field-group">
+              <label className="field-group__label" htmlFor="product-statiegeld-stuk">Statiegeld per stuk</label>
+              <Input id="product-statiegeld-stuk" type="number" min={0} step="0.01" value={statiegeldPerStuk} onChange={(e) => setStatiegeldPerStuk(e.target.value)} />
+            </div>
+            <div className="field-group">
+              <label className="field-group__label" htmlFor="product-statiegeld-verpakking">Statiegeld per verpakking</label>
+              <Input id="product-statiegeld-verpakking" type="number" min={0} step="0.01" value={statiegeldPerVerpakking} onChange={(e) => setStatiegeldPerVerpakking(e.target.value)} />
+            </div>
+          </div>
+        </fieldset>
+
+        <label className="keuzevakje">
+          <input type="checkbox" checked={voorraadloos} onChange={(e) => setVoorraadloos(e.target.checked)} />
+          <span>
+            Geen voorraad bijhouden
+            <span className="field-group__hint">
+              koffie en water uit een machine: het verbruik komt van de teller, niet uit het magazijn
+            </span>
+          </span>
+        </label>
+
         <div className="field-group">
           <div className="product-kiezer__kop">
             <label className="field-group__label" htmlFor="product-barcode">
