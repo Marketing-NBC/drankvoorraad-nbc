@@ -1,10 +1,11 @@
 import { useState } from "react";
 import { Link as RouterLink, Navigate, useNavigate, useParams } from "react-router-dom";
-import { Button, Card } from "../../design-system";
-import { PageHeader } from "../../components/layout/PageHeader";
+import { Badge, Button, Card } from "../../design-system";
 import { ActieMenu } from "../../components/ui/ActieMenu";
+import { AppIcon } from "../../components/ui/AppIcon";
 import { BrandBadge } from "../../components/ui/BrandBadge";
 import { FoutMelding } from "../../components/ui/FoutMelding";
+import { KaartKop } from "../../components/ui/KaartKop";
 import { MutatieTabel } from "../../components/ui/MutatieTabel";
 
 import { useAppState, useEvenement } from "../../context/AppStateContext";
@@ -15,7 +16,7 @@ import {
   productVerbruikPerEvenement,
   type ProductVerbruik,
 } from "../../data/calculations";
-import { formatCurrency, formatDate, formatDateTime } from "../../utils/format";
+import { formatCurrency, formatDate, formatDateTime, formatNumber } from "../../utils/format";
 import { exporteerNaarExcel } from "../../utils/excel";
 import { ROUTES } from "../../routes/routes";
 import { BookingModal, type BoekingRichting } from "./BookingModal";
@@ -30,7 +31,7 @@ export function EvenementDetail() {
   const { mag } = useAuth();
   const navigate = useNavigate();
   const evenement = useEvenement(id);
-  const [modal, setModal] = useState<BoekingRichting | null>(null);
+  const [modal, setModal] = useState<{ richting: BoekingRichting; productId?: string } | null>(null);
   const [exporteert, setExporteert] = useState(false);
   const [verwijderFout, setVerwijderFout] = useState<string | null>(null);
 
@@ -40,8 +41,20 @@ export function EvenementDetail() {
   const mutaties = mutatiesPerEvenement.get(evenement.id) ?? [];
   const pakbonnen = state.pakbonnen.filter((p) => p.evenementId === evenement.id);
   const magPakbon = mag("beheerder", "magazijnmedewerker");
+  const magBoeken = mag("beheerder", "magazijnmedewerker");
   const marge = berekenMarge(evenement.omzet, mutaties, state.producten);
   const productenById = new Map(state.producten.map((p) => [p.id, p]));
+
+  /* De drie cijfers boven het scherm: wat er heen ging, wat er terugkwam en
+     wat er dus werkelijk doorheen is. */
+  const verbruik = productVerbruikPerEvenement(mutaties).reduce(
+    (som, r) => ({
+      uit: som.uit + r.aantalUitgegeven,
+      retour: som.retour + r.aantalRetour,
+      verbruik: som.verbruik + r.werkelijkVerbruik,
+    }),
+    { uit: 0, retour: 0, verbruik: 0 }
+  );
 
   /**
    * Verwijderen mag alleen zolang er niets aan het evenement hangt. De
@@ -121,69 +134,104 @@ export function EvenementDetail() {
 
   return (
     <>
-      <PageHeader
-        eyebrow={evenement.id}
-        title={evenement.naam}
-        actions={
-          <>
-            <Button variant="ghost-dark" icon={null} onClick={() => void handleExportExcel()} disabled={exporteert}>
-              {exporteert ? "Bezig…" : "Exporteren (Excel)"}
+      {/* Boeken en retour staan altijd binnen bereik, boven de cijfers. */}
+      <div className="actiebalk no-print">
+        <RouterLink className="actiebalk__terug" to={ROUTES.overzicht}>
+          <AppIcon name="arrow-left" size={16} />
+          Evenementen
+        </RouterLink>
+        <div className="actiebalk__acties">
+          {magBoeken ? (
+            <>
+              <Button icon="plus" iconPosition="leading" onClick={() => setModal({ richting: "uitgifte" })}>
+                Product boeken
+              </Button>
+              <Button variant="ghost-dark" icon={null} onClick={() => setModal({ richting: "retour" })}>
+                Retour boeken
+              </Button>
+            </>
+          ) : null}
+          {magPakbon ? (
+            <Button variant="zacht" icon={null} onClick={() => navigate(ROUTES.pakbonNieuw(evenement.id))}>
+              Pakbon maken
             </Button>
-            <Button variant="ghost-dark" icon={null} onClick={() => window.print()}>Exporteren (PDF)</Button>
-            {mag("beheerder") ? (
-              <ActieMenu
-                label="Beheren"
-                items={[{ label: "Evenement verwijderen", onClick: () => void handleVerwijder() }]}
-              />
-            ) : null}
-          </>
-        }
-      />
+          ) : null}
+          <Button variant="zacht" icon={null} onClick={() => void handleExportExcel()} disabled={exporteert}>
+            {exporteert ? "Bezig…" : "Excel"}
+          </Button>
+          <Button variant="zacht" icon={null} onClick={() => window.print()}>PDF</Button>
+          {mag("beheerder") ? (
+            <ActieMenu
+              label="Beheren"
+              items={[{ label: "Evenement verwijderen", onClick: () => void handleVerwijder() }]}
+            />
+          ) : null}
+        </div>
+      </div>
 
       {verwijderFout ? <FoutMelding melding={verwijderFout} /> : null}
 
-      <div className="detail-grid">
+      <div className="detail-kop">
         <div>
-          <Card style={{ marginBottom: "var(--s-6)" }}>
-            <div className="event-row__meta">
-              <span>{formatDate(evenement.datum)}</span>
-              <BrandBadge merk={evenement.merk} />
-              <StatusKiezer evenement={evenement} />
-              {evenement.opdrachtgever ? <span>Opdrachtgever: {evenement.opdrachtgever}</span> : null}
-            </div>
+          <span className="page-header__eyebrow eyebrow eyebrow--bare">{evenement.id}</span>
+          <h1 className="page-header__title">{evenement.naam}</h1>
+          <div className="detail-kop__meta">
+            <span>{formatDate(evenement.datum)}</span>
+            <BrandBadge merk={evenement.merk} />
+            <StatusKiezer evenement={evenement} />
+            {evenement.opdrachtgever ? <span>Opdrachtgever: {evenement.opdrachtgever}</span> : null}
+          </div>
+        </div>
+
+        <div className="detail-cijfers">
+          <div className="detail-cijfer">
+            <span className="detail-cijfer__label">Uitgegeven</span>
+            <div className="detail-cijfer__waarde">{formatNumber(verbruik.uit)}</div>
+          </div>
+          <div className="detail-cijfer">
+            <span className="detail-cijfer__label">Retour</span>
+            <div className="detail-cijfer__waarde">{formatNumber(verbruik.retour)}</div>
+          </div>
+          <div className="detail-cijfer detail-cijfer--petrol">
+            <span className="detail-cijfer__label">Verbruik</span>
+            <div className="detail-cijfer__waarde">{formatNumber(verbruik.verbruik)}</div>
+          </div>
+        </div>
+      </div>
+
+      <div className="detail-grid">
+        <div className="detail-grid__kolom">
+          <Card className="card--tabel">
+            <KaartKop titel="Geboekte producten" sub="uitgifte, retour en werkelijk verbruik" />
+            <BookingTable
+              mutaties={mutaties}
+              producten={state.producten}
+              onUitgifte={
+                magBoeken ? (product) => setModal({ richting: "uitgifte", productId: product.id }) : undefined
+              }
+              onRetour={
+                magBoeken ? (product) => setModal({ richting: "retour", productId: product.id }) : undefined
+              }
+            />
           </Card>
 
-          <div className="section-title">
-            <h3>Geboekte producten</h3>
-            <div className="button-row no-print">
-              <Button variant="ghost-dark" icon="plus" iconPosition="leading" onClick={() => setModal("uitgifte")}>
-                Product boeken
-              </Button>
-              <Button variant="ghost-dark" icon="arrow-left" iconPosition="leading" onClick={() => setModal("retour")}>
-                Retour boeken
-              </Button>
-            </div>
-          </div>
           <Card>
-            <BookingTable mutaties={mutaties} producten={state.producten} />
-          </Card>
-
-          <div className="section-title" style={{ marginTop: "var(--s-7)" }}>
-            <h3>Pakbonnen</h3>
-            {magPakbon ? (
-              <div className="button-row no-print">
-                <Button
-                  variant="ghost-dark"
-                  icon="plus"
-                  iconPosition="leading"
-                  onClick={() => navigate(ROUTES.pakbonNieuw(evenement.id))}
-                >
-                  Pakbon maken
-                </Button>
-              </div>
-            ) : null}
-          </div>
-          <Card>
+            <KaartKop
+              titel="Pakbonnen"
+              rechts={
+                magPakbon ? (
+                  <Button
+                    variant="ghost-dark"
+                    size="sm"
+                    icon={null}
+                    className="no-print"
+                    onClick={() => navigate(ROUTES.pakbonNieuw(evenement.id))}
+                  >
+                    Pakbon maken
+                  </Button>
+                ) : null
+              }
+            />
             {pakbonnen.length === 0 ? (
               <p className="data-table__empty">
                 Nog geen pakbonnen. Maak er een bij de overdracht naar het evenement, zodat de
@@ -199,6 +247,9 @@ export function EvenementDetail() {
                         <span>{formatDateTime(pakbon.aangemaaktOp)}</span>
                         <span>ontvangen door {pakbon.ontvangerNaam}</span>
                       </span>
+                      <span className="pakbon-lijst__status">
+                        <Badge variant="success">vastgelegd</Badge>
+                      </span>
                     </RouterLink>
                   </li>
                 ))}
@@ -206,11 +257,10 @@ export function EvenementDetail() {
             )}
           </Card>
 
-          <div className="section-title" style={{ marginTop: "var(--s-7)" }}>
-            <h3>Historie</h3>
-          </div>
-          <Card>
+          <Card className="card--tabel">
+            <KaartKop titel="Historie" sub="elke boeking op dit evenement" />
             <MutatieTabel
+              compact
               mutaties={mutaties}
               producten={state.producten}
               locaties={state.locaties}
@@ -220,17 +270,43 @@ export function EvenementDetail() {
           </Card>
         </div>
 
-        <div>
-          <Card style={{ marginBottom: "var(--s-6)" }}>
+        <div className="detail-grid__kolom">
+          <Card>
             <OmzetInput
               value={evenement.omzet}
               onSave={(omzet) => void wijzigEvenement(evenement.id, { omzet })}
             />
           </Card>
           <Card>
+            <KaartKop titel="Marge" />
             <MargeSummary marge={marge} />
           </Card>
 
+          {/* Wat er nog buiten staat is geld dat je kwijtraakt als niemand
+              het terugboekt — vandaar het gele vlak en één directe actie. */}
+          {verbruik.verbruik > 0 && evenement.status !== "Afgerond" ? (
+            <Card className="card--goud">
+              <KaartKop titel="Nog niet retour" />
+              <div className="stat-kaart__waarde" style={{ color: "inherit", margin: "0 0 6px" }}>
+                {formatNumber(verbruik.verbruik)}
+              </div>
+              <span className="kaart-kop__sub" style={{ color: "inherit" }}>
+                Boek retour zodra de bar leeg is, anders telt het als verbruik
+                ({formatCurrency(marge.kostprijsVerbruik)}).
+              </span>
+              {magBoeken ? (
+                <div className="button-row no-print" style={{ marginTop: 14 }}>
+                  <button
+                    type="button"
+                    className="lage-voorraad__actie"
+                    onClick={() => setModal({ richting: "retour" })}
+                  >
+                    Retour boeken
+                  </button>
+                </div>
+              ) : null}
+            </Card>
+          ) : null}
         </div>
       </div>
 
@@ -238,7 +314,8 @@ export function EvenementDetail() {
         open={modal !== null}
         onClose={() => setModal(null)}
         evenementId={evenement.id}
-        richting={modal ?? "uitgifte"}
+        richting={modal?.richting ?? "uitgifte"}
+        standaardProductId={modal?.productId}
         producten={state.producten}
       />
     </>

@@ -16,12 +16,15 @@ export function BookingModal({
   evenementId,
   richting,
   producten,
+  standaardProductId,
 }: {
   open: boolean;
   onClose: () => void;
   evenementId: string;
   richting: BoekingRichting;
   producten: Product[];
+  /** Vooraf gekozen product — gezet door de snelknoppen in de boekingstabel. */
+  standaardProductId?: string;
 }) {
   const { voegMutatieToe, hoofdmagazijn, state, mutatiesPerEvenement } = useAppState();
   const [productId, setProductId] = useState("");
@@ -60,15 +63,16 @@ export function BookingModal({
 
   useEffect(() => {
     if (!open) return;
-    setProductId(producten[0]?.id ?? "");
+    setProductId(standaardProductId ?? producten[0]?.id ?? "");
     setLocatieId(hoofdmagazijn?.id ?? magazijnen[0]?.id ?? "");
     setAantal("");
     setFout(null);
-    // Alleen op `open`: `producten` en `hoofdmagazijn` komen uit de gedeelde
-    // state en krijgen bij elke achtergrondverversing een nieuwe referentie.
-    // In de dependencies zouden ze het formulier tijdens het invullen wissen.
+    // Alleen op `open` en het vooraf gekozen product: `producten` en
+    // `hoofdmagazijn` komen uit de gedeelde state en krijgen bij elke
+    // achtergrondverversing een nieuwe referentie. In de dependencies zouden
+    // ze het formulier tijdens het invullen wissen.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open]);
+  }, [open, standaardProductId]);
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();

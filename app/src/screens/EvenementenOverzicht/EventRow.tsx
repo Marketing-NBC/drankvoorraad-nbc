@@ -1,11 +1,15 @@
 import { Link } from "react-router-dom";
-import { Card } from "../../design-system";
 import { BrandBadge } from "../../components/ui/BrandBadge";
 import { StatusBadge } from "../../components/ui/StatusBadge";
 import type { Evenement, Mutatie, Product } from "../../data/types";
 import { berekenMarge } from "../../data/calculations";
-import { formatBrutomarge, formatDateKort } from "../../utils/format";
+import { formatDateKort } from "../../utils/format";
 import { ROUTES } from "../../routes/routes";
+
+/** "66%" of een streepje — de lijst heeft geen ruimte voor "nog niet beschikbaar". */
+function margeKort(waarde: number | null): string {
+  return waarde === null ? "—" : `${Math.round(waarde)}%`;
+}
 
 export function EventRow({
   evenement,
@@ -17,29 +21,27 @@ export function EventRow({
   producten: Product[];
 }) {
   const marge = berekenMarge(evenement.omzet, mutaties, producten);
+
   return (
-    <Link
-      to={ROUTES.evenementDetail(evenement.id)}
-      style={{ display: "block", textDecoration: "none", color: "inherit" }}
-    >
-      <Card hover>
-        <div className="event-row">
-          <div className="event-row__main">
-            <span className="event-row__title">{evenement.naam}</span>
-            <span className="event-row__meta">
-              <span>{formatDateKort(evenement.datum)}</span>
-              <span className="event-row__badges">
-                <BrandBadge merk={evenement.merk} />
-                <StatusBadge status={evenement.status} />
-              </span>
-            </span>
-          </div>
-          <div className="event-row__marge">
-            <span className="event-row__marge-label">brutomarge</span>
-            <span className="event-row__marge-value">{formatBrutomarge(marge.brutomarge)}</span>
-          </div>
-        </div>
-      </Card>
+    <Link className="event-rij" to={ROUTES.evenementDetail(evenement.id)}>
+      <span className="event-rij__main">
+        <span className="event-rij__titel">{evenement.naam}</span>
+        <span className="event-rij__meta">
+          {formatDateKort(evenement.datum)}
+          {/* Het merk valt op een telefoon weg: daar is de ruimte voor de
+              status, en die zegt meer over wat je nu moet doen. */}
+          <span className="verberg-mobiel"><BrandBadge merk={evenement.merk} /></span>
+          <StatusBadge status={evenement.status} />
+        </span>
+      </span>
+
+      <span className="event-rij__marge">
+        <span className="event-rij__marge-label">brutomarge</span>
+        <span className="event-rij__marge-waarde">{margeKort(marge.brutomarge)}</span>
+      </span>
+
+      {/* Geen knop in een link; dit vlak lift mee op de hele rij. */}
+      <span className="event-rij__openen" aria-hidden="true">Openen</span>
     </Link>
   );
 }

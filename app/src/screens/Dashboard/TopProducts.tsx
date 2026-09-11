@@ -11,7 +11,7 @@ export function TopProducts({ producten }: { producten: TopProduct[] }) {
       columns={[
         { header: "Product", primair: true, render: (r) => r.product.naam },
         { header: "Categorie", verbergOpMobiel: true, render: (r) => r.product.categorie },
-        { header: "Totaal verbruik", align: "right", render: (r) => formatNumber(r.totaalVerbruik) },
+        { header: "Verbruik", align: "right", render: (r) => <strong>{formatNumber(r.totaalVerbruik)}</strong> },
       ]}
     />
   );

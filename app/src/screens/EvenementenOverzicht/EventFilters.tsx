@@ -22,7 +22,7 @@ export function EventFilters({
   return (
     <div className={["filters-bar", open && "filters-bar--open"].filter(Boolean).join(" ")}>
       <div className="search">
-        <Icon name="search" size={18} className="search__icoon" />
+        <Icon name="search" size={16} className="search__icoon" />
         <input
           className="input search__veld"
           placeholder="Zoek op evenementnaam…"
@@ -36,11 +36,11 @@ export function EventFilters({
         type="button"
         className="filters-bar__schakelaar"
         aria-expanded={open}
+        aria-label="Filters tonen"
         onClick={() => setOpen(!open)}
       >
         Filters
         {actieveFilters > 0 ? <span className="filters-bar__teller">{actieveFilters}</span> : null}
-        <Icon name="chevron-down" size={16} />
       </button>
 
       <div className="filters-bar__keuzes">

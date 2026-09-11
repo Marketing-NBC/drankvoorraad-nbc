@@ -19,7 +19,7 @@ export function MargePerEvenementChart({
     .filter((d): d is { label: string; value: number } => d !== null);
 
   if (data.length === 0) {
-    return <p style={{ color: "var(--fg-secondary)" }}>Nog geen evenementen met een berekenbare brutomarge.</p>;
+    return <p className="data-table__empty">Nog geen evenementen met een berekenbare brutomarge.</p>;
   }
 
   return <BarChart data={data} />;

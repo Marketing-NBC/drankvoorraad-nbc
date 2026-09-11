@@ -2,11 +2,13 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { Navigate, useNavigate, useParams } from "react-router-dom";
 import { Badge, Button, Card, Icon } from "../../design-system";
 import { PageHeader } from "../../components/layout/PageHeader";
+import { AppIcon } from "../../components/ui/AppIcon";
 import { BarcodeScanner } from "../../components/ui/BarcodeScanner";
 import { FoutMelding } from "../../components/ui/FoutMelding";
+import { KaartKop } from "../../components/ui/KaartKop";
 import { useAppState } from "../../context/AppStateContext";
 import type { Product, Tellingregel } from "../../data/types";
-import { formatNumber } from "../../utils/format";
+import { formatCurrency, formatNumber } from "../../utils/format";
 import { ROUTES } from "../../routes/routes";
 
 interface Regel extends Tellingregel {
@@ -81,8 +83,16 @@ export function TellingDetail() {
     const afwijkend = regels.filter(
       (r) => r.geteldAantal !== null && r.geteldAantal !== referentie(r)
     ).length;
-    return { geteld, totaal: regels.length, afwijkend };
+    /* Wat de correcties samen waard zijn, tegen inkoopprijs. Een min
+       betekent dat er minder staat dan geboekt: dat kost geld. */
+    const waarde = regels.reduce((som, r) => {
+      if (r.geteldAantal === null) return som;
+      return som + (r.geteldAantal - referentie(r)) * r.product.inkoopprijs;
+    }, 0);
+    return { geteld, totaal: regels.length, afwijkend, waarde, nietGeteld: regels.length - geteld };
   }, [regels, referentie]);
+
+  const percentage = voortgang.totaal === 0 ? 0 : Math.round((voortgang.geteld / voortgang.totaal) * 100);
 
   async function bewaarAantal(regel: Regel, waarde: string) {
     const aantal = waarde.trim() === "" ? null : Number(waarde);
@@ -115,10 +125,9 @@ export function TellingDetail() {
   }
 
   async function afronden() {
-    const nietGeteld = voortgang.totaal - voortgang.geteld;
     const bevestiging =
-      nietGeteld > 0
-        ? `${nietGeteld} product(en) zijn niet geteld en blijven ongewijzigd. ${voortgang.afwijkend} correctie(s) worden geboekt. Doorgaan?`
+      voortgang.nietGeteld > 0
+        ? `${voortgang.nietGeteld} product(en) zijn niet geteld en blijven ongewijzigd. ${voortgang.afwijkend} correctie(s) worden geboekt. Doorgaan?`
         : `${voortgang.afwijkend} correctie(s) worden geboekt. Doorgaan?`;
     if (!window.confirm(bevestiging)) return;
 
@@ -153,6 +162,11 @@ export function TellingDetail() {
       <PageHeader
         eyebrow={afgerond ? "afgeronde telling" : "telling bezig"}
         title={locatie?.naam ?? "Telling"}
+        toelichting={
+          afgerond
+            ? "Deze telling is afgerond. De verschillen zijn als correctie geboekt en staan in Mutaties."
+            : "Tel door te scannen of in te typen. Bij afronden worden de verschillen automatisch als correctie geboekt."
+        }
         actions={
           afgerond ? null : (
             <>
@@ -169,80 +183,93 @@ export function TellingDetail() {
 
       {fout ? <FoutMelding melding={fout} /> : null}
 
-      <div className="telling-voortgang">
-        <span>
-          <strong>{voortgang.geteld}</strong> van {voortgang.totaal} geteld
-        </span>
-        {voortgang.afwijkend > 0 ? (
-          <Badge variant="gold">{voortgang.afwijkend} afwijking(en)</Badge>
-        ) : voortgang.geteld > 0 ? (
-          <Badge variant="success" icon="check">alles klopt</Badge>
-        ) : null}
-      </div>
+      {/* Voortgang en de scanknop staan samen bovenaan: dit is wat je op de
+          vloer nodig hebt zonder te scrollen. */}
+      <Card>
+        <div className="telling-voortgang">
+          <div className="telling-voortgang__regel">
+            <span className="telling-voortgang__tekst">
+              <strong>{voortgang.geteld}</strong> van {voortgang.totaal} geteld
+            </span>
+            <span className="telling-voortgang__balk" role="progressbar" aria-valuenow={percentage} aria-valuemin={0} aria-valuemax={100}>
+              <span className="telling-voortgang__vulling" style={{ width: `${percentage}%` }} />
+            </span>
+            {voortgang.afwijkend > 0 ? (
+              <Badge variant="gold">
+                {voortgang.afwijkend} {voortgang.afwijkend === 1 ? "afwijking" : "afwijkingen"}
+              </Badge>
+            ) : voortgang.geteld > 0 ? (
+              <Badge variant="success" icon="check">alles klopt</Badge>
+            ) : null}
+          </div>
 
-      {!afgerond ? (
-        <div className="telling-scanbalk">
-          <Button
-            variant={scannen ? "primary" : "ghost-dark"}
-            icon={null}
-            onClick={() => {
-              setFout(null);
-              setScannen(!scannen);
-            }}
-          >
-            {scannen ? "Stop met scannen" : "Scan een product"}
-          </Button>
-        </div>
-      ) : null}
-
-      {scannen ? (
-        <Card style={{ marginBottom: "var(--s-5)" }}>
-          <BarcodeScanner
-            actief={scannen}
-            onGevonden={verwerkScan}
-            onFout={(m) => {
-              setFout(m);
-              setScannen(false);
-            }}
-          />
-        </Card>
-      ) : null}
-
-      {regelsLaden ? (
-        <p className="app-laden">Telregels laden…</p>
-      ) : (
-        <div className="telling-lijst">
-          {regels.map((regel) => {
-            const basis = referentie(regel);
-            const verschil = regel.geteldAantal === null ? null : regel.geteldAantal - basis;
-            return (
-              <Card
-                key={regel.id}
-                className={[
-                  "telling-regel",
-                  gemarkeerd === regel.id && "telling-regel--gemarkeerd",
-                  regel.geteldAantal !== null && "telling-regel--geteld",
-                ].filter(Boolean).join(" ")}
+          {!afgerond ? (
+            <div className="telling-voortgang__acties">
+              <Button
+                variant={scannen ? "ghost-dark" : "primary"}
+                icon={null}
+                onClick={() => {
+                  setFout(null);
+                  setScannen(!scannen);
+                }}
               >
-                <div className="telling-regel__kop">
-                  <span className="telling-regel__naam">{regel.product.naam}</span>
-                  {regel.geteldAantal !== null ? (
-                    <Icon name="check-circle" size={20} className="telling-regel__vink" />
-                  ) : null}
-                </div>
+                {scannen ? "Stop met scannen" : "Scan een product"}
+              </Button>
+            </div>
+          ) : null}
+        </div>
+      </Card>
 
-                <div className="telling-regel__body">
-                  <span className="telling-regel__verwacht">
-                    verwacht <strong>{formatNumber(basis)}</strong> {regel.product.eenheid}
-                  </span>
+      <div className="telling-grid">
+        <Card>
+          <KaartKop titel="Telregels" sub="alfabetisch · geteld schuift niet van plek" />
+          {regelsLaden ? (
+            <p className="app-laden">Telregels laden…</p>
+          ) : (
+            <div className="telling-lijst">
+              {regels.map((regel) => {
+                const basis = referentie(regel);
+                const verschil = regel.geteldAantal === null ? null : regel.geteldAantal - basis;
+                const geteld = regel.geteldAantal !== null;
+                return (
+                  <div
+                    key={regel.id}
+                    className={[
+                      "telling-regel",
+                      geteld && (verschil === 0 ? "telling-regel--klopt" : "telling-regel--afwijkend"),
+                      gemarkeerd === regel.id && "telling-regel--gemarkeerd",
+                    ].filter(Boolean).join(" ")}
+                  >
+                    <div className="telling-regel__tekst">
+                      <span className="telling-regel__naam">
+                        {regel.product.naam}
+                        {geteld ? <Icon name="check-circle" size={16} className="telling-regel__vink" /> : null}
+                      </span>
+                      <span className="telling-regel__verwacht">
+                        verwacht <strong>{formatNumber(basis)}</strong> {regel.product.eenheid}
+                        {verschil !== null && verschil !== 0 ? (
+                          <>
+                            {" · "}
+                            <span
+                              className={["telling-regel__verschil", verschil < 0 && "telling-regel__verschil--tekort"]
+                                .filter(Boolean).join(" ")}
+                            >
+                              {verschil > 0
+                                ? `${formatNumber(verschil)} meer dan verwacht`
+                                : `${formatNumber(Math.abs(verschil))} minder dan verwacht`}
+                            </span>
+                          </>
+                        ) : null}
+                      </span>
+                    </div>
 
-                  <div className="telling-regel__invoer">
                     <label className="visueel-verborgen" htmlFor={`telling-${regel.id}`}>
                       Geteld aantal {regel.product.naam}
                     </label>
                     <input
                       id={`telling-${regel.id}`}
-                      className="input telling-regel__veld"
+                      className={["telling-regel__veld", geteld && "telling-regel__veld--gevuld"]
+                        .filter(Boolean).join(" ")}
                       type="number"
                       min={0}
                       inputMode="numeric"
@@ -256,19 +283,70 @@ export function TellingDetail() {
                       }}
                     />
                   </div>
-                </div>
+                );
+              })}
+            </div>
+          )}
+        </Card>
 
-                {verschil !== null && verschil !== 0 ? (
-                  <p className={["telling-regel__verschil", verschil < 0 && "telling-regel__verschil--tekort"]
-                    .filter(Boolean).join(" ")}>
-                    {verschil > 0 ? `${formatNumber(verschil)} meer dan verwacht` : `${formatNumber(Math.abs(verschil))} minder dan verwacht`}
-                  </p>
-                ) : null}
-              </Card>
-            );
-          })}
+        <div className="detail-grid__kolom">
+          {!afgerond ? (
+            <Card className={scannen ? undefined : "scan-kaart--leeg"}>
+              <div className="scanpaneel">
+                {scannen ? (
+                  <BarcodeScanner
+                    actief={scannen}
+                    onGevonden={verwerkScan}
+                    onFout={(m) => {
+                      setFout(m);
+                      setScannen(false);
+                    }}
+                  />
+                ) : (
+                  <button
+                    type="button"
+                    className="scanpaneel__vlak"
+                    aria-label="Scannen starten"
+                    onClick={() => {
+                      setFout(null);
+                      setScannen(true);
+                    }}
+                  >
+                    <AppIcon name="scan" size={80} />
+                  </button>
+                )}
+                <span className="scanpaneel__uitleg">
+                  Houd de barcode in beeld. Het veld van dat product krijgt meteen focus.
+                </span>
+              </div>
+            </Card>
+          ) : null}
+
+          <Card>
+            <KaartKop titel={afgerond ? "Wat er geboekt is" : "Bij afronden"} />
+            <div className="regellijst">
+              <div className="regellijst__regel">
+                <span>{afgerond ? "Geboekte correcties" : "Correcties te boeken"}</span>
+                <span>{formatNumber(voortgang.afwijkend)}</span>
+              </div>
+              <div className="regellijst__regel">
+                <span>Niet geteld — blijft ongewijzigd</span>
+                <span>{formatNumber(voortgang.nietGeteld)}</span>
+              </div>
+              <div className="regellijst__regel">
+                <span>Waarde afwijking</span>
+                <span>
+                  {voortgang.waarde < 0 ? "− " : ""}
+                  {formatCurrency(Math.abs(voortgang.waarde))}
+                </span>
+              </div>
+            </div>
+            <span className="regellijst__voet">
+              Een correctie is zelf ook een mutatie en blijft terugvindbaar in Mutaties.
+            </span>
+          </Card>
         </div>
-      )}
+      </div>
     </>
   );
 }

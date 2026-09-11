@@ -1,5 +1,7 @@
-import { Card, Stat } from "../../design-system";
+import type { ReactNode } from "react";
+import { Card } from "../../design-system";
 import { PageHeader } from "../../components/layout/PageHeader";
+import { KaartKop } from "../../components/ui/KaartKop";
 import { LageVoorraadMelding } from "../../components/ui/LageVoorraadMelding";
 import { useAppState } from "../../context/AppStateContext";
 import {
@@ -13,6 +15,33 @@ import { formatCurrency, formatNumber } from "../../utils/format";
 import { MargePerEvenementChart } from "./MargePerEvenementChart";
 import { Rapporten } from "./Rapporten";
 import { TopProducts } from "./TopProducts";
+
+function StatKaart({
+  label,
+  waarde,
+  body,
+  petrol = false,
+  alarm = false,
+}: {
+  label: string;
+  waarde: ReactNode;
+  body: string;
+  /** Eén kaart per rij mag de aandacht pakken; hier is dat de brutowinst. */
+  petrol?: boolean;
+  alarm?: boolean;
+}) {
+  return (
+    <div className={["stat-kaart", petrol && "stat-kaart--petrol"].filter(Boolean).join(" ")}>
+      <div className="stat-kaart__kop">
+        <span className="stat-kaart__label">{label}</span>
+      </div>
+      <div className={["stat-kaart__waarde", alarm && "stat-kaart__waarde--alarm"].filter(Boolean).join(" ")}>
+        {waarde}
+      </div>
+      <div className="stat-kaart__body">{body}</div>
+    </div>
+  );
+}
 
 export function Dashboard() {
   const { state, laden, mutatiesPerEvenement } = useAppState();
@@ -32,59 +61,53 @@ export function Dashboard() {
 
   return (
     <>
-      <PageHeader eyebrow="in één oogopslag" title="Dashboard" />
+      <PageHeader
+        eyebrow="in één oogopslag"
+        title="Dashboard"
+        toelichting="Wat er drinkt, wat er uitstaat en wat er bij moet — per evenement."
+      />
 
       <LageVoorraadMelding />
 
       <div className="stat-grid">
-        <Card padding="feature">
-          <Stat
-            value={formatCurrency(totaalBrutowinst)}
-            label="Totale brutowinst"
-            body="Evenementen die bezig of afgerond zijn."
-          />
-        </Card>
-        <Card padding="feature">
-          <Stat value={formatCurrency(derving)} label="Derving" body="Waarde van beschadigde producten." />
-        </Card>
-        <Card padding="feature">
-          <Stat
-            value={formatCurrency(waardeUitstaand)}
-            label="Uitstaand op evenementen"
-            body="Uitgegeven en nog niet retour geboekt."
-          />
-        </Card>
-        <Card padding="feature">
-          <Stat
-            value={formatNumber(tekorten.length)}
-            label="Onder minimum"
-            body="Producten die bijbesteld moeten worden."
-          />
-        </Card>
+        <StatKaart
+          petrol
+          label="Totale brutowinst"
+          waarde={formatCurrency(totaalBrutowinst)}
+          body="Evenementen die bezig of afgerond zijn."
+        />
+        <StatKaart
+          label="Derving"
+          waarde={formatCurrency(derving)}
+          body="Waarde van beschadigde producten."
+        />
+        <StatKaart
+          label="Uitstaand op evenementen"
+          waarde={formatCurrency(waardeUitstaand)}
+          body="Uitgegeven en nog niet retour geboekt."
+        />
+        <StatKaart
+          label="Onder minimum"
+          waarde={formatNumber(tekorten.length)}
+          alarm={tekorten.length > 0}
+          body="Producten die bijbesteld moeten worden."
+        />
       </div>
 
       <div className="dashboard-grid">
-        <div>
-          <div className="section-title">
-            <h3>Top 5 meest gebruikte producten</h3>
-          </div>
-          <Card>
-            <TopProducts producten={top5} />
-          </Card>
-        </div>
+        <Card className="card--tabel">
+          <KaartKop titel="Top 5 meest gebruikte producten" sub="werkelijk verbruik over alle evenementen" />
+          <TopProducts producten={top5} />
+        </Card>
 
-        <div>
-          <div className="section-title">
-            <h3>Brutomarge per evenement</h3>
-          </div>
-          <Card>
-            <MargePerEvenementChart
-              evenementen={state.evenementen}
-              mutatiesPerEvenement={mutatiesPerEvenement}
-              producten={state.producten}
-            />
-          </Card>
-        </div>
+        <Card>
+          <KaartKop titel="Brutomarge per evenement" sub="alleen evenementen met een ingevulde omzet" />
+          <MargePerEvenementChart
+            evenementen={state.evenementen}
+            mutatiesPerEvenement={mutatiesPerEvenement}
+            producten={state.producten}
+          />
+        </Card>
       </div>
 
       <Rapporten />

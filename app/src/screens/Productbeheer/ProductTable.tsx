@@ -29,7 +29,7 @@ export function ProductTable({
     <Table<Product>
       rowKey={(p) => p.id}
       rows={producten}
-      emptyMessage="Nog geen producten toegevoegd."
+      emptyMessage="Geen producten gevonden."
       columns={[
         { header: "Naam", primair: true, render: (p) => p.naam },
         { header: "Categorie", verbergOpMobiel: true, render: (p) => p.categorie },
@@ -38,7 +38,7 @@ export function ProductTable({
           header: "Barcode",
           verbergOpMobiel: true,
           render: (p) =>
-            p.barcode ? <code className="barcode-cel">{p.barcode}</code> : <span className="tekst-zwak">—</span>,
+            p.barcode ? <code className="barcode-cel">{p.barcode}</code> : <span className="tekst-leeg">—</span>,
         },
         {
           header: "Voorraad",
@@ -54,15 +54,15 @@ export function ProductTable({
             );
           },
         },
-        { header: "Inkoopprijs", align: "right", render: (p) => formatCurrency(p.inkoopprijs) },
-        { header: "Verkoopprijs", align: "right", verbergOpMobiel: true, render: (p) => formatCurrency(p.verkoopprijs) },
+        { header: "Inkoop", align: "right", render: (p) => formatCurrency(p.inkoopprijs) },
+        { header: "Verkoop", align: "right", verbergOpMobiel: true, render: (p) => formatCurrency(p.verkoopprijs) },
         ...(magBeheren
           ? [
               {
                 header: "",
                 align: "right" as const,
                 render: (p: Product) => (
-                  <span style={{ display: "inline-flex", gap: 16 }}>
+                  <span style={{ display: "inline-flex", gap: 14 }}>
                     <Link icon={null} onClick={() => onEdit(p)}>Wijzig</Link>
                     {magVerwijderen ? <Link icon={null} onClick={() => onDelete(p)}>Verwijder</Link> : null}
                   </span>

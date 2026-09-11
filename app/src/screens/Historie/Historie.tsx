@@ -1,13 +1,15 @@
 import { useMemo, useState } from "react";
-import { Button, Card, Icon } from "../../design-system";
+import { Badge, Button, Card, Icon } from "../../design-system";
 import { PageHeader } from "../../components/layout/PageHeader";
 import { FoutMelding } from "../../components/ui/FoutMelding";
+import { KaartKop } from "../../components/ui/KaartKop";
 import { MutatieTabel } from "../../components/ui/MutatieTabel";
 import { Select } from "../../components/ui/Select";
 import { useAppState } from "../../context/AppStateContext";
 import { mutatieLabels, mutatieTypeOpties } from "../../data/labels";
 import type { MutatieType } from "../../data/types";
 import { exporteerNaarExcel } from "../../utils/excel";
+import { formatNumber } from "../../utils/format";
 import type { Mutatie } from "../../data/types";
 
 export function Historie() {
@@ -41,6 +43,17 @@ export function Historie() {
   }, [state.mutaties, type, locatieId, zoek, productNaam, evenementNaam]);
 
   const actieveFilters = [type, locatieId].filter(Boolean).length;
+
+  /* Twee cijfers die bij het doorbladeren houvast geven: hoeveel er deze
+     week geboekt is, en hoeveel daarvan derving was. */
+  const dezeWeek = useMemo(() => {
+    const grens = Date.now() - 7 * 24 * 60 * 60 * 1000;
+    return mutaties.filter((m) => new Date(m.datumTijd).getTime() >= grens).length;
+  }, [mutaties]);
+  const afschrijvingen = useMemo(
+    () => mutaties.filter((m) => m.type === "beschadigd").length,
+    [mutaties]
+  );
 
   const [exporteert, setExporteert] = useState(false);
 
@@ -86,6 +99,7 @@ export function Historie() {
       <PageHeader
         eyebrow="volledige historie"
         title="Mutaties"
+        toelichting="Elke voorraadbeweging wordt vastgelegd met tijdstip en gebruiker. Mutaties worden nooit gewijzigd — een correctie is zelf ook weer een mutatie."
         actions={
           <Button
             variant="ghost-dark"
@@ -100,14 +114,9 @@ export function Historie() {
 
       {fout ? <FoutMelding melding={fout} onOpnieuw={() => void herlaad()} /> : null}
 
-      <p className="scherm-toelichting">
-        Elke voorraadbeweging wordt hier vastgelegd met tijdstip en gebruiker. Mutaties worden nooit
-        gewijzigd of verwijderd — een correctie is zelf ook weer een mutatie.
-      </p>
-
       <div className={["filters-bar", filtersOpen && "filters-bar--open"].filter(Boolean).join(" ")}>
         <div className="search">
-          <Icon name="search" size={18} className="search__icoon" />
+          <Icon name="search" size={16} className="search__icoon" />
           <input
             className="input search__veld"
             placeholder="Zoek op product, evenement of notitie…"
@@ -119,11 +128,11 @@ export function Historie() {
           type="button"
           className="filters-bar__schakelaar"
           aria-expanded={filtersOpen}
+          aria-label="Filters tonen"
           onClick={() => setFiltersOpen(!filtersOpen)}
         >
           Filters
           {actieveFilters > 0 ? <span className="filters-bar__teller">{actieveFilters}</span> : null}
-          <Icon name="chevron-down" size={16} />
         </button>
         <div className="filters-bar__keuzes">
           <Select
@@ -143,7 +152,21 @@ export function Historie() {
         </div>
       </div>
 
-      <Card>
+      <Card className="card--tabel">
+        <KaartKop
+          titel={`${formatNumber(mutaties.length)} ${mutaties.length === 1 ? "mutatie" : "mutaties"}`}
+          sub="nieuwste eerst"
+          rechts={
+            <>
+              {dezeWeek > 0 ? <Badge variant="neutral">deze week {dezeWeek}</Badge> : null}
+              {afschrijvingen > 0 ? (
+                <Badge variant="gold">
+                  {afschrijvingen} {afschrijvingen === 1 ? "afschrijving" : "afschrijvingen"}
+                </Badge>
+              ) : null}
+            </>
+          }
+        />
         <MutatieTabel
           mutaties={mutaties}
           producten={state.producten}

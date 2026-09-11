@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Badge, Card } from "../../design-system";
 import { PageHeader } from "../../components/layout/PageHeader";
 import { FoutMelding } from "../../components/ui/FoutMelding";
+import { KaartKop } from "../../components/ui/KaartKop";
 import { Select } from "../../components/ui/Select";
 import { Table } from "../../components/ui/Table";
 import { useAppState } from "../../context/AppStateContext";
@@ -38,17 +39,20 @@ export function Gebruikers() {
 
   return (
     <>
-      <PageHeader eyebrow="toegang" title="Gebruikers" />
+      <PageHeader
+        eyebrow="toegang"
+        title="Gebruikers"
+        toelichting="Nieuwe accounts maak je aan in Supabase onder Authentication → Users. Ze krijgen automatisch de rol evenementmanager; hier zet je ze daarna op de juiste rol."
+      />
 
       {fout ? <FoutMelding melding={fout} onOpnieuw={() => void herlaad()} /> : null}
       {actieFout ? <FoutMelding melding={actieFout} /> : null}
 
-      <p className="scherm-toelichting">
-        Nieuwe accounts maak je aan in Supabase onder Authentication → Users. Ze krijgen automatisch
-        de rol evenementmanager; hier zet je ze daarna op de juiste rol.
-      </p>
-
-      <Card>
+      <Card className="card--tabel">
+        <KaartKop
+          titel={`${state.profielen.length} ${state.profielen.length === 1 ? "gebruiker" : "gebruikers"}`}
+          sub="rol bepaalt wat iemand ziet en mag boeken"
+        />
         <Table<Profiel>
           rowKey={(g) => g.id}
           rows={state.profielen}
@@ -82,7 +86,6 @@ export function Gebruikers() {
             },
             {
               header: "Mag",
-              verbergOpMobiel: true,
               render: (g) => <span className="tekst-zwak">{rolToelichting[g.rol]}</span>,
             },
           ]}

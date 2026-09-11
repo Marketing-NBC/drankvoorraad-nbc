@@ -31,6 +31,13 @@ voorraadstand op rust:
 | **Hosting** | GitHub Pages, workflows in `.github/workflows/` |
 | **Huisstijl** | NBC design system in `app/src/design-system/` |
 
+De map `design-system/` is een schone kopie van het NBC design system: daar
+horen geen app-specifieke toevoegingen in. De vormgeving van deze app —
+eigen tokens (creme pagina, petrol- en goudvlakken, statuskleuren, radii,
+de UI-typeschaal) én de herstyling van de basisklassen `.btn`, `.card`,
+`.badge` en `.input` — staat in `app/src/app.css`. Dat bestand wordt ná
+`design-system/styles.css` geladen, dus die regels winnen.
+
 Er is geen backend van onszelf: de browser praat rechtstreeks met Supabase,
 afgeschermd door RLS-policies. Serverlogica zit in Postgres, aangeroepen via
 RPC's: `start_telling`, `rond_telling_af`, `annuleer_telling`, `maak_pakbon`,
@@ -44,6 +51,18 @@ of `pakbonnen` een stille herlaad doet.
 Inloggen gaat uitsluitend met e-mail en wachtwoord (`signInWithPassword`). Er is
 geen magic link, geen OAuth en geen wachtwoordherstel — dus ook geen
 redirect-URL's die in Supabase geconfigureerd moeten staan.
+
+## De schermen zonder Supabase bekijken
+
+`npm run preview:ui` draait de échte schermen met verzonnen gegevens. De twee
+contextmodules worden door `vite.preview.config.ts` vervangen door de stubs in
+`app/preview/`; verder is het dezelfde code. Handig om vormgeving te
+beoordelen zonder op productiedata te werken, en het enige dat er nu voor in
+de plaats is zolang er geen test-Supabase naast productie staat.
+
+Voeg een pad toe met `?pad=`, bijvoorbeeld
+`http://localhost:5173/?pad=/magazijn`. De map `app/preview/` hoort niet in de
+publicatiebuild: die gebruikt `vite.config.ts`.
 
 ## Publiceren
 
@@ -83,9 +102,8 @@ kapot — het zijn keuzes die passen bij een PoC en knellen zodra het menens wor
   `fase9-terugdraaien.sql`. Er is geen manier om vast te stellen wat er
   daadwerkelijk op productie staat, en geen manier om iets terug te draaien. Dit
   is het eerste dat je ter discussie stelt zodra V2 het datamodel raakt.
-- **Zware schermen.** Ongeveer de helft van de code zit in `app/src/screens/`
-  (3.400 regels over 10 schermen). Logica en weergave lopen door elkaar, wat
-  testen en wijzigen duur maakt.
+- **Zware schermen.** Ongeveer de helft van de code zit in `app/src/screens/`.
+  Logica en weergave lopen door elkaar, wat testen en wijzigen duur maakt.
 - **Eén omgeving.** Er is geen test-Supabase naast productie, dus experimenteren
   gebeurt op echte data.
 

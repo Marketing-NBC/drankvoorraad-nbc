@@ -1,12 +1,15 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Button, Card } from "../../design-system";
 import { PageHeader } from "../../components/layout/PageHeader";
 import { FoutMelding } from "../../components/ui/FoutMelding";
+import { KaartKop } from "../../components/ui/KaartKop";
 import { useAppState } from "../../context/AppStateContext";
 import { useAuth } from "../../context/AuthContext";
 import type { Product } from "../../data/types";
 import { exporteerNaarExcel } from "../../utils/excel";
+import { formatCurrency } from "../../utils/format";
 import { ActieMenu } from "../../components/ui/ActieMenu";
+import { ProductFilters, type ProductFiltersValue } from "./ProductFilters";
 import { ProductForm } from "./ProductForm";
 import { ProductTable } from "./ProductTable";
 
@@ -16,20 +19,42 @@ export function Productbeheer() {
   const [editing, setEditing] = useState<Product | null>(null);
   const [formOpen, setFormOpen] = useState(false);
   const [actieFout, setActieFout] = useState<string | null>(null);
+  const [filters, setFilters] = useState<ProductFiltersValue>({ zoek: "", categorie: "", leverancier: "" });
 
   const magBeheren = mag("beheerder", "magazijnmedewerker");
   const magVerwijderen = mag("beheerder");
 
+  const voorraadPerProduct = useMemo(() => {
+    const per = new Map<string, number>();
+    for (const v of state.voorraad) per.set(v.productId, (per.get(v.productId) ?? 0) + v.aantal);
+    return per;
+  }, [state.voorraad]);
+
+  const zichtbaar = useMemo(() => {
+    const zoek = filters.zoek.trim().toLowerCase();
+    return state.producten
+      .filter((p) => (filters.categorie ? p.categorie === filters.categorie : true))
+      .filter((p) => (filters.leverancier ? p.leverancier === filters.leverancier : true))
+      .filter((p) =>
+        zoek
+          ? p.naam.toLowerCase().includes(zoek) ||
+            p.categorie.toLowerCase().includes(zoek) ||
+            (p.barcode ?? "").includes(zoek)
+          : true
+      );
+  }, [state.producten, filters]);
+
+  const totaleWaarde = zichtbaar.reduce(
+    (som, p) => som + (voorraadPerProduct.get(p.id) ?? 0) * p.inkoopprijs,
+    0
+  );
+
   async function handleExport() {
-    const voorraadPerProduct = new Map<string, number>();
-    for (const v of state.voorraad) {
-      voorraadPerProduct.set(v.productId, (voorraadPerProduct.get(v.productId) ?? 0) + v.aantal);
-    }
     await exporteerNaarExcel<Product>({
       bestandsnaam: `productenlijst-${new Date().toISOString().slice(0, 10)}`,
       titel: "Productenlijst",
-      ondertitel: `${state.producten.length} producten · voorraad over alle locaties`,
-      rijen: state.producten,
+      ondertitel: `${zichtbaar.length} producten · voorraad over alle locaties`,
+      rijen: zichtbaar,
       kolommen: [
         { header: "Naam", value: (p) => p.naam },
         { header: "Categorie", value: (p) => p.categorie },
@@ -45,10 +70,7 @@ export function Productbeheer() {
           value: (p) => (voorraadPerProduct.get(p.id) ?? 0) * p.inkoopprijs,
         },
       ],
-      totalen: {
-        0: "Totale voorraadwaarde",
-        8: state.producten.reduce((som, p) => som + (voorraadPerProduct.get(p.id) ?? 0) * p.inkoopprijs, 0),
-      },
+      totalen: { 0: "Totale voorraadwaarde", 8: totaleWaarde },
     });
   }
 
@@ -70,6 +92,7 @@ export function Productbeheer() {
       <PageHeader
         eyebrow="drankvoorraad"
         title="Producten"
+        toelichting="Barcode, eenheid en prijzen bepalen wat er bij tellen en marge gebeurt. Producten met boekingen kun je niet verwijderen."
         actions={
           <>
             {magBeheren ? (
@@ -92,15 +115,26 @@ export function Productbeheer() {
         }
       />
 
+      <ProductFilters value={filters} onChange={setFilters} producten={state.producten} />
+
       {fout ? <FoutMelding melding={fout} onOpnieuw={() => void herlaad()} /> : null}
       {actieFout ? <FoutMelding melding={actieFout} /> : null}
 
       {laden ? (
         <p className="app-laden">Bezig met laden…</p>
       ) : (
-        <Card>
+        <Card className="card--tabel">
+          <KaartKop
+            titel={`${zichtbaar.length} ${zichtbaar.length === 1 ? "product" : "producten"}`}
+            sub="voorraad over alle locaties"
+            rechts={
+              <span className="kaart-kop__sub">
+                totale voorraadwaarde <strong>{formatCurrency(totaleWaarde)}</strong>
+              </span>
+            }
+          />
           <ProductTable
-            producten={state.producten}
+            producten={zichtbaar}
             voorraad={state.voorraad}
             magBeheren={magBeheren}
             magVerwijderen={magVerwijderen}

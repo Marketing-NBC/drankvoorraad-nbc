@@ -59,11 +59,16 @@ export function VoorraadTabel({
   producten,
   voorraad,
   magBeheren,
+  onInboeken,
+  onVerplaatsen,
 }: {
   locatieId: string;
   producten: Product[];
   voorraad: Voorraad[];
   magBeheren: boolean;
+  /** Snelknop per rij; weglaten verbergt de kolom. */
+  onInboeken?: (product: Product) => void;
+  onVerplaatsen?: (product: Product) => void;
 }) {
   const perProduct = new Map(voorraad.filter((v) => v.locatieId === locatieId).map((v) => [v.productId, v]));
 
@@ -72,11 +77,15 @@ export function VoorraadTabel({
     return { product, aantal: v?.aantal ?? 0, minVoorraad: v?.minVoorraad ?? 0 };
   });
 
+  const totaal = regels.reduce((som, r) => som + r.aantal, 0);
+  const snelBoeken = magBeheren && onInboeken && onVerplaatsen;
+
   return (
     <Table<VoorraadRegel>
       rowKey={(r) => r.product.id}
       rows={regels}
       emptyMessage="Nog geen producten."
+      totaal={["Totaal", null, formatNumber(totaal), null, ...(snelBoeken ? [null] : [])]}
       columns={[
         { header: "Product", primair: true, render: (r) => r.product.naam },
         { header: "Eenheid", verbergOpMobiel: true, render: (r) => r.product.eenheid },
@@ -104,6 +113,34 @@ export function VoorraadTabel({
             />
           ),
         },
+        ...(snelBoeken
+          ? [
+              {
+                header: "Snel boeken",
+                align: "right" as const,
+                render: (r: VoorraadRegel) => (
+                  <span className="snelknoppen">
+                    <button
+                      type="button"
+                      className="snelknop snelknop--primair"
+                      title={`${r.product.naam} inboeken`}
+                      onClick={() => onInboeken(r.product)}
+                    >
+                      + in
+                    </button>
+                    <button
+                      type="button"
+                      className="snelknop snelknop--zacht"
+                      title={`${r.product.naam} verplaatsen`}
+                      onClick={() => onVerplaatsen(r.product)}
+                    >
+                      verpl.
+                    </button>
+                  </span>
+                ),
+              },
+            ]
+          : []),
       ]}
     />
   );

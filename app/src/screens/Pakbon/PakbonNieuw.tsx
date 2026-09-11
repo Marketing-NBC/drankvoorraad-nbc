@@ -3,6 +3,7 @@ import { Navigate, useNavigate, useParams } from "react-router-dom";
 import { Badge, Button, Card, IconButton, Input } from "../../design-system";
 import { PageHeader } from "../../components/layout/PageHeader";
 import { FoutMelding } from "../../components/ui/FoutMelding";
+import { KaartKop } from "../../components/ui/KaartKop";
 import { Handtekening, type HandtekeningHandle } from "../../components/ui/Handtekening";
 import { ProductKiezer } from "../../components/ui/ProductKiezer";
 import { Select } from "../../components/ui/Select";
@@ -119,16 +120,13 @@ export function PakbonNieuw() {
       <PageHeader
         eyebrow={`${evenement.id} · ${formatDate(evenement.datum)}`}
         title={`Pakbon voor ${evenement.naam}`}
+        toelichting="Zet de producten op de pakbon die daadwerkelijk meegaan, laat de ontvanger tekenen en leg de pakbon vast. De voorraad wordt dan in één keer afgeboekt van de gekozen locatie."
       />
 
       {fout ? <FoutMelding melding={fout} /> : null}
 
-      <p className="scherm-toelichting">
-        Zet de producten op de pakbon die daadwerkelijk meegaan, laat de ontvanger tekenen en leg de
-        pakbon vast. De voorraad wordt dan in één keer afgeboekt van de gekozen locatie.
-      </p>
-
-      <Card style={{ marginBottom: "var(--s-6)" }}>
+      <Card>
+        <KaartKop titel="Wat gaat er mee" sub="scan of kies een product en zet het aantal erbij" />
         <div className="field-group">
           <label className="field-group__label" htmlFor="pakbon-locatie">Uitgifte vanaf</label>
           <Select
@@ -175,10 +173,11 @@ export function PakbonNieuw() {
         </div>
       </Card>
 
-      <div className="section-title">
-        <h3>Op deze pakbon</h3>
-      </div>
-      <Card style={{ marginBottom: "var(--s-6)" }}>
+      <Card>
+        <KaartKop
+          titel="Op deze pakbon"
+          sub={`${regels.length} ${regels.length === 1 ? "regel" : "regels"}`}
+        />
         {regels.length === 0 ? (
           <p className="data-table__empty">Nog geen producten toegevoegd.</p>
         ) : (
@@ -218,8 +217,10 @@ export function PakbonNieuw() {
       ) : null}
 
       <Card>
+        <KaartKop titel="Ontvangen door" />
+        <div className="pakbon-teken">
         <div className="field-group">
-          <label className="field-group__label" htmlFor="pakbon-ontvanger">Ontvangen door</label>
+          <label className="visueel-verborgen" htmlFor="pakbon-ontvanger">Naam van de ontvanger</label>
           <Input
             id="pakbon-ontvanger"
             placeholder="Naam van de ontvanger"
@@ -228,6 +229,10 @@ export function PakbonNieuw() {
           />
         </div>
         <Handtekening ref={handtekeningRef} />
+        <p className="pakbon-teken__voet">
+          Na tekenen is de pakbon definitief en direct als PDF te delen.
+        </p>
+        </div>
         <div className="modal-actions">
           <Button
             variant="ghost-dark"
