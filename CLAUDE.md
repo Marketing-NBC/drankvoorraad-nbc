@@ -27,6 +27,12 @@ voorraadstand op rust:
 - **De kantine en de kroeg zijn voor personeel.** Wat daar opgaat telt nooit
   mee bij een evenement. Een trigger weigert elke boeking die die twee mengt;
   zie `supabase/migraties/011_personeelslocaties.sql`.
+- **In de kantine en de kroeg meet de telling het verbruik.** Een tekort wordt
+  daar geboekt als `personeelsverbruik` en niet als `correctie` — niemand houdt
+  achter de bar bij wie wat pakt. Een overschot blijft wél een correctie: meer
+  vinden dan verwacht is een telfout of een niet-geboekte aanvulling. Zo blijft
+  het telverschillenrapport gaan over voorraad die zoek is. Zie
+  `supabase/migraties/018_personeelsverbruik_uit_telling.sql`.
 - **Koffie en water hebben geen voorraad.** Franke en Aquablu leveren verbruik,
   geen kratten. Een meting is daarom géén mutatie: `mutaties` blijft over
   voorraadbewegingen gaan. Het verbruik telt wel mee in de marge.
@@ -144,7 +150,7 @@ afmaken ervan. Deze paragraaf mag weg zodra dat plan er ligt.
 Vier dingen die bij "van PoC naar af" waarschijnlijk terugkomen. Geen van deze is
 kapot — het zijn keuzes die passen bij een PoC en knellen zodra het menens wordt:
 
-- **Testdekking.** 70 tests over rekenlogica (`app/src/data/`), de wachtrij
+- **Testdekking.** 74 tests over rekenlogica (`app/src/data/`), de wachtrij
   (`app/src/lib/`) en de Excel-export (`app/src/utils/`). Geen enkel scherm of
   gebruikersstroom is getest, terwijl daar de meeste code zit.
 - **Databasemigraties.** Half opgelost: nieuwe wijzigingen staan genummerd in

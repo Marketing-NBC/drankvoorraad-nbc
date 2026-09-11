@@ -159,12 +159,12 @@ const metingen: Meting[] = [
 const dagenGeleden = (n: number) => new Date(Date.now() - n * 86400000).toISOString();
 mutaties.push(
   mut({ productId: "p4", aantal: 96, type: "magazijn-naar-magazijn", vanLocatieId: "l0", naarLocatieId: "l5", gebruikerId: "u2", datumTijd: dagenGeleden(9) }),
-  mut({ productId: "p4", aantal: 48, type: "personeelsverbruik", vanLocatieId: "l5", gebruikerId: "u2", notitie: "week 36", datumTijd: dagenGeleden(4) }),
+  mut({ productId: "p4", aantal: 48, type: "personeelsverbruik", vanLocatieId: "l5", gebruikerId: "u2", notitie: "Uit telling", datumTijd: dagenGeleden(4) }),
   mut({ productId: "p3", aantal: 36, type: "magazijn-naar-magazijn", vanLocatieId: "l0", naarLocatieId: "l5", gebruikerId: "u4", datumTijd: dagenGeleden(9) }),
-  mut({ productId: "p3", aantal: 12, type: "personeelsverbruik", vanLocatieId: "l5", gebruikerId: "u4", notitie: "week 36", datumTijd: dagenGeleden(4) }),
+  mut({ productId: "p3", aantal: 12, type: "personeelsverbruik", vanLocatieId: "l5", gebruikerId: "u4", notitie: "Uit telling", datumTijd: dagenGeleden(4) }),
   mut({ productId: "p2", aantal: 72, type: "magazijn-naar-magazijn", vanLocatieId: "l0", naarLocatieId: "l6", gebruikerId: "u2", datumTijd: dagenGeleden(11) }),
-  mut({ productId: "p2", aantal: 24, type: "personeelsverbruik", vanLocatieId: "l6", gebruikerId: "u3", notitie: "vrijdagmiddag", datumTijd: dagenGeleden(3) }),
-  mut({ productId: "p6", aantal: 6, type: "personeelsverbruik", vanLocatieId: "l6", gebruikerId: "u3", notitie: "vrijdagmiddag", datumTijd: dagenGeleden(3) })
+  mut({ productId: "p2", aantal: 24, type: "personeelsverbruik", vanLocatieId: "l6", gebruikerId: "u3", notitie: "Uit telling", datumTijd: dagenGeleden(3) }),
+  mut({ productId: "p6", aantal: 6, type: "personeelsverbruik", vanLocatieId: "l6", gebruikerId: "u3", notitie: "Uit telling", datumTijd: dagenGeleden(3) })
 );
 
 const leveringen: Levering[] = [
@@ -187,6 +187,10 @@ const pakbonnen: PakbonSamenvatting[] = [
 const tellingen: Telling[] = [
   { id: "t1", locatieId: "l1", status: "open", gebruikerId: "u2", aangemaaktOp: "2026-05-14T07:30:00Z" },
   { id: "t2", locatieId: "l0", status: "afgerond", gebruikerId: "u1", aangemaaktOp: "2026-05-01T08:00:00Z", afgerondOp: "2026-05-01T09:15:00Z" },
+  /* De kantine en de kroeg worden geteld: dáár komt het personeelsverbruik
+     vandaan. */
+  { id: "t3", locatieId: "l5", status: "afgerond", gebruikerId: "u2", aangemaaktOp: dagenGeleden(4), afgerondOp: dagenGeleden(4) },
+  { id: "t4", locatieId: "l6", status: "afgerond", gebruikerId: "u3", aangemaaktOp: dagenGeleden(3), afgerondOp: dagenGeleden(3) },
 ];
 
 const tellingregels: Record<string, Tellingregel[]> = {

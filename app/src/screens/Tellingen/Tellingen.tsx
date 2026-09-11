@@ -55,7 +55,7 @@ export function Tellingen() {
       <PageHeader
         eyebrow="inventarisatie"
         title="Tellingen"
-        toelichting="Tel een locatie door de producten te scannen of de aantallen in te typen. Bij het afronden worden de verschillen automatisch als correctie geboekt, zodat de voorraad klopt met wat er werkelijk staat."
+        toelichting="Tel een locatie door de producten te scannen of de aantallen in te typen. Bij het afronden worden de verschillen automatisch geboekt, zodat de voorraad klopt met wat er werkelijk staat. In de kantine en de kroeg is een tekort geen verschil maar personeelsverbruik — daar is de telling dus de meting."
         actions={
           magTellen ? (
             <Button
@@ -118,13 +118,22 @@ export function Tellingen() {
             Kies de locatie die je gaat tellen. De app maakt een lijst met alle producten en de
             verwachte aantallen.
           </p>
+          {state.locaties.find((l) => l.id === (locatieId || state.locaties[0]?.id))?.voorPersoneel ? (
+            <p className="melding-waarschuwing">
+              Dit is een locatie voor personeel. Wat er minder staat dan verwacht wordt geboekt als
+              personeelsverbruik, niet als telverschil.
+            </p>
+          ) : null}
           <div className="field-group">
             <span className="field-group__label">Locatie</span>
             <Select
               aria-label="Locatie"
               value={locatieId}
               onChange={(e) => setLocatieId(e.target.value)}
-              options={state.locaties.map((l) => ({ value: l.id, label: l.naam }))}
+              options={state.locaties.map((l) => ({
+                value: l.id,
+                label: l.voorPersoneel ? `${l.naam} (personeel)` : l.naam,
+              }))}
             />
           </div>
           {startFout ? <p className="form-error">{startFout}</p> : null}

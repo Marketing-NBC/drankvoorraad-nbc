@@ -42,6 +42,7 @@ trigger en de functie zijn weg. De migraties hieronder gaan daarvan uit.
 | `015_leveringen.sql` | Leveringen aannemen: wat er op de bon staat, wat er werkelijk kwam, en het verschil dat openstaat. |
 | `016_wachtrij.sql` | Het kenmerk waarmee een boeking uit de wachtrij niet twee keer kan landen. |
 | `017_gebruikersbeheer.sql` | E-mailadres bij het profiel (alleen voor een beheerder), en wie er toegang heeft. |
+| `018_personeelsverbruik_uit_telling.sql` | Een tekort in de kantine of de kroeg is personeelsverbruik, geen telverschil. |
 
 ## Waarom `010` en niet `1`
 

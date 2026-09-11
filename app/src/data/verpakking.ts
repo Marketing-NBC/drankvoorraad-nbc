@@ -73,7 +73,7 @@ function meervoudVan(naam: string, aantal: number): string {
  * dan staat die er expliciet bij in plaats van dat hij wegvalt.
  */
 export function omschrijfAantal(product: Product, stuks: number): string {
-  if (!heeftVerpakking(product)) return String(stuks);
+  if (!heeftVerpakking(product) || stuks === 0) return String(stuks);
 
   const heel = Math.floor(stuks / product.stuksPerVerpakking);
   const rest = stuks - heel * product.stuksPerVerpakking;

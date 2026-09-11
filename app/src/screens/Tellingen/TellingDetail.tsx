@@ -134,16 +134,23 @@ export function TellingDetail() {
   }
 
   async function afronden() {
+    const wat = locatie?.voorPersoneel ? "boeking(en)" : "correctie(s)";
     const bevestiging =
       voortgang.nietGeteld > 0
-        ? `${voortgang.nietGeteld} product(en) zijn niet geteld en blijven ongewijzigd. ${voortgang.afwijkend} correctie(s) worden geboekt. Doorgaan?`
-        : `${voortgang.afwijkend} correctie(s) worden geboekt. Doorgaan?`;
+        ? `${voortgang.nietGeteld} product(en) zijn niet geteld en blijven ongewijzigd. ${voortgang.afwijkend} ${wat} worden geboekt. Doorgaan?`
+        : `${voortgang.afwijkend} ${wat} worden geboekt. Doorgaan?`;
     if (!window.confirm(bevestiging)) return;
 
     setBezig(true);
     try {
       const aantal = await rondTellingAf(id!);
-      navigate(ROUTES.tellingen, { state: { melding: `Telling afgerond met ${aantal} correctie(s).` } });
+      navigate(ROUTES.tellingen, {
+        state: {
+          melding: locatie?.voorPersoneel
+            ? `Telling afgerond. ${aantal} product(en) geboekt als personeelsverbruik.`
+            : `Telling afgerond met ${aantal} correctie(s).`,
+        },
+      });
     } catch {
       setFout("De telling kon niet afgerond worden. Probeer het opnieuw.");
       setBezig(false);
@@ -172,9 +179,13 @@ export function TellingDetail() {
         eyebrow={afgerond ? "afgeronde telling" : "telling bezig"}
         title={locatie?.naam ?? "Telling"}
         toelichting={
-          afgerond
-            ? "Deze telling is afgerond. De verschillen zijn als correctie geboekt en staan in Mutaties."
-            : "Tel door te scannen of in te typen. Bij afronden worden de verschillen automatisch als correctie geboekt."
+          locatie?.voorPersoneel
+            ? afgerond
+              ? "Deze telling is afgerond. Wat er minder stond dan verwacht is geboekt als personeelsverbruik en staat bij Personeel."
+              : "Tel door te scannen of in te typen. Wat er minder staat dan verwacht wordt bij afronden geboekt als personeelsverbruik — dit is de meting."
+            : afgerond
+              ? "Deze telling is afgerond. De verschillen zijn als correctie geboekt en staan in Mutaties."
+              : "Tel door te scannen of in te typen. Bij afronden worden de verschillen automatisch als correctie geboekt."
         }
         actions={
           afgerond ? null : (

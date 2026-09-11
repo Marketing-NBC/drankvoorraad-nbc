@@ -1,4 +1,13 @@
-import type { Evenement, Locatie, Machine, Meting, Mutatie, Product, Voorraad } from "./types";
+import type {
+  Evenement,
+  Locatie,
+  Machine,
+  Meting,
+  Mutatie,
+  Product,
+  Telling,
+  Voorraad,
+} from "./types";
 import { PERSONEELSVERBRUIK, RETOUR_TYPES, UITGIFTE_TYPES } from "./types";
 
 function isUitgifte(m: Mutatie): boolean {
@@ -182,6 +191,19 @@ export interface PersoneelProductRegel {
   productId: string;
   aantal: number;
   waarde: number;
+}
+
+/**
+ * De laatste afgeronde telling van een locatie.
+ *
+ * In de kantine en de kroeg is dat het moment waarop het verbruik gemeten is:
+ * wat er sindsdien bijgevuld is, staat er nog of is al op zonder dat iemand
+ * het weet. Vandaar dat die datum op het scherm hoort.
+ */
+export function laatsteTelling(tellingen: Telling[], locatieId: string): Telling | undefined {
+  return tellingen
+    .filter((t) => t.locatieId === locatieId && t.status === "afgerond" && t.afgerondOp)
+    .sort((a, b) => (a.afgerondOp! < b.afgerondOp! ? 1 : -1))[0];
 }
 
 export interface PersoneelsverbruikPerLocatie {

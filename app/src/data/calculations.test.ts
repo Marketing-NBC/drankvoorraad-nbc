@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   berekenMarge,
+  laatsteTelling,
   kostprijsMetingen,
   personeelsverbruik,
   verbruikUitMetingen,
@@ -16,7 +17,7 @@ import {
   voorraadverschillen,
   werkelijkVerbruik,
 } from "./calculations";
-import type { Evenement, Locatie, Machine, Meting, Mutatie, Product, Voorraad } from "./types";
+import type { Evenement, Locatie, Machine, Meting, Mutatie, Product, Telling, Voorraad } from "./types";
 
 /** Kale productvelden, zodat een fixture alleen hoeft te zeggen wat afwijkt. */
 function product(velden: Partial<Product> & Pick<Product, "id" | "naam">): Product {
@@ -400,5 +401,27 @@ describe("personeelsverbruik", () => {
     const [regel] = personeelsverbruik([], producten, [magazijn, kantine]);
     expect(regel.locatie.naam).toBe("Kantine");
     expect(regel.waardeVerbruik).toBe(0);
+  });
+});
+
+
+describe("laatsteTelling", () => {
+  const tellingen: Telling[] = [
+    { id: "t1", locatieId: "l9", status: "afgerond", gebruikerId: "u1", aangemaaktOp: "2026-09-01T08:00:00Z", afgerondOp: "2026-09-01T09:00:00Z" },
+    { id: "t2", locatieId: "l9", status: "afgerond", gebruikerId: "u1", aangemaaktOp: "2026-09-08T08:00:00Z", afgerondOp: "2026-09-08T09:00:00Z" },
+    { id: "t3", locatieId: "l9", status: "open", gebruikerId: "u1", aangemaaktOp: "2026-09-11T08:00:00Z" },
+    { id: "t4", locatieId: "l0", status: "afgerond", gebruikerId: "u1", aangemaaktOp: "2026-09-10T08:00:00Z", afgerondOp: "2026-09-10T09:00:00Z" },
+  ];
+
+  it("geeft de meest recente afgeronde telling van die locatie", () => {
+    expect(laatsteTelling(tellingen, "l9")?.id).toBe("t2");
+  });
+
+  it("telt een lopende telling niet mee — daar is nog niets mee geboekt", () => {
+    expect(laatsteTelling(tellingen.filter((t) => t.id !== "t1" && t.id !== "t2"), "l9")).toBeUndefined();
+  });
+
+  it("geeft niets terug voor een locatie die nooit geteld is", () => {
+    expect(laatsteTelling(tellingen, "l-onbekend")).toBeUndefined();
   });
 });

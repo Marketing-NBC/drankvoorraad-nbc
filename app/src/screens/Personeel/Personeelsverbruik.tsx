@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { Badge, Button, Card, Input } from "../../design-system";
 import { PageHeader } from "../../components/layout/PageHeader";
 import { ActieMenu } from "../../components/ui/ActieMenu";
@@ -8,10 +9,16 @@ import { KaartKop } from "../../components/ui/KaartKop";
 import { Table } from "../../components/ui/Table";
 import { useAppState } from "../../context/AppStateContext";
 import { useAuth } from "../../context/AuthContext";
-import { personeelsverbruik, type PersoneelsverbruikPerLocatie } from "../../data/calculations";
+import {
+  laatsteTelling,
+  personeelsverbruik,
+  type PersoneelsverbruikPerLocatie,
+} from "../../data/calculations";
 import { omschrijfAantal } from "../../data/verpakking";
 import { exporteerNaarExcel } from "../../utils/excel";
+import { foutBericht } from "../../utils/fouten";
 import { formatCurrency, formatDate } from "../../utils/format";
+import { ROUTES } from "../../routes/routes";
 import { VoorraadMutatieModal } from "../Magazijn/VoorraadMutatieModal";
 
 /** Eerste dag van de maand waarin `datum` valt, als ISO-datum. */
@@ -39,14 +46,37 @@ interface Regel {
  * aan een evenement koppelt wordt geweigerd.
  */
 export function Personeelsverbruik() {
-  const { state, laden, fout, herlaad } = useAppState();
+  const { state, laden, fout, herlaad, startTelling } = useAppState();
   const { mag } = useAuth();
+  const navigate = useNavigate();
   const [vanaf, setVanaf] = useState(() => eersteVanDeMaand(new Date()));
   const [tot, setTot] = useState(() => new Date().toISOString().slice(0, 10));
   const [boeken, setBoeken] = useState<string | null>(null);
   const [exporteert, setExporteert] = useState(false);
+  const [actieFout, setActieFout] = useState<string | null>(null);
 
   const magBoeken = mag("beheerder", "magazijnmedewerker");
+
+  /**
+   * Tellen is hier de manier waarop het verbruik binnenkomt: er ging 96 in,
+   * er staat nog 36, dus er is 60 doorheen. Een tekort op een
+   * personeelslocatie boekt de database daarom als personeelsverbruik en
+   * niet als telverschil — zie migratie 018.
+   */
+  async function tellen(locatieId: string) {
+    setActieFout(null);
+    const lopend = state.tellingen.find((t) => t.locatieId === locatieId && t.status === "open");
+    if (lopend) {
+      navigate(ROUTES.tellingDetail(lopend.id));
+      return;
+    }
+    try {
+      const id = await startTelling(locatieId);
+      navigate(ROUTES.tellingDetail(id));
+    } catch (err) {
+      setActieFout(foutBericht(err) || "De telling kon niet gestart worden.");
+    }
+  }
 
   const samenvattingen = useMemo(
     () => personeelsverbruik(state.mutaties, state.producten, state.locaties, { vanaf, tot }),
@@ -123,23 +153,38 @@ export function Personeelsverbruik() {
       <PageHeader
         eyebrow="intern"
         title="Personeelsverbruik"
-        toelichting="De kantine en de kroeg zijn voor het personeel. Wat daar opgaat telt nooit mee bij een evenement — de database weigert die koppeling zelfs. Hier zie je wat er naartoe gebracht is en wat er daadwerkelijk doorheen ging."
+        toelichting="De kantine en de kroeg zijn voor het personeel. Wat daar opgaat telt nooit mee bij een evenement — de database weigert die koppeling zelfs. Het verbruik komt uit de telling: wat erin ging min wat er nog staat."
         actions={
           <>
             {magBoeken && samenvattingen.length > 0 ? (
-              <Button icon="plus" iconPosition="leading" onClick={() => setBoeken(samenvattingen[0].locatie.id)}>
-                Verbruik boeken
+              <Button
+                icon="plus"
+                iconPosition="leading"
+                onClick={() => void tellen(samenvattingen[0].locatie.id)}
+              >
+                {samenvattingen[0].locatie.naam} tellen
               </Button>
             ) : null}
             <ActieMenu
               label="Meer"
-              items={[{ label: exporteert ? "Bezig…" : "Exporteren naar Excel", onClick: () => void exporteer() }]}
+              items={[
+                ...(magBoeken && samenvattingen.length > 0
+                  ? [
+                      {
+                        label: "Handmatig afboeken",
+                        onClick: () => setBoeken(samenvattingen[0].locatie.id),
+                      },
+                    ]
+                  : []),
+                { label: exporteert ? "Bezig…" : "Exporteren naar Excel", onClick: () => void exporteer() },
+              ]}
             />
           </>
         }
       />
 
       {fout ? <FoutMelding melding={fout} onOpnieuw={() => void herlaad()} /> : null}
+      {actieFout ? <FoutMelding melding={actieFout} /> : null}
 
       <Card>
         <div className="periode-kiezer">
@@ -172,11 +217,16 @@ export function Personeelsverbruik() {
       ) : (
         samenvattingen.map((samenvatting) => {
           const regels = regelsVan(samenvatting);
+          const geteld = laatsteTelling(state.tellingen, samenvatting.locatie.id);
           return (
             <Card key={samenvatting.locatie.id} className="card--tabel">
               <KaartKop
                 titel={samenvatting.locatie.naam}
-                sub={`${formatDate(vanaf)} tot en met ${formatDate(tot)}`}
+                sub={
+                  geteld?.afgerondOp
+                    ? `Laatst geteld op ${formatDate(geteld.afgerondOp)}`
+                    : "Nog nooit geteld — tot die tijd staat het verbruik op nul"
+                }
                 rechts={
                   <span className="kaart-kop__cijfers">
                     <Badge variant="neutral">{formatCurrency(samenvatting.waardeVerbruik)} verbruikt</Badge>
@@ -184,9 +234,9 @@ export function Personeelsverbruik() {
                       <Button
                         variant="ghost-dark"
                         icon={null}
-                        onClick={() => setBoeken(samenvatting.locatie.id)}
+                        onClick={() => void tellen(samenvatting.locatie.id)}
                       >
-                        Boeken
+                        Tellen
                       </Button>
                     ) : null}
                   </span>
@@ -237,11 +287,12 @@ export function Personeelsverbruik() {
                   formatCurrency(samenvatting.waardeVerbruik),
                 ]}
               />
-              {samenvatting.waardeAangevuld > samenvatting.waardeVerbruik * 2 &&
-              samenvatting.waardeVerbruik > 0 ? (
+              {samenvatting.waardeAangevuld > 0 &&
+              samenvatting.waardeAangevuld > samenvatting.waardeVerbruik * 2 ? (
                 <p className="kaart-tekst">
-                  Er is meer naartoe gebracht dan er afgeboekt is. Dat kan kloppen — het staat er dan
-                  nog — maar het kan ook betekenen dat het verbruik nog niet geboekt is.
+                  Er is meer bijgevuld dan er afgeboekt is. Dat kan kloppen — het staat er dan nog —
+                  maar als het langer geleden is dat er geteld is, weet je dat pas zeker na de
+                  volgende telling.
                 </p>
               ) : null}
             </Card>

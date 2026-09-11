@@ -95,6 +95,12 @@ describe("omschrijfAantal", () => {
     expect(omschrijfAantal(flesje, 12)).toBe("12 los");
   });
 
+  it("laat nul gewoon nul zijn", () => {
+    // "0 los" leest als een halve krat die er niet is.
+    expect(omschrijfAantal(flesje, 0)).toBe("0");
+    expect(omschrijfAantal(spa, 0)).toBe("0");
+  });
+
   it("houdt stuks voorop bij een product dat wel los mag", () => {
     expect(omschrijfAantal(spa, 24)).toBe("24 (2 kratten)");
     expect(omschrijfAantal(spa, 25)).toBe("25");
