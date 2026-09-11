@@ -2,10 +2,22 @@ import {
   createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode,
 } from "react";
 import { supabase } from "../lib/supabaseClient";
+import {
+  haalUitWachtrij,
+  isAlBinnen,
+  isNetwerkfout,
+  leesWachtrij,
+  nieuwKenmerk,
+  voegToeAanWachtrij,
+  werkItemBij,
+  type WachtrijItem,
+} from "../lib/wachtrij";
 import type {
   EvenementRow,
   EvenementZaalRow,
   KoppelingRow,
+  LeveringRow,
+  LeveringregelRow,
   LocatieRow,
   MachineRow,
   MetingRow,
@@ -23,9 +35,13 @@ import type {
 import type {
   Evenement,
   GebruikerRol,
+  Gebruiker,
   Koppeling,
+  Levering,
+  Leveringregel,
   Locatie,
   Machine,
+  NieuweLeveringregel,
   Meting,
   Mutatie,
   Pakbon,
@@ -152,8 +168,35 @@ function naarLocatie(r: LocatieRow): Locatie {
   };
 }
 
-function naarProfiel(r: Pick<ProfileRow, "id" | "naam" | "rol">): Profiel {
-  return { id: r.id, naam: r.naam, rol: r.rol };
+function naarProfiel(r: Pick<ProfileRow, "id" | "naam" | "rol" | "actief">): Profiel {
+  return { id: r.id, naam: r.naam, rol: r.rol, actief: r.actief ?? true };
+}
+
+function naarLevering(r: LeveringRow): Levering {
+  return {
+    id: r.id,
+    locatieId: r.locatie_id,
+    leverancier: r.leverancier ?? undefined,
+    bonnummer: r.bonnummer ?? undefined,
+    aangenomenDoor: r.aangenomen_door,
+    gebruikerId: r.gebruiker_id,
+    opmerking: r.opmerking ?? undefined,
+    aangemaaktOp: r.aangemaakt_op,
+  };
+}
+
+function naarLeveringregel(r: LeveringregelRow): Leveringregel {
+  return {
+    id: r.id,
+    leveringId: r.levering_id,
+    productId: r.product_id,
+    aantalBon: r.aantal_bon,
+    aantalWerkelijk: r.aantal_werkelijk,
+    verschil: r.verschil,
+    notitie: r.notitie ?? undefined,
+    afgehandeldOp: r.afgehandeld_op ?? undefined,
+    afgehandeldDoor: r.afgehandeld_door ?? undefined,
+  };
 }
 
 function naarTelling(r: TellingRow): Telling {
@@ -220,6 +263,8 @@ export interface AppState {
   koppelingen: Koppeling[];
   machines: Machine[];
   metingen: Meting[];
+  leveringen: Levering[];
+  leveringregels: Leveringregel[];
 }
 
 interface AppStateContextValue {
@@ -238,7 +283,16 @@ interface AppStateContextValue {
   voegProductToe: (product: Omit<Product, "id">) => Promise<Product | null>;
   wijzigProduct: (id: string, changes: Partial<Omit<Product, "id">>) => Promise<void>;
   verwijderProduct: (id: string) => Promise<void>;
-  voegMutatieToe: (mutatie: Omit<Mutatie, "id" | "gebruikerId" | "datumTijd">) => Promise<void>;
+  /**
+   * Boeking wegschrijven. Valt de verbinding weg, dan gaat hij niet verloren
+   * maar de wachtrij in en wordt hij later alsnog verstuurd — de belofte aan
+   * degene met de kar in zijn hand. `omschrijving` is wat er dan in die
+   * wachtrij te lezen staat.
+   */
+  voegMutatieToe: (
+    mutatie: Omit<Mutatie, "id" | "gebruikerId" | "datumTijd">,
+    opties?: { omschrijving?: string }
+  ) => Promise<{ inWachtrij: boolean }>;
   voegLocatieToe: (locatie: Omit<Locatie, "id">) => Promise<void>;
   wijzigLocatie: (id: string, changes: Partial<Omit<Locatie, "id">>) => Promise<void>;
   verwijderLocatie: (id: string) => Promise<void>;
@@ -273,6 +327,29 @@ interface AppStateContextValue {
     id: string,
     changes: { actief?: boolean; apiBasisUrl?: string | null; notitie?: string | null }
   ) => Promise<void>;
+  boekLevering: (levering: {
+    locatieId: string;
+    leverancier?: string;
+    bonnummer?: string;
+    aangenomenDoor: string;
+    opmerking?: string;
+    regels: NieuweLeveringregel[];
+  }) => Promise<{ inWachtrij: boolean }>;
+  handelVerschilAf: (regelId: string, notitie: string) => Promise<void>;
+  /** Boekingen die op verbinding wachten, van iedereen die dit apparaat gebruikte. */
+  wachtrij: WachtrijItem[];
+  verstuurWachtrij: () => Promise<void>;
+  /** Weggooien wat nooit gaat lukken — alleen met de hand, nooit vanzelf. */
+  verwijderUitWachtrij: (id: string) => void;
+  haalGebruikers: () => Promise<Gebruiker[]>;
+  maakGebruiker: (gegevens: {
+    naam: string;
+    email: string;
+    wachtwoord: string;
+    rol: GebruikerRol;
+  }) => Promise<void>;
+  zetWachtwoord: (gebruikerId: string, wachtwoord: string) => Promise<void>;
+  zetToegang: (gebruikerId: string, actief: boolean) => Promise<void>;
 }
 
 const AppStateContext = createContext<AppStateContextValue | null>(null);
@@ -281,6 +358,7 @@ const legeState: AppState = {
   producten: [], evenementen: [], mutaties: [], locaties: [], voorraad: [],
   profielen: [], tellingen: [], pakbonnen: [], zalen: [], evenementZalen: [],
   vulplekken: [], standaardvulling: [], koppelingen: [], machines: [], metingen: [],
+  leveringen: [], leveringregels: [],
 };
 
 export function AppStateProvider({ children }: { children: ReactNode }) {
@@ -288,7 +366,9 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState<AppState>(legeState);
   const [laden, setLaden] = useState(true);
   const [fout, setFout] = useState<string | null>(null);
+  const [wachtrij, setWachtrij] = useState<WachtrijItem[]>(() => leesWachtrij());
   const alEensGeladen = useRef(false);
+  const versturenBezig = useRef(false);
 
   const herlaad = useCallback(async () => {
     // Alleen de allereerste keer een laadscherm tonen. Elke verversing daarna
@@ -305,13 +385,14 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       const [
         producten, evenementen, mutaties, locaties, voorraad, profielen, tellingen, pakbonnen,
         zalen, evenementZalen, vulplekken, standaardvulling, koppelingen, machines, metingen,
+        leveringen, leveringregels,
       ] = await Promise.all([
         supabase.from("producten").select("*").order("naam"),
         supabase.from("evenementen").select("*").order("datum"),
         supabase.from("mutaties").select("*").order("datum_tijd", { ascending: false }),
         supabase.from("locaties").select("*").order("naam"),
         supabase.from("voorraad").select("*"),
-        supabase.from("profiles").select("id, naam, rol").order("naam"),
+        supabase.from("profiles").select("id, naam, rol, actief").order("naam"),
         supabase.from("tellingen").select("*").order("aangemaakt_op", { ascending: false }),
         // Bewust zonder `handtekening`: zie PakbonSamenvatting.
         supabase
@@ -325,16 +406,19 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
         supabase.from("koppelingen").select("*").order("naam"),
         supabase.from("machines").select("*").order("naam"),
         supabase.from("machine_metingen").select("*").order("datum", { ascending: false }),
+        supabase.from("leveringen").select("*").order("aangemaakt_op", { ascending: false }),
+        supabase.from("leveringregels").select("*"),
       ]);
       const eersteFout =
         producten.error ?? evenementen.error ?? mutaties.error ?? locaties.error ??
         voorraad.error ?? profielen.error ?? tellingen.error ?? pakbonnen.error ??
         zalen.error ?? evenementZalen.error ?? vulplekken.error ?? standaardvulling.error ??
-        koppelingen.error ?? machines.error ?? metingen.error;
+        koppelingen.error ?? machines.error ?? metingen.error ??
+        leveringen.error ?? leveringregels.error;
       return {
         producten, evenementen, mutaties, locaties, voorraad, profielen, tellingen, pakbonnen,
         zalen, evenementZalen, vulplekken, standaardvulling, koppelingen, machines, metingen,
-        eersteFout,
+        leveringen, leveringregels, eersteFout,
       };
     }
 
@@ -372,6 +456,8 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       koppelingen: (resultaat.koppelingen.data ?? []).map(naarKoppeling),
       machines: (resultaat.machines.data ?? []).map(naarMachine),
       metingen: (resultaat.metingen.data ?? []).map(naarMeting),
+      leveringen: (resultaat.leveringen.data ?? []).map(naarLevering),
+      leveringregels: (resultaat.leveringregels.data ?? []).map(naarLeveringregel),
     });
     alEensGeladen.current = true;
     setLaden(false);
@@ -404,6 +490,8 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       .on("postgres_changes", { event: "*", schema: "public", table: "machine_metingen" }, () => void herlaad())
       .on("postgres_changes", { event: "*", schema: "public", table: "machines" }, () => void herlaad())
       .on("postgres_changes", { event: "*", schema: "public", table: "vulplek_standaard" }, () => void herlaad())
+      .on("postgres_changes", { event: "*", schema: "public", table: "leveringen" }, () => void herlaad())
+      .on("postgres_changes", { event: "*", schema: "public", table: "leveringregels" }, () => void herlaad())
       .subscribe();
 
     return () => {
@@ -421,6 +509,124 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     }
     return map;
   }, [state.mutaties]);
+
+  /**
+   * Eén wachtend item alsnog wegschrijven. Gooit door wat er misgaat; de
+   * aanroeper hieronder beslist of dat wachten of weggooien betekent.
+   */
+  const verstuurItem = useCallback(async (item: WachtrijItem) => {
+    if (item.soort === "mutatie") {
+      const p = item.payload as Omit<Mutatie, "id" | "gebruikerId" | "datumTijd">;
+      const { error } = await supabase.from("mutaties").insert({
+        product_id: p.productId,
+        aantal: p.aantal,
+        type: p.type,
+        van_locatie_id: p.vanLocatieId ?? null,
+        naar_locatie_id: p.naarLocatieId ?? null,
+        evenement_id: p.evenementId ?? null,
+        pakbon_id: p.pakbonId ?? null,
+        gebruiker_id: item.gebruikerId,
+        notitie: p.notitie ?? null,
+        client_id: item.id,
+      });
+      if (error) throw error;
+      return;
+    }
+
+    const p = item.payload as {
+      locatieId: string;
+      leverancier?: string;
+      bonnummer?: string;
+      aangenomenDoor: string;
+      opmerking?: string;
+      regels: NieuweLeveringregel[];
+    };
+    const { error } = await supabase.rpc("boek_levering", {
+      p_locatie_id: p.locatieId,
+      p_leverancier: p.leverancier ?? null,
+      p_bonnummer: p.bonnummer ?? null,
+      p_aangenomen_door: p.aangenomenDoor,
+      p_opmerking: p.opmerking ?? null,
+      p_regels: p.regels.map((r) => ({
+        product_id: r.productId,
+        aantal_bon: r.aantalBon,
+        aantal_werkelijk: r.aantalWerkelijk,
+        notitie: r.notitie ?? null,
+      })),
+      p_client_id: item.id,
+    });
+    if (error) throw error;
+  }, []);
+
+  /**
+   * De wachtrij leegmaken, op volgorde van binnenkomst.
+   *
+   * Alleen boekingen van wie er nú is ingelogd: elke boeking staat op naam,
+   * en de database accepteert alleen mutaties op naam van de ingelogde
+   * gebruiker. Wisselt er iemand van account op een gedeelde tablet, dan
+   * blijven de boekingen van de ander gewoon staan tot die weer inlogt.
+   *
+   * Een netwerkfout stopt de hele ronde — heeft de verbinding het bij de
+   * eerste al begeven, dan hoeven de rest ook niet. Een weigering van de
+   * server is iets anders: die boeking gaat nooit landen, dus blijft hij
+   * staan mét de melding erbij, zodat iemand ernaar kan kijken.
+   */
+  const verstuurWachtrij = useCallback(async () => {
+    if (versturenBezig.current) return;
+    const eigenaar = session?.user.id;
+    if (!eigenaar) return;
+    if (leesWachtrij().every((i) => i.gebruikerId !== eigenaar)) return;
+
+    versturenBezig.current = true;
+    let ietsGelukt = false;
+    try {
+      let items = leesWachtrij();
+      for (const item of items) {
+        if (item.gebruikerId !== eigenaar) continue;
+
+        try {
+          await verstuurItem(item);
+          items = haalUitWachtrij(item.id);
+          ietsGelukt = true;
+        } catch (verzendfout) {
+          if (isAlBinnen(verzendfout)) {
+            // Was al binnen bij een eerdere poging; het kenmerk hield hem tegen.
+            items = haalUitWachtrij(item.id);
+            ietsGelukt = true;
+            continue;
+          }
+          const bericht =
+            verzendfout instanceof Error ? verzendfout.message : "Versturen is niet gelukt.";
+          items = werkItemBij(item.id, {
+            pogingen: item.pogingen + 1,
+            laatsteFout: isNetwerkfout(verzendfout) ? "Nog geen verbinding." : bericht,
+          });
+          if (isNetwerkfout(verzendfout)) break;
+        }
+      }
+      setWachtrij(items);
+    } finally {
+      versturenBezig.current = false;
+    }
+
+    if (ietsGelukt) await herlaad();
+  }, [session, verstuurItem, herlaad]);
+
+  /* Zodra het bereik terug is, en verder elke minuut: er is geen enkele
+     reden om te wachten tot iemand de app weer openslaat. */
+  useEffect(() => {
+    if (!session) return;
+    void verstuurWachtrij();
+
+    const bijVerbinding = () => void verstuurWachtrij();
+    window.addEventListener("online", bijVerbinding);
+    const klok = window.setInterval(bijVerbinding, 60_000);
+
+    return () => {
+      window.removeEventListener("online", bijVerbinding);
+      window.clearInterval(klok);
+    };
+  }, [session, verstuurWachtrij]);
 
   const metingenPerEvenement = useMemo(() => {
     const map = new Map<string, Meting[]>();
@@ -556,21 +762,48 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
         await herlaad();
       },
 
-      async voegMutatieToe(mutatie) {
+      async voegMutatieToe(mutatie, opties) {
         if (!session) throw new Error("Niet ingelogd.");
-        const { error } = await supabase.from("mutaties").insert({
-          product_id: mutatie.productId,
-          aantal: mutatie.aantal,
-          type: mutatie.type,
-          van_locatie_id: mutatie.vanLocatieId ?? null,
-          naar_locatie_id: mutatie.naarLocatieId ?? null,
-          evenement_id: mutatie.evenementId ?? null,
-          pakbon_id: mutatie.pakbonId ?? null,
-          gebruiker_id: session.user.id,
-          notitie: mutatie.notitie ?? null,
-        });
-        if (error) throw error;
+        const kenmerk = nieuwKenmerk();
+
+        try {
+          const { error } = await supabase.from("mutaties").insert({
+            product_id: mutatie.productId,
+            aantal: mutatie.aantal,
+            type: mutatie.type,
+            van_locatie_id: mutatie.vanLocatieId ?? null,
+            naar_locatie_id: mutatie.naarLocatieId ?? null,
+            evenement_id: mutatie.evenementId ?? null,
+            pakbon_id: mutatie.pakbonId ?? null,
+            gebruiker_id: session.user.id,
+            notitie: mutatie.notitie ?? null,
+            client_id: kenmerk,
+          });
+          if (error) throw error;
+        } catch (boekfout) {
+          /* Alleen een haperende verbinding gaat de wachtrij in. Een
+             weigering van de database — geen rechten, personeelsverbruik aan
+             een evenement — moet de gebruiker nú zien; die boeking gaat
+             later ook niet lukken. */
+          if (!isNetwerkfout(boekfout)) throw boekfout;
+
+          setWachtrij(
+            voegToeAanWachtrij({
+              id: kenmerk,
+              soort: "mutatie",
+              gebruikerId: session.user.id,
+              omschrijving: opties?.omschrijving ?? "Voorraadboeking",
+              payload: mutatie,
+              aangemaaktOp: new Date().toISOString(),
+              pogingen: 1,
+              laatsteFout: "Nog geen verbinding.",
+            })
+          );
+          return { inWachtrij: true };
+        }
+
         await herlaad();
+        return { inWachtrij: false };
       },
 
       async voegLocatieToe(locatie) {
@@ -781,6 +1014,117 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
         await herlaad();
       },
 
+      /**
+       * Een aangenomen levering vastleggen: de bon, wat er werkelijk stond,
+       * en de voorraadmutaties die daaruit volgen — in één keer, in de
+       * database. Net als een gewone boeking wacht hij op verbinding in
+       * plaats van verloren te gaan; het kenmerk van de telefoon zorgt dat
+       * een tweede poging niet dubbel telt.
+       */
+      async boekLevering(levering) {
+        if (!session) throw new Error("Niet ingelogd.");
+        const kenmerk = nieuwKenmerk();
+
+        try {
+          const { error } = await supabase.rpc("boek_levering", {
+            p_locatie_id: levering.locatieId,
+            p_leverancier: levering.leverancier ?? null,
+            p_bonnummer: levering.bonnummer ?? null,
+            p_aangenomen_door: levering.aangenomenDoor,
+            p_opmerking: levering.opmerking ?? null,
+            p_regels: levering.regels.map((r) => ({
+              product_id: r.productId,
+              aantal_bon: r.aantalBon,
+              aantal_werkelijk: r.aantalWerkelijk,
+              notitie: r.notitie ?? null,
+            })),
+            p_client_id: kenmerk,
+          });
+          if (error) throw error;
+        } catch (boekfout) {
+          if (!isNetwerkfout(boekfout)) throw boekfout;
+
+          const aantalRegels = levering.regels.length;
+          setWachtrij(
+            voegToeAanWachtrij({
+              id: kenmerk,
+              soort: "levering",
+              gebruikerId: session.user.id,
+              omschrijving: `Levering ${levering.leverancier ?? ""} — ${aantalRegels} regel${
+                aantalRegels === 1 ? "" : "s"
+              }`.trim(),
+              payload: levering,
+              aangemaaktOp: new Date().toISOString(),
+              pogingen: 1,
+              laatsteFout: "Nog geen verbinding.",
+            })
+          );
+          return { inWachtrij: true };
+        }
+
+        await herlaad();
+        return { inWachtrij: false };
+      },
+
+      async handelVerschilAf(regelId, notitie) {
+        const { error } = await supabase.rpc("handel_verschil_af", {
+          p_regel_id: regelId,
+          p_notitie: notitie || null,
+        });
+        if (error) throw error;
+        await herlaad();
+      },
+
+      wachtrij,
+      verstuurWachtrij,
+
+      verwijderUitWachtrij(id) {
+        setWachtrij(haalUitWachtrij(id));
+      },
+
+      /**
+       * De gebruikerslijst mét inlognaam. Gaat via een functie en niet via een
+       * gewone query: het e-mailadres is voor andere rollen ingetrokken.
+       */
+      async haalGebruikers() {
+        const { data, error } = await supabase.rpc("gebruikers_overzicht");
+        if (error) throw error;
+        return (data ?? []).map((r) => ({
+          id: r.id,
+          naam: r.naam,
+          rol: r.rol,
+          email: r.email ?? undefined,
+          actief: r.actief,
+          aangemaaktOp: r.aangemaakt_op,
+        }));
+      },
+
+      /* Aanmaken, een wachtwoord zetten en toegang intrekken kan alleen met
+         de servicesleutel, en die hoort niet in een browser. Dat werk doet de
+         Edge Function `gebruikers`; zie supabase/functions/gebruikers. */
+      async maakGebruiker({ naam, email, wachtwoord, rol }) {
+        const { error } = await supabase.functions.invoke("gebruikers", {
+          body: { actie: "aanmaken", naam, email, wachtwoord, rol },
+        });
+        if (error) throw error;
+        await herlaad();
+      },
+
+      async zetWachtwoord(gebruikerId, wachtwoord) {
+        const { error } = await supabase.functions.invoke("gebruikers", {
+          body: { actie: "wachtwoord", gebruiker_id: gebruikerId, wachtwoord },
+        });
+        if (error) throw error;
+      },
+
+      async zetToegang(gebruikerId, actief) {
+        const { error } = await supabase.functions.invoke("gebruikers", {
+          body: { actie: "toegang", gebruiker_id: gebruikerId, actief },
+        });
+        if (error) throw error;
+        await herlaad();
+      },
+
       async stelMinVoorraadIn(locatieId, productId, minVoorraad) {
         const { error } = await supabase.rpc("stel_min_voorraad", {
           p_locatie_id: locatieId,
@@ -791,7 +1135,10 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
         await herlaad();
       },
     }),
-    [state, laden, fout, mutatiesPerEvenement, metingenPerEvenement, hoofdmagazijn, herlaad, session]
+    [
+      state, laden, fout, mutatiesPerEvenement, metingenPerEvenement, hoofdmagazijn, herlaad,
+      session, wachtrij, verstuurWachtrij,
+    ]
   );
 
   return <AppStateContext.Provider value={value}>{children}</AppStateContext.Provider>;

@@ -1,5 +1,6 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { Button, Input } from "../../design-system";
+import { AantalStepper } from "../../components/ui/AantalStepper";
 import { Modal } from "../../components/ui/Modal";
 import { ProductKiezer } from "../../components/ui/ProductKiezer";
 import { Select } from "../../components/ui/Select";
@@ -203,14 +204,24 @@ export function VoorraadMutatieModal({
               <span className="field-group__hint">1 {product.verpakking} = {verpakkingLabel(product)}</span>
             ) : null}
           </label>
-          <Input
-            id="mutatie-aantal"
-            type="number"
-            step={1}
-            {...(actie !== "correctie" ? { min: 1 } : {})}
-            value={aantal}
-            onChange={(e) => setAantal(e.target.value)}
-          />
+          {/* Een correctie mag negatief zijn (afboeken); de rest niet. Daar
+              is een stepper met een ondergrens de snelste weg. */}
+          {actie === "correctie" ? (
+            <Input
+              id="mutatie-aantal"
+              type="number"
+              step={1}
+              value={aantal}
+              onChange={(e) => setAantal(e.target.value)}
+            />
+          ) : (
+            <AantalStepper
+              id="mutatie-aantal"
+              ariaLabel={invoerVorm.label}
+              waarde={Number(aantal) || 0}
+              onChange={(n) => setAantal(String(n))}
+            />
+          )}
         </div>
 
         {actie === "beschadigd" || actie === "correctie" || actie === "personeelsverbruik" ? (

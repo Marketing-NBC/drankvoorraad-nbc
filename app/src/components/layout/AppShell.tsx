@@ -6,6 +6,7 @@ import { useAppState } from "../../context/AppStateContext";
 import type { GebruikerRol } from "../../data/types";
 import { useAuth } from "../../context/AuthContext";
 import { ROUTES } from "../../routes/routes";
+import { Wachtbalk } from "./Wachtbalk";
 import { Zoekbalk } from "./Zoekbalk";
 
 interface NavItem {
@@ -26,6 +27,7 @@ const navItems: NavItem[] = [
   { to: ROUTES.dashboard, label: "Dashboard", tabLabel: "Cijfers", icon: "grafiek" },
   { to: ROUTES.overzicht, label: "Evenementen", tabLabel: "Events", icon: "calendar" },
   { to: ROUTES.magazijn, label: "Magazijn", icon: "building" },
+  { to: ROUTES.leveringen, label: "Leveringen", tabLabel: "Binnen", icon: "doos" },
   { to: ROUTES.tellingen, label: "Tellingen", tabLabel: "Tellen", icon: "scan" },
   { to: ROUTES.producten, label: "Producten", icon: "doos" },
   { to: ROUTES.historie, label: "Mutaties", icon: "clock" },
@@ -45,7 +47,10 @@ const navItems: NavItem[] = [
 ];
 
 /** Volgorde in de onderbalk — zes gelijke vakken, duim-eerst. */
-const tabVolgorde = [ROUTES.overzicht, ROUTES.magazijn, ROUTES.tellingen, ROUTES.producten, ROUTES.historie, ROUTES.dashboard];
+/* Zes vakken, duim-eerst. Leveringen staat erin omdat dat dagelijks werk op
+   de vloer is; Mutaties niet, want dat lees je achteraf op een groot scherm —
+   die staat in de zijbalk en het accountmenu. */
+const tabVolgorde = [ROUTES.overzicht, ROUTES.magazijn, ROUTES.leveringen, ROUTES.tellingen, ROUTES.producten, ROUTES.dashboard];
 
 /**
  * Naam van het scherm in de mobiele kop, plus of er een pijl terug hoort.
@@ -58,6 +63,7 @@ function schermNaam(pad: string): { label: string; terug: boolean } {
   if (pad.startsWith("/evenementen/")) return { label: "Evenement", terug: true };
   if (pad.startsWith("/pakbonnen/")) return { label: "Pakbon", terug: true };
   if (pad.startsWith("/tellingen/")) return { label: "Telling", terug: true };
+  if (pad === ROUTES.leveringNieuw) return { label: "Levering aannemen", terug: true };
   const item = navItems.find((n) => n.to === pad);
   return { label: item?.label ?? "Drankvoorraad", terug: false };
 }
@@ -223,6 +229,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         </header>
 
         <main className="app-shell__main">
+          <Wachtbalk />
           {profielFout ? <p className="form-error rol-waarschuwing">{profielFout}</p> : null}
           {children}
         </main>

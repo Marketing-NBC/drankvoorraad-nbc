@@ -1,17 +1,24 @@
 /* Alleen voor de visuele preview (npm run preview:ui) — niet in de app. */
 import { createContext, useContext, type ReactNode } from "react";
 import type {
-  Evenement, Koppeling, Locatie, Machine, Meting, Mutatie, Pakbon, PakbonSamenvatting, Product,
-  Profiel, Telling, Tellingregel, Voorraad, Vulplek, VulplekRegel, Zaal,
+  Evenement, Gebruiker, Koppeling, Levering, Leveringregel, Locatie, Machine, Meting, Mutatie,
+  Pakbon, PakbonSamenvatting, Product, Profiel, Telling, Tellingregel, Voorraad, Vulplek,
+  VulplekRegel, Zaal,
 } from "../src/data/types";
 
 const profielen: Profiel[] = [
-  { id: "u1", naam: "Abel Bakker", rol: "beheerder" },
-  { id: "u2", naam: "Sanne Vos", rol: "magazijnmedewerker" },
-  { id: "u3", naam: "Jeroen de Wit", rol: "evenementmanager" },
-  { id: "u4", naam: "Fleur Janssen", rol: "magazijnmedewerker" },
-  { id: "u5", naam: "Daan Peters", rol: "evenementmanager" },
+  { id: "u1", naam: "Abel Bakker", rol: "beheerder", actief: true },
+  { id: "u2", naam: "Sanne Vos", rol: "magazijnmedewerker", actief: true },
+  { id: "u3", naam: "Jeroen de Wit", rol: "evenementmanager", actief: true },
+  { id: "u4", naam: "Fleur Janssen", rol: "magazijnmedewerker", actief: true },
+  { id: "u5", naam: "Daan Peters", rol: "evenementmanager", actief: false },
 ];
+
+const gebruikers: Gebruiker[] = profielen.map((p, i) => ({
+  ...p,
+  email: `${p.naam.split(" ")[0].toLowerCase()}@nbcevents.nl`,
+  aangemaaktOp: new Date(2026, 0, 4 + i * 11).toISOString(),
+}));
 
 const locaties: Locatie[] = [
   { id: "l0", naam: "Hoofdmagazijn", type: "magazijn", merk: null, voorPersoneel: false },
@@ -40,7 +47,7 @@ function p(velden: Partial<Product> & Pick<Product, "id" | "naam">): Product {
 
 const producten: Product[] = [
   p({ id: "p1", naam: "Fust Swinckels 20 L", categorie: "bier", inhoud: "20 L", eenheid: "fust", inkoopprijs: 40.7, statiegeldPerStuk: 30, barcode: "8712000012345", leverancier: "Swinkels" }),
-  p({ id: "p2", naam: "Swinckels 0,3 L", categorie: "bier", inhoud: "0,3 L", inkoopprijs: 0.53, verpakking: "krat", stuksPerVerpakking: 24, statiegeldPerVerpakking: 3.9, barcode: "8712000098765", leverancier: "Swinkels" }),
+  p({ id: "p2", naam: "Swinckels 0,3 L", categorie: "bier", inhoud: "0,3 L", inkoopprijs: 0.53, verpakking: "krat", stuksPerVerpakking: 24, alleenPerVerpakking: true, statiegeldPerVerpakking: 3.9, barcode: "8712000098765", leverancier: "Swinkels" }),
   p({ id: "p3", naam: "Spa blauw 1 L", inhoud: "1 L", inkoopprijs: 0.95, verpakking: "krat", stuksPerVerpakking: 12, statiegeldPerVerpakking: 5, barcode: "8712000055512", leverancier: "Spadel" }),
   p({ id: "p4", naam: "Coca Cola 0,2 L", inhoud: "0,2 L", inkoopprijs: 0.46, verpakking: "krat", stuksPerVerpakking: 24, alleenPerVerpakking: true, statiegeldPerVerpakking: 5, barcode: "8712000044421", leverancier: "Coca-Cola" }),
   p({ id: "p5", naam: "Coca Cola 1,25 L", inhoud: "1,25 L", inkoopprijs: 2.05, statiegeldPerStuk: 0.25, leverancier: "Coca-Cola" }),
@@ -160,6 +167,18 @@ mutaties.push(
   mut({ productId: "p6", aantal: 6, type: "personeelsverbruik", vanLocatieId: "l6", gebruikerId: "u3", notitie: "vrijdagmiddag", datumTijd: dagenGeleden(3) })
 );
 
+const leveringen: Levering[] = [
+  { id: "lv1", locatieId: "l0", leverancier: "Swinkels", bonnummer: "BON-8842", aangenomenDoor: "Ricardo", gebruikerId: "u2", aangemaaktOp: dagenGeleden(2) },
+  { id: "lv2", locatieId: "l0", leverancier: "Coca-Cola", bonnummer: "CC-19334", aangenomenDoor: "Mo", gebruikerId: "u4", aangemaaktOp: dagenGeleden(6) },
+];
+
+const leveringregels: Leveringregel[] = [
+  { id: "lr1", leveringId: "lv1", productId: "p2", aantalBon: 240, aantalWerkelijk: 192, verschil: -48 },
+  { id: "lr2", leveringId: "lv1", productId: "p1", aantalBon: 6, aantalWerkelijk: 6, verschil: 0 },
+  { id: "lr3", leveringId: "lv2", productId: "p4", aantalBon: 480, aantalWerkelijk: 480, verschil: 0 },
+  { id: "lr4", leveringId: "lv2", productId: "p5", aantalBon: 60, aantalWerkelijk: 54, verschil: -6, notitie: "Zes flessen gebroken aangekomen" },
+];
+
 const pakbonnen: PakbonSamenvatting[] = [
   { id: "a7f31c29-0000-0000-0000-000000000000", evenementId: "NBC-2026-014", vanLocatieId: "l0", ontvangerNaam: "Jeroen de Wit", gebruikerId: "u2", aangemaaktOp: "2026-05-13T16:40:00Z" },
   { id: "b21d0e84-0000-0000-0000-000000000000", evenementId: "NBC-2026-014", vanLocatieId: "l0", ontvangerNaam: "Sanne Vos", gebruikerId: "u2", aangemaaktOp: "2026-05-14T09:05:00Z" },
@@ -186,7 +205,22 @@ const tellingregels: Record<string, Tellingregel[]> = {
 const state = {
   producten, evenementen, mutaties, locaties, voorraad, profielen, tellingen, pakbonnen,
   zalen, evenementZalen, vulplekken, standaardvulling, koppelingen, machines, metingen,
+  leveringen, leveringregels,
 };
+
+/* Eén wachtende boeking, zodat de balk in de preview te beoordelen is. */
+const wachtrij = [
+  {
+    id: "w1",
+    soort: "mutatie" as const,
+    gebruikerId: "u1",
+    omschrijving: "4 kratten Coca Cola 0,2 L naar Koelcel NBC",
+    payload: {},
+    aangemaaktOp: dagenGeleden(0),
+    pogingen: 2,
+    laatsteFout: "Nog geen verbinding.",
+  },
+];
 
 const mutatiesPerEvenement = new Map<string, Mutatie[]>();
 for (const m of mutaties) {
@@ -215,7 +249,7 @@ const waarde: Record<string, unknown> = {
   voegProductToe: async () => null,
   wijzigProduct: niets,
   verwijderProduct: niets,
-  voegMutatieToe: niets,
+  voegMutatieToe: async () => ({ inWachtrij: false }),
   voegLocatieToe: niets,
   wijzigLocatie: niets,
   verwijderLocatie: niets,
@@ -234,6 +268,15 @@ const waarde: Record<string, unknown> = {
   wijzigMachine: niets,
   verwijderMachine: niets,
   wijzigKoppeling: niets,
+  boekLevering: async () => ({ inWachtrij: false }),
+  handelVerschilAf: niets,
+  wachtrij,
+  verstuurWachtrij: niets,
+  verwijderUitWachtrij: () => {},
+  haalGebruikers: async () => gebruikers,
+  maakGebruiker: niets,
+  zetWachtwoord: niets,
+  zetToegang: niets,
   haalPakbon: async (id: string) => {
     const p = pakbonnen.find((b) => b.id === id);
     return p ? ({ ...p, handtekening: undefined } as Pakbon) : null;

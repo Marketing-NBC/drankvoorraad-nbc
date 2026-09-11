@@ -19,6 +19,18 @@ export interface Profiel {
   id: string;
   naam: string;
   rol: GebruikerRol;
+  /** False = toegang ingetrokken; diegene kan niet meer inloggen. */
+  actief: boolean;
+}
+
+/**
+ * Een profiel mét inlognaam, zoals alleen een beheerder het te zien krijgt.
+ * Het e-mailadres komt uit `gebruikers_overzicht()` en niet uit een gewone
+ * query: de kolom is voor andere rollen ingetrokken.
+ */
+export interface Gebruiker extends Profiel {
+  email?: string;
+  aangemaaktOp: string;
 }
 
 /** merk === null betekent gedeeld tussen NBC en Green Village (het hoofdmagazijn). */
@@ -261,5 +273,54 @@ export interface Meting {
   bron: MetingBron;
   evenementId?: string;
   gebruikerId?: string;
+  notitie?: string;
+}
+
+// ─── Leveringen ───────────────────────────────────────────────────────────────
+
+/**
+ * Eén levering die is aangenomen.
+ *
+ * `aangenomenDoor` is een ingetypte naam en geen gebruiker, omdat Post met
+ * één gedeeld account werkt: er loopt elke dag iemand anders beneden. Wie het
+ * aannam typ je in, zodat je bij een verschil niet het rooster erbij hoeft
+ * te pakken.
+ */
+export interface Levering {
+  id: string;
+  locatieId: string;
+  leverancier?: string;
+  bonnummer?: string;
+  aangenomenDoor: string;
+  gebruikerId: string;
+  opmerking?: string;
+  aangemaaktOp: string;
+}
+
+/**
+ * Eén regel van een levering: wat er op de bon stond en wat er werkelijk was.
+ *
+ * De voorraad gaat omhoog met `aantalWerkelijk`, nooit met `aantalBon`. Het
+ * verschil blijft staan als openstaand punt richting de leverancier tot
+ * iemand het afhandelt.
+ */
+export interface Leveringregel {
+  id: string;
+  leveringId: string;
+  productId: string;
+  aantalBon: number;
+  aantalWerkelijk: number;
+  /** aantalWerkelijk − aantalBon. Negatief = er kwam te weinig. */
+  verschil: number;
+  notitie?: string;
+  afgehandeldOp?: string;
+  afgehandeldDoor?: string;
+}
+
+/** Eén regel op een levering die nog niet is vastgelegd. */
+export interface NieuweLeveringregel {
+  productId: string;
+  aantalBon: number;
+  aantalWerkelijk: number;
   notitie?: string;
 }

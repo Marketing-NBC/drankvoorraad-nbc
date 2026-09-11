@@ -25,7 +25,35 @@ export type ProfileRow = {
   id: string;
   naam: string;
   rol: GebruikerRol;
+  /* `email` staat wel in de tabel maar is voor gewone gebruikers ingetrokken;
+     alleen gebruikers_overzicht() geeft hem terug. Zie migratie 017. */
+  email: string | null;
+  actief: boolean;
   aangemaakt_op: string;
+};
+
+export type LeveringRow = {
+  id: string;
+  locatie_id: string;
+  leverancier: string | null;
+  bonnummer: string | null;
+  aangenomen_door: string;
+  gebruiker_id: string;
+  opmerking: string | null;
+  client_id: string | null;
+  aangemaakt_op: string;
+};
+
+export type LeveringregelRow = {
+  id: string;
+  levering_id: string;
+  product_id: string;
+  aantal_bon: number;
+  aantal_werkelijk: number;
+  verschil: number;
+  notitie: string | null;
+  afgehandeld_op: string | null;
+  afgehandeld_door: string | null;
 };
 
 export type LocatieRow = {
@@ -147,8 +175,11 @@ export type MutatieRow = {
   naar_locatie_id: string | null;
   evenement_id: string | null;
   pakbon_id: string | null;
+  levering_id: string | null;
   gebruiker_id: string;
   notitie: string | null;
+  /** Gezet bij een boeking die in de wachtrij stond; uniek in de database. */
+  client_id: string | null;
   datum_tijd: string;
 };
 
@@ -188,7 +219,7 @@ export type Database = {
     Tables: {
       profiles: {
         Row: ProfileRow;
-        Insert: MetDefaults<ProfileRow, "naam" | "rol" | "aangemaakt_op">;
+        Insert: MetDefaults<ProfileRow, "naam" | "rol" | "email" | "actief" | "aangemaakt_op">;
         Update: Partial<ProfileRow>;
         Relationships: [];
       };
@@ -228,7 +259,7 @@ export type Database = {
         Insert: MetDefaults<
           MutatieRow,
           | "id" | "van_locatie_id" | "naar_locatie_id" | "evenement_id"
-          | "pakbon_id" | "notitie" | "datum_tijd"
+          | "pakbon_id" | "levering_id" | "client_id" | "notitie" | "datum_tijd"
         >;
         Update: Partial<MutatieRow>;
         Relationships: [];
@@ -290,6 +321,24 @@ export type Database = {
         Update: Partial<MachineRow>;
         Relationships: [];
       };
+      leveringen: {
+        Row: LeveringRow;
+        Insert: MetDefaults<
+          LeveringRow,
+          "id" | "leverancier" | "bonnummer" | "aangenomen_door" | "opmerking" | "client_id" | "aangemaakt_op"
+        >;
+        Update: Partial<LeveringRow>;
+        Relationships: [];
+      };
+      leveringregels: {
+        Row: LeveringregelRow;
+        Insert: MetDefaults<
+          LeveringregelRow,
+          "id" | "verschil" | "notitie" | "afgehandeld_op" | "afgehandeld_door"
+        >;
+        Update: Partial<LeveringregelRow>;
+        Relationships: [];
+      };
       machine_metingen: {
         Row: MetingRow;
         Insert: MetDefaults<
@@ -318,6 +367,38 @@ export type Database = {
       annuleer_telling: {
         Args: { p_telling_id: string };
         Returns: undefined;
+      };
+      boek_levering: {
+        Args: {
+          p_locatie_id: string;
+          p_leverancier: string | null;
+          p_bonnummer: string | null;
+          p_aangenomen_door: string;
+          p_opmerking: string | null;
+          p_regels: {
+            product_id: string;
+            aantal_bon: number;
+            aantal_werkelijk: number;
+            notitie?: string | null;
+          }[];
+          p_client_id?: string | null;
+        };
+        Returns: string;
+      };
+      handel_verschil_af: {
+        Args: { p_regel_id: string; p_notitie: string | null };
+        Returns: undefined;
+      };
+      gebruikers_overzicht: {
+        Args: Record<string, never>;
+        Returns: {
+          id: string;
+          naam: string;
+          rol: GebruikerRol;
+          email: string | null;
+          actief: boolean;
+          aangemaakt_op: string;
+        }[];
       };
       boek_meting: {
         Args: {

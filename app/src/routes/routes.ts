@@ -15,6 +15,8 @@ export const ROUTES = {
   historie: "/historie",
   gebruikers: "/gebruikers",
   koppelingen: "/koppelingen",
+  leveringen: "/leveringen",
+  leveringNieuw: "/leveringen/nieuw",
   personeel: "/personeel",
   dashboard: "/dashboard",
 } as const;

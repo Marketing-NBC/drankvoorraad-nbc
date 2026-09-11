@@ -51,14 +51,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       for (let poging = 0; poging < 2; poging++) {
         const { data, error } = await supabase
           .from("profiles")
-          .select("id, naam, rol")
+          .select("id, naam, rol, actief")
           .eq("id", session.user.id)
           .single();
 
         if (geannuleerd) return;
 
         if (data) {
-          setProfiel({ id: data.id, naam: data.naam, rol: data.rol });
+          setProfiel({ id: data.id, naam: data.naam, rol: data.rol, actief: data.actief ?? true });
           setProfielFout(null);
           setLaden(false);
           return;

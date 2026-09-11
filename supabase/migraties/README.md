@@ -38,6 +38,10 @@ trigger en de functie zijn weg. De migraties hieronder gaan daarvan uit.
 | `011_personeelslocaties.sql` | Kantine en Kroeg als voorraadlocatie voor personeel, plus het mutatietype `personeelsverbruik`. |
 | `012_zalen_en_vulplekken.sql` | Zalen bij een evenement; koelkasten en bars als vulplek met standaardvulling. |
 | `013_koppelingen.sql` | Machines van Franke en Aquablu, hun dagmetingen, en de invoerpoort waar een koppeling later op aansluit. |
+| `014_bierflesjes_per_krat.sql` | De flesjes van 0,3 L gaan ook per krat, net als die van 0,2 L. |
+| `015_leveringen.sql` | Leveringen aannemen: wat er op de bon staat, wat er werkelijk kwam, en het verschil dat openstaat. |
+| `016_wachtrij.sql` | Het kenmerk waarmee een boeking uit de wachtrij niet twee keer kan landen. |
+| `017_gebruikersbeheer.sql` | E-mailadres bij het profiel (alleen voor een beheerder), en wie er toegang heeft. |
 
 ## Waarom `010` en niet `1`
 

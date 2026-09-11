@@ -30,6 +30,19 @@ voorraadstand op rust:
 - **Koffie en water hebben geen voorraad.** Franke en Aquablu leveren verbruik,
   geen kratten. Een meting is daarom géén mutatie: `mutaties` blijft over
   voorraadbewegingen gaan. Het verbruik telt wel mee in de marge.
+- **Een levering boekt wat er werkelijk stond**, nooit wat de bon beweert. Het
+  verschil blijft staan als openstaand punt richting de leverancier tot iemand
+  het afhandelt. Zie `supabase/migraties/015_leveringen.sql`.
+- **De wachtrij verliest nooit een boeking en boekt er nooit één dubbel.** Bij
+  een haperende verbinding wacht de boeking op de telefoon; bij een weigering
+  van de database krijgt de gebruiker de melding meteen. Het onderscheid zit in
+  `isNetwerkfout` (`app/src/lib/wachtrij.ts`), en dubbel boeken wordt
+  tegengehouden door een unieke index op `client_id`. Tellingen gaan er bewust
+  niet in: die rekenen af tegen de voorraad van dát moment.
+- **De servicesleutel komt nooit in de browser.** Accounts aanmaken, een
+  wachtwoord zetten en toegang intrekken gaat via de Edge Function
+  `supabase/functions/gebruikers`, die zelf controleert of de aanvrager
+  beheerder is.
 - **De basis-URL staat op één plek**: `base` in `app/vite.config.ts`. De router
   leest dezelfde waarde via `import.meta.env.BASE_URL` in `app/src/main.tsx`.
   Verander die twee nooit los van elkaar.
@@ -53,7 +66,8 @@ de UI-typeschaal) én de herstyling van de basisklassen `.btn`, `.card`,
 Er is geen backend van onszelf: de browser praat rechtstreeks met Supabase,
 afgeschermd door RLS-policies. Serverlogica zit in Postgres, aangeroepen via
 RPC's: `start_telling`, `rond_telling_af`, `annuleer_telling`, `maak_pakbon`,
-`stel_min_voorraad`, `boek_meting`.
+`stel_min_voorraad`, `boek_meting`, `boek_levering`, `handel_verschil_af`,
+`gebruikers_overzicht`.
 
 `importeer_metingen` is de enige RPC die de app zelf niet aanroept. Dat is de
 poort waar de koppeling met Franke en Aquablu straks op aansluit: een Edge
@@ -69,6 +83,11 @@ of `pakbonnen` een stille herlaad doet.
 Inloggen gaat uitsluitend met e-mail en wachtwoord (`signInWithPassword`). Er is
 geen magic link, geen OAuth en geen wachtwoordherstel — dus ook geen
 redirect-URL's die in Supabase geconfigureerd moeten staan.
+
+Serverwerk dat niet in Postgres kan staat in `supabase/functions/`. Nu één
+functie: `gebruikers`. Die moet apart neergezet worden (`supabase functions
+deploy gebruikers`) — zie de README daar, inclusief wat er in het dashboard nog
+uit moet staan.
 
 ## Databasewijzigingen
 
@@ -125,9 +144,9 @@ afmaken ervan. Deze paragraaf mag weg zodra dat plan er ligt.
 Vier dingen die bij "van PoC naar af" waarschijnlijk terugkomen. Geen van deze is
 kapot — het zijn keuzes die passen bij een PoC en knellen zodra het menens wordt:
 
-- **Testdekking.** 62 tests, alleen over rekenlogica (`app/src/data/`) en de
-  Excel-export (`app/src/utils/`). Geen enkel scherm of gebruikersstroom is
-  getest, terwijl daar de meeste code zit.
+- **Testdekking.** 70 tests over rekenlogica (`app/src/data/`), de wachtrij
+  (`app/src/lib/`) en de Excel-export (`app/src/utils/`). Geen enkel scherm of
+  gebruikersstroom is getest, terwijl daar de meeste code zit.
 - **Databasemigraties.** Half opgelost: nieuwe wijzigingen staan genummerd in
   `supabase/migraties/`, maar van de oude `faseN.sql`-bestanden is nog steeds
   niet vast te stellen wat er precies op productie staat. Er is ook geen

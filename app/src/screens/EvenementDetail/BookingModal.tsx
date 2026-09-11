@@ -1,5 +1,6 @@
 import { useEffect, useState, type FormEvent } from "react";
-import { Button, Input } from "../../design-system";
+import { Button } from "../../design-system";
+import { AantalStepper } from "../../components/ui/AantalStepper";
 import { Modal } from "../../components/ui/Modal";
 import { ProductKiezer } from "../../components/ui/ProductKiezer";
 import { Select } from "../../components/ui/Select";
@@ -30,7 +31,7 @@ export function BookingModal({
   const { voegMutatieToe, hoofdmagazijn, state, mutatiesPerEvenement } = useAppState();
   const [productId, setProductId] = useState("");
   const [locatieId, setLocatieId] = useState("");
-  const [aantal, setAantal] = useState("");
+  const [aantal, setAantal] = useState(0);
   const [fout, setFout] = useState<string | null>(null);
   const [bezig, setBezig] = useState(false);
 
@@ -56,7 +57,7 @@ export function BookingModal({
    */
   const teveelRetour = (() => {
     if (richting !== "retour" || !productId) return null;
-    const aantalGetal = Number(aantal);
+    const aantalGetal = aantal;
     if (!aantalGetal || aantalGetal <= 0) return null;
 
     const regels = productVerbruikPerEvenement(mutatiesPerEvenement.get(evenementId) ?? []);
@@ -72,7 +73,7 @@ export function BookingModal({
     if (!open) return;
     setProductId(standaardProductId ?? producten[0]?.id ?? "");
     setLocatieId(hoofdmagazijn?.id ?? magazijnen[0]?.id ?? "");
-    setAantal("");
+    setAantal(0);
     setFout(null);
     // Alleen op `open` en het vooraf gekozen product: `producten` en
     // `hoofdmagazijn` komen uit de gedeelde state en krijgen bij elke
@@ -83,7 +84,7 @@ export function BookingModal({
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
-    const aantalGetal = Number(aantal);
+    const aantalGetal = aantal;
     if (!productId) {
       setFout("Kies een product.");
       return;
@@ -150,13 +151,11 @@ export function BookingModal({
               <span className="field-group__hint">1 {product.verpakking} = {verpakkingLabel(product)}</span>
             ) : null}
           </label>
-          <Input
+          <AantalStepper
             id="boeking-aantal"
-            type="number"
-            min={1}
-            step={1}
-            value={aantal}
-            onChange={(e) => setAantal(e.target.value)}
+            ariaLabel={invoerVorm.label}
+            waarde={aantal}
+            onChange={setAantal}
           />
         </div>
         {teveelRetour ? (
