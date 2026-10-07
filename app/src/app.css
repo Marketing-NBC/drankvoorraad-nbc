@@ -1135,23 +1135,104 @@ body { background: var(--canvas); }
   font: var(--t-ui); color: var(--nbc-stone-800); margin: 0;
 }
 
-.scanner { position: relative; border-radius: var(--r-kaart-mob); overflow: hidden; background: var(--nbc-black); }
-.scanner__video { width: 100%; height: 260px; object-fit: cover; display: block; }
-.scanner__kader {
-  position: absolute; inset: 18% 12%;
-  border: 2px solid var(--nbc-paper); border-radius: var(--r-nav);
-  box-shadow: 0 0 0 100vmax rgba(5, 6, 6, .35);
+/* Het scanscherm ligt over alles heen, ook over een modal (z-index 100):
+   de camera vult de telefoon, het kader staat in het midden. */
+.scanscherm {
+  position: fixed; inset: 0; z-index: 200;
+  background: var(--nbc-black); color: var(--fg-on-dark);
+  overflow: hidden;
 }
-.scanner__melding {
-  font: var(--t-ui); color: var(--fg-secondary); margin: 0;
-  background: var(--vlak-rij); border-radius: var(--r-rij); padding: 12px 16px;
+.scanscherm__video {
+  position: absolute; inset: 0; width: 100%; height: 100%;
+  object-fit: cover; display: block;
 }
-.scanner__status {
-  position: absolute; left: 0; right: 0; bottom: 0; margin: 0;
-  padding: 12px 16px; font: 800 12.5px/1.3 var(--font-body); color: var(--fg-on-dark); text-align: center;
-  background: linear-gradient(180deg, rgba(5, 6, 6, 0) 0%, rgba(5, 6, 6, .75) 100%);
+.scanscherm__kader {
+  --kader-kleur: #ffcb52;
+  position: absolute; left: 50%; top: 45%;
+  width: min(80vw, 340px); aspect-ratio: 3 / 2;
+  transform: translate(-50%, -50%);
+  border-radius: var(--r-kaart);
+  box-shadow: 0 0 0 100vmax rgba(5, 6, 6, .55);
+  display: flex; align-items: center; justify-content: center;
+  transition: box-shadow .15s ease;
 }
-@media (min-width: 640px) { .scanner__video { height: 300px; } }
+.scanscherm__kader--gevonden { --kader-kleur: #2fbf7a; outline: 4px solid var(--kader-kleur); }
+.scanscherm__kader--onbekend { --kader-kleur: var(--nbc-gold); outline: 4px solid var(--kader-kleur); }
+.scanscherm__kader--gevonden .scanscherm__hoek,
+.scanscherm__kader--onbekend .scanscherm__hoek { display: none; }
+.scanscherm__hoek {
+  position: absolute; width: 44px; height: 44px;
+  border: 0 solid var(--kader-kleur);
+}
+.scanscherm__hoek--lb { left: 0; top: 0; border-top-width: 4px; border-left-width: 4px; border-top-left-radius: var(--r-kaart); }
+.scanscherm__hoek--rb { right: 0; top: 0; border-top-width: 4px; border-right-width: 4px; border-top-right-radius: var(--r-kaart); }
+.scanscherm__hoek--lo { left: 0; bottom: 0; border-bottom-width: 4px; border-left-width: 4px; border-bottom-left-radius: var(--r-kaart); }
+.scanscherm__hoek--ro { right: 0; bottom: 0; border-bottom-width: 4px; border-right-width: 4px; border-bottom-right-radius: var(--r-kaart); }
+.scanscherm__lijn {
+  position: absolute; left: 8%; right: 8%; top: 50%; height: 2px;
+  background: var(--kader-kleur); box-shadow: 0 0 12px var(--kader-kleur);
+  animation: scanlijn 1.8s ease-in-out infinite alternate;
+}
+@keyframes scanlijn { from { top: 22%; } to { top: 78%; } }
+@media (prefers-reduced-motion: reduce) { .scanscherm__lijn { animation: none; } }
+.scanscherm__vink {
+  width: 76px; height: 76px; border-radius: 50%;
+  background: #2fbf7a; color: #fff;
+  display: flex; align-items: center; justify-content: center;
+}
+
+.scanscherm__kop {
+  position: absolute; left: 0; right: 0; top: 0;
+  padding: calc(env(safe-area-inset-top, 0px) + 16px) 16px 24px;
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  background: linear-gradient(180deg, rgba(5, 6, 6, .75) 0%, rgba(5, 6, 6, 0) 100%);
+}
+.scanscherm__rond {
+  flex: none; width: 48px; height: 48px; border-radius: 50%;
+  border: 0; padding: 0; cursor: pointer;
+  background: rgba(255, 255, 255, .16); color: #fff;
+  display: flex; align-items: center; justify-content: center;
+}
+.scanscherm__rond--aan { background: #ffcb52; color: var(--op-goud); }
+.scanscherm__rond--leeg { background: transparent; cursor: default; }
+.scanscherm__titel { display: flex; flex-direction: column; align-items: center; gap: 2px; min-width: 0; text-align: center; }
+.scanscherm__titel-hoofd { font: 700 17px/1.2 var(--font-body); }
+.scanscherm__titel-sub { font: var(--t-ui-sm); color: rgba(255, 255, 255, .75); }
+
+.scanscherm__status {
+  position: absolute; left: 16px; right: 16px; top: calc(45% + min(80vw, 340px) / 3 + 20px);
+  margin: 0; text-align: center; font: 400 16px/1.4 var(--font-body);
+  color: rgba(255, 255, 255, .92);
+}
+
+.scanscherm__voet {
+  position: absolute; left: 0; right: 0; bottom: 0;
+  padding: 24px 12px calc(env(safe-area-inset-bottom, 0px) + 20px);
+  display: flex; flex-direction: column; align-items: stretch;
+  background: linear-gradient(0deg, rgba(5, 6, 6, .85) 0%, rgba(5, 6, 6, 0) 100%);
+}
+.scanscherm__typknop {
+  height: 52px; border-radius: var(--r-veld); cursor: pointer;
+  border: 1px solid rgba(255, 255, 255, .35); background: rgba(255, 255, 255, .10);
+  color: #fff; font: 700 16px/1 var(--font-body);
+  display: flex; align-items: center; justify-content: center; gap: 10px;
+}
+.scanscherm__paneel {
+  background: var(--vlak); color: var(--fg-primary);
+  border-radius: var(--r-kaart); padding: 20px;
+  display: flex; flex-direction: column; gap: 12px;
+}
+.scanscherm__paneel-kop { display: flex; align-items: center; gap: 12px; }
+.scanscherm__code { font: var(--t-ui-sm); color: var(--fg-secondary); font-variant-numeric: tabular-nums; }
+.scanscherm__melding { margin: 0; font: var(--t-lead); }
+.scanscherm__knoppen { display: flex; flex-direction: column; gap: 10px; }
+.scanscherm__knoppen .btn { justify-content: center; }
+.scanscherm__invoer { display: flex; gap: 8px; }
+.scanscherm__invoer .input { flex: 1; min-width: 0; }
+
+@media (min-width: 640px) {
+  .scanscherm__voet { left: 50%; right: auto; width: 440px; transform: translateX(-50%); background: none; }
+}
 
 /* ══════════════════════════════════════════════════════════════════
    Statuskiezer op het evenement

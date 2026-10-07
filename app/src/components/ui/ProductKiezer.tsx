@@ -3,13 +3,14 @@ import { Badge, Link } from "../../design-system";
 import { zoekOpBarcode } from "../../data/barcode";
 import type { Product } from "../../data/types";
 import { eenheidLabel, heeftVerpakking, verpakkingLabel } from "../../data/verpakking";
-import { BarcodeInvoer, BarcodeScanner } from "./BarcodeScanner";
+import { BarcodeScanner, type ScanUitkomst } from "./BarcodeScanner";
 import { Select } from "./Select";
 
 /**
  * Productkeuze met twee gelijkwaardige manieren: scannen (camera of fysieke
- * scanner) en handmatig kiezen uit de lijst. Handmatig blijft altijd
- * beschikbaar — fusten en losse producten hebben vaak geen streepjescode.
+ * scanner, in het scanscherm) en handmatig kiezen uit de lijst. De lijst
+ * blijft altijd staan — fusten en losse producten hebben vaak geen
+ * streepjescode.
  */
 export function ProductKiezer({
   producten,
@@ -26,31 +27,24 @@ export function ProductKiezer({
   /** Kantine of kroeg: er wordt per flesje ingevuld, dus geen krat in de naam. */
   perStuk?: boolean;
 }) {
-  const [modus, setModus] = useState<"handmatig" | "scannen">("handmatig");
-  const [handmatigeCode, setHandmatigeCode] = useState("");
+  const [scannen, setScannen] = useState(false);
   const [melding, setMelding] = useState<string | null>(null);
   const [laatstGescand, setLaatstGescand] = useState<string | null>(null);
-  /** Camera onbeschikbaar (geen camera, of toestemming geweigerd). We blijven
-   *  wél in scanmodus: een losse USB/Bluetooth-scanner werkt via het invoerveld. */
-  const [cameraFout, setCameraFout] = useState<string | null>(null);
 
-  function verwerkCode(code: string) {
-    const genormaliseerd = code.trim();
-    if (!genormaliseerd) return;
-
-    const gevonden = zoekOpBarcode(producten, genormaliseerd);
+  function verwerkCode(code: string): ScanUitkomst {
+    const gevonden = zoekOpBarcode(producten, code);
     if (gevonden) {
       onProductIdChange(gevonden.id);
       setLaatstGescand(gevonden.naam);
       setMelding(null);
-      setHandmatigeCode("");
-      setModus("handmatig");
       return;
     }
 
+    const tekst = `Barcode ${code} hoort nog bij geen enkel product.`;
     setLaatstGescand(null);
-    setMelding(`Barcode ${genormaliseerd} hoort nog bij geen enkel product.`);
-    onOnbekendeBarcode?.(genormaliseerd);
+    setMelding(tekst);
+    onOnbekendeBarcode?.(code);
+    return tekst;
   }
 
   return (
@@ -61,52 +55,31 @@ export function ProductKiezer({
           icon={null}
           onClick={() => {
             setMelding(null);
-            setCameraFout(null);
-            setModus(modus === "scannen" ? "handmatig" : "scannen");
+            setScannen(true);
           }}
         >
-          {modus === "scannen" ? "Handmatig kiezen" : "Barcode scannen"}
+          Barcode scannen
         </Link>
       </div>
 
-      {modus === "scannen" ? (
-        <>
-          <BarcodeScanner
-            actief={cameraFout === null}
-            onGevonden={verwerkCode}
-            onFout={setCameraFout}
-          />
-          {cameraFout ? <p className="scanner__melding">{cameraFout}</p> : null}
-          <div className="field-group">
-            <label className="field-group__label" htmlFor="barcode-handmatig">
-              {cameraFout ? "Typ of scan de code" : "Of typ de code"}{" "}
-              <span className="field-group__hint">werkt ook met een losse scanner</span>
-            </label>
-            <BarcodeInvoer
-              waarde={handmatigeCode}
-              onChange={setHandmatigeCode}
-              onBevestig={verwerkCode}
-            />
-          </div>
-        </>
-      ) : (
-        <Select
-          aria-label="Product"
-          value={productId}
-          onChange={(e) => {
-            onProductIdChange(e.target.value);
-            setLaatstGescand(null);
-          }}
-          /* Bij een product dat nooit los gaat hoort de verpakking in de naam:
-             wie "Swinckels 0,3 L (fles)" leest, vult flesjes in. */
-          options={producten.map((p) => ({
-            value: p.id,
-            label: `${p.naam} (${
-              !perStuk && p.alleenPerVerpakking && heeftVerpakking(p) ? verpakkingLabel(p) : eenheidLabel(p)
-            })`,
-          }))}
-        />
-      )}
+      <BarcodeScanner open={scannen} onGevonden={verwerkCode} onSluit={() => setScannen(false)} />
+
+      <Select
+        aria-label="Product"
+        value={productId}
+        onChange={(e) => {
+          onProductIdChange(e.target.value);
+          setLaatstGescand(null);
+        }}
+        /* Bij een product dat nooit los gaat hoort de verpakking in de naam:
+           wie "Swinckels 0,3 L (fles)" leest, vult flesjes in. */
+        options={producten.map((p) => ({
+          value: p.id,
+          label: `${p.naam} (${
+            !perStuk && p.alleenPerVerpakking && heeftVerpakking(p) ? verpakkingLabel(p) : eenheidLabel(p)
+          })`,
+        }))}
+      />
 
       {laatstGescand ? (
         <p className="product-kiezer__bevestiging">

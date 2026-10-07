@@ -242,8 +242,8 @@ export function ProductForm({
             <label className="field-group__label" htmlFor="product-barcode">
               Barcode stuk <span className="field-group__hint">op het flesje of fust</span>
             </label>
-            <Link icon={null} onClick={() => setScannen(scannen === "stuk" ? null : "stuk")}>
-              {scannen === "stuk" ? "Stop met scannen" : "Scannen"}
+            <Link icon={null} onClick={() => setScannen("stuk")}>
+              Scannen
             </Link>
           </div>
           <Input id="product-barcode" value={barcode} onChange={(e) => setBarcode(e.target.value)} />
@@ -254,8 +254,8 @@ export function ProductForm({
               Barcode verpakking{" "}
               <span className="field-group__hint">op de {verpakking.trim() || "krat of doos"}</span>
             </label>
-            <Link icon={null} onClick={() => setScannen(scannen === "verpakking" ? null : "verpakking")}>
-              {scannen === "verpakking" ? "Stop met scannen" : "Scannen"}
+            <Link icon={null} onClick={() => setScannen("verpakking")}>
+              Scannen
             </Link>
           </div>
           <Input
@@ -265,16 +265,14 @@ export function ProductForm({
           />
         </div>
         <BarcodeScanner
-          actief={scannen !== null}
+          open={scannen !== null}
+          titel={scannen === "verpakking" ? "Barcode verpakking" : "Barcode stuk"}
+          context={naam.trim() || undefined}
           onGevonden={(code) => {
             if (scannen === "verpakking") setBarcodeVerpakking(code);
             else setBarcode(code);
-            setScannen(null);
           }}
-          onFout={(melding) => {
-            setFout(melding);
-            setScannen(null);
-          }}
+          onSluit={() => setScannen(null)}
         />
         <div className="field-group">
           <label className="field-group__label" htmlFor="product-leverancier">Leverancier (optioneel)</label>
