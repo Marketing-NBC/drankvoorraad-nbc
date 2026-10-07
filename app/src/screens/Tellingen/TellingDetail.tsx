@@ -3,13 +3,15 @@ import { Navigate, useNavigate, useParams } from "react-router-dom";
 import { Badge, Button, Card, Icon } from "../../design-system";
 import { PageHeader } from "../../components/layout/PageHeader";
 import { AppIcon } from "../../components/ui/AppIcon";
+import { hoortBijProduct } from "../../data/barcode";
 import { BarcodeScanner } from "../../components/ui/BarcodeScanner";
 import { FoutMelding } from "../../components/ui/FoutMelding";
 import { KaartKop } from "../../components/ui/KaartKop";
 import { useAppState } from "../../context/AppStateContext";
+import { useAuth } from "../../context/AuthContext";
 import type { Product, Tellingregel } from "../../data/types";
 import { formatCurrency, formatNumber } from "../../utils/format";
-import { invoer, omschrijfAantal, verpakkingLabel, heeftVerpakking } from "../../data/verpakking";
+import { heeftVerpakking, invoer, losOpLocatie, omschrijfAantal, verpakkingLabel } from "../../data/verpakking";
 import { ROUTES } from "../../routes/routes";
 
 interface Regel extends Tellingregel {
@@ -22,6 +24,7 @@ export function TellingDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { state, laden, haalTellingregels, zetGeteldAantal, rondTellingAf, annuleerTelling } = useAppState();
+  const { zietBedragen } = useAuth();
 
   const [regels, setRegels] = useState<Regel[]>([]);
   const [regelsLaden, setRegelsLaden] = useState(true);
@@ -32,6 +35,9 @@ export function TellingDetail() {
 
   const telling = state.tellingen.find((t) => t.id === id);
   const locatie = state.locaties.find((l) => l.id === telling?.locatieId);
+  /* In de kantine en de kroeg tel je flesjes, ook van wat het magazijn per
+     krat telt. Zie losOpLocatie in src/data/verpakking.ts. */
+  const perStuk = losOpLocatie(locatie);
 
   const laadRegels = useCallback(async () => {
     if (!id) return;
@@ -105,7 +111,7 @@ export function TellingDetail() {
   async function bewaarAantal(regel: Regel, waarde: string) {
     const ingevoerd = waarde.trim() === "" ? null : Number(waarde);
     if (ingevoerd !== null && (Number.isNaN(ingevoerd) || ingevoerd < 0)) return;
-    const aantal = ingevoerd === null ? null : ingevoerd * invoer(regel.product).factor;
+    const aantal = ingevoerd === null ? null : ingevoerd * invoer(regel.product, { los: perStuk }).factor;
 
     setRegels((huidig) => huidig.map((r) => (r.id === regel.id ? { ...r, geteldAantal: aantal } : r)));
     try {
@@ -116,7 +122,7 @@ export function TellingDetail() {
   }
 
   function verwerkScan(code: string) {
-    const regel = regels.find((r) => r.product.barcode === code.trim());
+    const regel = regels.find((r) => hoortBijProduct(r.product, code));
     if (!regel) {
       setFout(`Barcode ${code.trim()} hoort niet bij een product in deze lijst.`);
       return;
@@ -266,8 +272,8 @@ export function TellingDetail() {
                         {geteld ? <Icon name="check-circle" size={16} className="telling-regel__vink" /> : null}
                       </span>
                       <span className="telling-regel__verwacht">
-                        verwacht <strong>{omschrijfAantal(regel.product, basis)}</strong>{" "}
-                        {heeftVerpakking(regel.product) && regel.product.alleenPerVerpakking
+                        verwacht <strong>{omschrijfAantal(regel.product, basis, { los: perStuk })}</strong>{" "}
+                        {!perStuk && heeftVerpakking(regel.product) && regel.product.alleenPerVerpakking
                           ? verpakkingLabel(regel.product)
                           : regel.product.eenheid}
                         {verschil !== null && verschil !== 0 ? (
@@ -303,7 +309,7 @@ export function TellingDetail() {
                       defaultValue={
                         regel.geteldAantal === null
                           ? ""
-                          : regel.geteldAantal / invoer(regel.product).factor
+                          : regel.geteldAantal / invoer(regel.product, { los: perStuk }).factor
                       }
                       onFocus={(e) => e.target.select()}
                       onBlur={(e) => void bewaarAantal(regel, e.target.value)}
@@ -362,13 +368,15 @@ export function TellingDetail() {
                 <span>Niet geteld — blijft ongewijzigd</span>
                 <span>{formatNumber(voortgang.nietGeteld)}</span>
               </div>
-              <div className="regellijst__regel">
-                <span>Waarde afwijking</span>
-                <span>
-                  {voortgang.waarde < 0 ? "− " : ""}
-                  {formatCurrency(Math.abs(voortgang.waarde))}
-                </span>
-              </div>
+              {zietBedragen ? (
+                <div className="regellijst__regel">
+                  <span>Waarde afwijking</span>
+                  <span>
+                    {voortgang.waarde < 0 ? "− " : ""}
+                    {formatCurrency(Math.abs(voortgang.waarde))}
+                  </span>
+                </div>
+              ) : null}
             </div>
             <span className="regellijst__voet">
               Een correctie is zelf ook een mutatie en blijft terugvindbaar in Mutaties.

@@ -24,7 +24,7 @@ import { MetingForm } from "./MetingForm";
  */
 export function Koppelingen() {
   const { state, laden, fout, herlaad, wijzigKoppeling, verwijderMachine } = useAppState();
-  const { mag } = useAuth();
+  const { mag, zietBedragen } = useAuth();
   const [machineForm, setMachineForm] = useState<{ koppeling: Koppeling; machine: Machine | null } | null>(null);
   const [metingOpen, setMetingOpen] = useState(false);
   const [actieFout, setActieFout] = useState<string | null>(null);
@@ -49,7 +49,9 @@ export function Koppelingen() {
   /* Koffie en water tellen mee in de marge. Staat de inkoopprijs nog op 0,
      dan komt die kostenpost op € 0,00 uit — dat is geen fout maar een
      ontbrekend getal, en dat hoort zichtbaar te zijn. */
-  const zonderPrijs = state.producten.filter((p) => p.voorraadloos && p.inkoopprijs === 0);
+  const zonderPrijs = zietBedragen
+    ? state.producten.filter((p) => p.voorraadloos && p.inkoopprijs === 0)
+    : [];
 
   const recenteMetingen = state.metingen.slice(0, 25);
   const verbruik = useMemo(
@@ -214,12 +216,16 @@ export function Koppelingen() {
           columns={[
             { header: "Product", primair: true, render: (r) => productNaam.get(r.productId) ?? "—" },
             { header: "Aantal", align: "right", render: (r) => formatNumber(r.aantal) },
-            {
-              header: "Inkoopwaarde",
-              align: "right",
-              render: (r) =>
-                r.waarde > 0 ? formatCurrency(r.waarde) : <span className="tekst-leeg">prijs ontbreekt</span>,
-            },
+            ...(zietBedragen
+              ? [
+                  {
+                    header: "Inkoopwaarde",
+                    align: "right" as const,
+                    render: (r: (typeof verbruik)[number]) =>
+                      r.waarde > 0 ? formatCurrency(r.waarde) : <span className="tekst-leeg">prijs ontbreekt</span>,
+                  },
+                ]
+              : []),
           ]}
         />
       </Card>

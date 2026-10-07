@@ -17,6 +17,7 @@ import { Dashboard } from "./screens/Dashboard/Dashboard";
 import { Koppelingen } from "./screens/Koppelingen/Koppelingen";
 import { Leveringen } from "./screens/Leveringen/Leveringen";
 import { LeveringNieuw } from "./screens/Leveringen/LeveringNieuw";
+import { EmballageRetour } from "./screens/Emballage/EmballageRetour";
 import { Personeelsverbruik } from "./screens/Personeel/Personeelsverbruik";
 
 export function App() {
@@ -46,7 +47,14 @@ export function App() {
                     </RequireAuth>
                   }
                 />
-                <Route path={ROUTES.dashboard} element={<Dashboard />} />
+                <Route
+                  path={ROUTES.dashboard}
+                  element={
+                    <RequireAuth rollen={["beheerder"]}>
+                      <Dashboard />
+                    </RequireAuth>
+                  }
+                />
                 <Route path={ROUTES.personeel} element={<Personeelsverbruik />} />
                 <Route path={ROUTES.leveringen} element={<Leveringen />} />
                 <Route
@@ -57,6 +65,7 @@ export function App() {
                     </RequireAuth>
                   }
                 />
+                <Route path={ROUTES.emballage} element={<EmballageRetour />} />
                 <Route
                   path={ROUTES.koppelingen}
                   element={

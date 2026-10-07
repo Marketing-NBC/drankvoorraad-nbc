@@ -9,7 +9,7 @@ import { LageVoorraadMelding } from "../../components/ui/LageVoorraadMelding";
 import { useAppState } from "../../context/AppStateContext";
 import { useAuth } from "../../context/AuthContext";
 import type { Locatie, Product } from "../../data/types";
-import { exporteerNaarExcel } from "../../utils/excel";
+import { exporteerNaarExcel, type ExcelKolom } from "../../utils/excel";
 import { formatCurrency, formatNumber } from "../../utils/format";
 import { ProductForm } from "../Productbeheer/ProductForm";
 import { LocatieForm } from "./LocatieForm";
@@ -18,7 +18,7 @@ import { VoorraadTabel } from "./VoorraadTabel";
 
 export function Magazijn() {
   const { state, laden, fout, herlaad, verwijderLocatie, hoofdmagazijn } = useAppState();
-  const { mag } = useAuth();
+  const { mag, zietBedragen } = useAuth();
   const [actieveLocatieId, setActieveLocatieId] = useState<string | null>(null);
   const [locatieForm, setLocatieForm] = useState<{ open: boolean; locatie: Locatie | null }>({
     open: false,
@@ -38,6 +38,9 @@ export function Magazijn() {
   }, [state.locaties, actieveLocatieId]);
 
   const actieveLocatie = state.locaties.find((l) => l.id === actieveLocatieId) ?? null;
+  /* Staat de kantine of de kroeg open, dan is "erbij" altijd: aanvullen
+     vanuit het magazijn. Inkoop van buiten gaat nooit rechtstreeks daarheen. */
+  const opPersoneelslocatie = actieveLocatie?.voorPersoneel ?? false;
   const overigeLocaties = state.locaties.filter((l) => l.id !== hoofdmagazijn?.id);
   const heeftPersoneelslocatie = state.locaties.some((l) => l.voorPersoneel);
 
@@ -80,17 +83,24 @@ export function Magazijn() {
             return v.aantal < v.minVoorraad ? "Onder minimum" : "Voldoende";
           },
         },
-        { header: "Inkoopprijs", opmaak: "bedrag", value: (p) => p.inkoopprijs },
-        {
-          header: "Voorraadwaarde",
-          opmaak: "bedrag",
-          value: (p) => (perProduct.get(p.id)?.aantal ?? 0) * p.inkoopprijs,
-        },
+        // Bedragen alleen voor de beheerder (migratie 019).
+        ...(zietBedragen
+          ? ([
+              { header: "Inkoopprijs", opmaak: "bedrag", value: (p) => p.inkoopprijs },
+              {
+                header: "Voorraadwaarde",
+                opmaak: "bedrag",
+                value: (p) => (perProduct.get(p.id)?.aantal ?? 0) * p.inkoopprijs,
+              },
+            ] satisfies ExcelKolom<Product>[])
+          : []),
       ],
-      totalen: {
-        0: "Totale voorraadwaarde",
-        6: state.producten.reduce((som, p) => som + (perProduct.get(p.id)?.aantal ?? 0) * p.inkoopprijs, 0),
-      },
+      ...(zietBedragen && {
+        totalen: {
+          0: "Totale voorraadwaarde",
+          6: state.producten.reduce((som, p) => som + (perProduct.get(p.id)?.aantal ?? 0) * p.inkoopprijs, 0),
+        },
+      }),
     });
   }
 
@@ -118,13 +128,31 @@ export function Magazijn() {
         actions={
           magBeheren ? (
             <>
-              <Button icon="plus" iconPosition="leading" onClick={() => setActie({ soort: "inkoop" })}>
-                Inboeken
-              </Button>
+              {opPersoneelslocatie ? (
+                <Button icon="plus" iconPosition="leading" onClick={() => setActie({ soort: "aanvullen" })}>
+                  Aanvullen
+                </Button>
+              ) : (
+                <Button icon="plus" iconPosition="leading" onClick={() => setActie({ soort: "inkoop" })}>
+                  Inboeken
+                </Button>
+              )}
               <ActieMenu
                 label="Beheren"
                 items={[
-                  { label: "Verplaatsen", onClick: () => setActie({ soort: "verplaatsen" }) },
+                  ...(opPersoneelslocatie
+                    ? [{ label: "Inboeken (inkoop)", onClick: () => setActie({ soort: "inkoop" as const }) }]
+                    : [
+                        { label: "Verplaatsen", onClick: () => setActie({ soort: "verplaatsen" as const }) },
+                        ...(heeftPersoneelslocatie
+                          ? [
+                              {
+                                label: "Kantine of kroeg aanvullen",
+                                onClick: () => setActie({ soort: "aanvullen" as const }),
+                              },
+                            ]
+                          : []),
+                      ]),
                   { label: "Afschrijven", onClick: () => setActie({ soort: "beschadigd" }) },
                   { label: "Corrigeren", onClick: () => setActie({ soort: "correctie" }) },
                   ...(heeftPersoneelslocatie
@@ -190,10 +218,12 @@ export function Magazijn() {
                   <strong>{formatNumber(hoofdCijfers.producten)}</strong>
                   <span>producten</span>
                 </span>
-                <span className="magazijn-hoofd__cijfer">
-                  <strong>{formatCurrency(hoofdCijfers.waarde)}</strong>
-                  <span>voorraadwaarde</span>
-                </span>
+                {zietBedragen ? (
+                  <span className="magazijn-hoofd__cijfer">
+                    <strong>{formatCurrency(hoofdCijfers.waarde)}</strong>
+                    <span>voorraadwaarde</span>
+                  </span>
+                ) : null}
               </span>
             </button>
           ) : null}
@@ -257,7 +287,10 @@ export function Magazijn() {
                   producten={state.producten}
                   voorraad={state.voorraad}
                   magBeheren={magBeheren}
-                  onInboeken={(product) => setActie({ soort: "inkoop", productId: product.id })}
+                  onInboeken={(product) =>
+                    setActie({ soort: opPersoneelslocatie ? "aanvullen" : "inkoop", productId: product.id })
+                  }
+                  perStuk={opPersoneelslocatie}
                   onVerplaatsen={(product) => setActie({ soort: "verplaatsen", productId: product.id })}
                 />
               </Card>
@@ -274,7 +307,13 @@ export function Magazijn() {
       <VoorraadMutatieModal
         open={actie !== null}
         actie={actie?.soort ?? "inkoop"}
-        standaardLocatieId={actieveLocatieId ?? undefined}
+        /* Aanvullen: van het hoofdmagazijn naar de kantine of kroeg die open staat. */
+        standaardLocatieId={
+          actie?.soort === "aanvullen" ? hoofdmagazijn?.id : actieveLocatieId ?? undefined
+        }
+        standaardNaarLocatieId={
+          actie?.soort === "aanvullen" && opPersoneelslocatie ? actieveLocatieId ?? undefined : undefined
+        }
         standaardProductId={actie?.productId}
         onClose={() => setActie(null)}
         onNieuwProduct={

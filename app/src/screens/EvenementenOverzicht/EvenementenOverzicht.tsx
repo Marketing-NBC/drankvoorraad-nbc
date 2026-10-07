@@ -19,7 +19,7 @@ const maandNotatie = new Intl.DateTimeFormat("nl-NL", { month: "long", year: "nu
 
 export function EvenementenOverzicht() {
   const { state, laden, fout, herlaad, mutatiesPerEvenement } = useAppState();
-  const { mag } = useAuth();
+  const { mag, zietBedragen } = useAuth();
   const navigate = useNavigate();
   const [filters, setFilters] = useState<EventFiltersValue>({ zoek: "", merk: "", status: "" });
   const [modalOpen, setModalOpen] = useState(false);
@@ -54,20 +54,25 @@ export function EvenementenOverzicht() {
           { header: "Merk", value: (e) => e.merk },
           { header: "Status", value: (e) => e.status },
           { header: "Opdrachtgever", value: (e) => e.opdrachtgever ?? "" },
-          { header: "Omzet", opmaak: "bedrag", value: (e) => e.omzet },
-          {
-            header: "Brutowinst",
-            opmaak: "bedrag",
-            value: (e) =>
-              berekenMarge(e.omzet, mutatiesPerEvenement.get(e.id) ?? [], state.producten).brutowinst,
-          },
-          {
-            header: "Brutomarge",
-            value: (e) => {
-              const marge = berekenMarge(e.omzet, mutatiesPerEvenement.get(e.id) ?? [], state.producten);
-              return marge.brutomarge === null ? "" : `${Math.round(marge.brutomarge)}%`;
-            },
-          },
+          // Omzet en marge alleen voor de beheerder (migratie 019).
+          ...(zietBedragen
+            ? [
+                { header: "Omzet", opmaak: "bedrag" as const, value: (e: Evenement) => e.omzet },
+                {
+                  header: "Brutowinst",
+                  opmaak: "bedrag" as const,
+                  value: (e: Evenement) =>
+                    berekenMarge(e.omzet, mutatiesPerEvenement.get(e.id) ?? [], state.producten).brutowinst,
+                },
+                {
+                  header: "Brutomarge",
+                  value: (e: Evenement) => {
+                    const marge = berekenMarge(e.omzet, mutatiesPerEvenement.get(e.id) ?? [], state.producten);
+                    return marge.brutomarge === null ? "" : `${Math.round(marge.brutomarge)}%`;
+                  },
+                },
+              ]
+            : []),
         ],
       });
     } finally {
@@ -80,7 +85,11 @@ export function EvenementenOverzicht() {
       <PageHeader
         eyebrow="welkom bij nbc & green village"
         title="Evenementen"
-        toelichting="Alles wat er dit seizoen staat, gesorteerd op datum. De marge staat op de rij, zodat je niet hoeft te openen om te zien of het klopt."
+        toelichting={
+          zietBedragen
+            ? "Alles wat er dit seizoen staat, gesorteerd op datum. De marge staat op de rij, zodat je niet hoeft te openen om te zien of het klopt."
+            : "Alles wat er dit seizoen staat, gesorteerd op datum."
+        }
         actions={
           <>
             {magEvenementenBeheren ? (

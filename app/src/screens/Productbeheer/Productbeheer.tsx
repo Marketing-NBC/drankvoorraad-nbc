@@ -6,7 +6,7 @@ import { KaartKop } from "../../components/ui/KaartKop";
 import { useAppState } from "../../context/AppStateContext";
 import { useAuth } from "../../context/AuthContext";
 import type { Product } from "../../data/types";
-import { exporteerNaarExcel } from "../../utils/excel";
+import { exporteerNaarExcel, type ExcelKolom } from "../../utils/excel";
 import { formatCurrency } from "../../utils/format";
 import { heeftVerpakking, verpakkingLabel } from "../../data/verpakking";
 import { ActieMenu } from "../../components/ui/ActieMenu";
@@ -16,7 +16,7 @@ import { ProductTable } from "./ProductTable";
 
 export function Productbeheer() {
   const { state, laden, fout, herlaad, verwijderProduct } = useAppState();
-  const { mag } = useAuth();
+  const { mag, zietBedragen } = useAuth();
   const [editing, setEditing] = useState<Product | null>(null);
   const [formOpen, setFormOpen] = useState(false);
   const [actieFout, setActieFout] = useState<string | null>(null);
@@ -40,7 +40,8 @@ export function Productbeheer() {
         zoek
           ? p.naam.toLowerCase().includes(zoek) ||
             p.categorie.toLowerCase().includes(zoek) ||
-            (p.barcode ?? "").includes(zoek)
+            (p.barcode ?? "").includes(zoek) ||
+            (p.barcodeVerpakking ?? "").includes(zoek)
           : true
       );
   }, [state.producten, filters]);
@@ -63,22 +64,28 @@ export function Productbeheer() {
         { header: "Eenheid", value: (p) => p.eenheid },
         { header: "Verpakking", value: (p) => (heeftVerpakking(p) ? verpakkingLabel(p) : "") },
         { header: "Barcode", value: (p) => p.barcode ?? "" },
+        { header: "Barcode verpakking", value: (p) => p.barcodeVerpakking ?? "" },
         { header: "Leverancier", value: (p) => p.leverancier ?? "" },
         {
           header: "Voorraad",
           opmaak: "getal",
           value: (p) => (p.voorraadloos ? 0 : voorraadPerProduct.get(p.id) ?? 0),
         },
-        { header: "Inkoopprijs", opmaak: "bedrag", value: (p) => p.inkoopprijs },
-        { header: "Statiegeld per stuk", opmaak: "bedrag", value: (p) => p.statiegeldPerStuk },
-        { header: "Statiegeld per verpakking", opmaak: "bedrag", value: (p) => p.statiegeldPerVerpakking },
-        {
-          header: "Voorraadwaarde",
-          opmaak: "bedrag",
-          value: (p) => (voorraadPerProduct.get(p.id) ?? 0) * p.inkoopprijs,
-        },
+        // Bedragen alleen voor de beheerder (migratie 019).
+        ...(zietBedragen
+          ? ([
+            { header: "Inkoopprijs", opmaak: "bedrag", value: (p) => p.inkoopprijs },
+            { header: "Statiegeld per stuk", opmaak: "bedrag", value: (p) => p.statiegeldPerStuk },
+            { header: "Statiegeld per verpakking", opmaak: "bedrag", value: (p) => p.statiegeldPerVerpakking },
+            {
+              header: "Voorraadwaarde",
+              opmaak: "bedrag",
+              value: (p) => (voorraadPerProduct.get(p.id) ?? 0) * p.inkoopprijs,
+            },
+            ] satisfies ExcelKolom<Product>[])
+          : []),
       ],
-      totalen: { 0: "Totale voorraadwaarde", 11: totaleWaarde },
+      ...(zietBedragen && { totalen: { 0: "Totale voorraadwaarde", 12: totaleWaarde } }),
     });
   }
 
@@ -100,7 +107,11 @@ export function Productbeheer() {
       <PageHeader
         eyebrow="drankvoorraad"
         title="Producten"
-        toelichting="Barcode, eenheid en prijzen bepalen wat er bij tellen en marge gebeurt. Producten met boekingen kun je niet verwijderen."
+        toelichting={
+          zietBedragen
+            ? "Barcode, eenheid en prijzen bepalen wat er bij tellen en marge gebeurt. Producten met boekingen kun je niet verwijderen."
+            : "Barcode en eenheid bepalen wat er bij tellen gebeurt. Producten met boekingen kun je niet verwijderen."
+        }
         actions={
           <>
             {magBeheren ? (
@@ -136,9 +147,11 @@ export function Productbeheer() {
             titel={`${zichtbaar.length} ${zichtbaar.length === 1 ? "product" : "producten"}`}
             sub="voorraad over alle locaties"
             rechts={
-              <span className="kaart-kop__sub">
-                totale voorraadwaarde <strong>{formatCurrency(totaleWaarde)}</strong>
-              </span>
+              zietBedragen ? (
+                <span className="kaart-kop__sub">
+                  totale voorraadwaarde <strong>{formatCurrency(totaleWaarde)}</strong>
+                </span>
+              ) : null
             }
           />
           <ProductTable
@@ -146,6 +159,7 @@ export function Productbeheer() {
             voorraad={state.voorraad}
             magBeheren={magBeheren}
             magVerwijderen={magVerwijderen}
+            zietBedragen={zietBedragen}
             onEdit={(product) => {
               setEditing(product);
               setFormOpen(true);

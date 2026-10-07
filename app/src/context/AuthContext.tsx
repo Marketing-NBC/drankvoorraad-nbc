@@ -13,6 +13,12 @@ interface AuthContextValue {
   uitloggen: () => Promise<void>;
   /** true wanneer de ingelogde gebruiker een van de opgegeven rollen heeft */
   mag: (...rollen: GebruikerRol[]) => boolean;
+  /**
+   * Bedragen en marges zijn alleen voor de beheerder. De database dwingt dat
+   * af (migratie 019); dit is wat de schermen gebruiken om ze te verbergen,
+   * zodat er nergens een "€ 0,00" staat die eigenlijk "geheim" betekent.
+   */
+  zietBedragen: boolean;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -101,6 +107,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       mag(...rollen) {
         return profiel !== null && rollen.includes(profiel.rol);
       },
+      zietBedragen: profiel?.rol === "beheerder",
     }),
     [session, profiel, profielFout, laden]
   );

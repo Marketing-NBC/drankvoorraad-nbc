@@ -206,10 +206,36 @@ const tellingregels: Record<string, Tellingregel[]> = {
   t2: [],
 };
 
+const emballage = [
+  { id: "e1", naam: "Krat Coca-Cola 24 × 0,2 L", leverancier: "Coca-Cola", actief: true, borg: 5 },
+  { id: "e2", naam: "PET-fles Coca-Cola", leverancier: "Coca-Cola", actief: true, borg: 0.25 },
+  { id: "e3", naam: "Krat Spa 12 × 1 L", leverancier: "Spadel", actief: true, borg: 5 },
+  { id: "e4", naam: "Bierkrat Swinkels 24 × 0,3 L", leverancier: "Swinkels", actief: true, borg: 3.9 },
+  { id: "e5", naam: "Fust Swinkels 20 L", leverancier: "Swinkels", actief: true, borg: 30 },
+];
+const emballageRetouren = [
+  { id: "er1", leverancier: "Coca-Cola", bonnummer: "CC-88123", gebruikerId: "u2", aangemaaktOp: dagenGeleden(3) },
+  { id: "er2", leverancier: "Swinkels", gebruikerId: "u4", aangemaaktOp: dagenGeleden(9) },
+];
+const emballageRetourregels = [
+  { id: "em1", retourId: "er1", emballageId: "e1", aantal: 18 },
+  { id: "em2", retourId: "er1", emballageId: "e2", aantal: 40 },
+  { id: "em3", retourId: "er2", emballageId: "e5", aantal: 12 },
+  { id: "em4", retourId: "er2", emballageId: "e4", aantal: 6 },
+];
+
+/* Zoals de database: bedragen alleen voor de beheerder, anders 0. */
+const zietBedragen = (new URLSearchParams(window.location.search).get("rol") ?? "beheerder") === "beheerder";
 const state = {
-  producten, evenementen, mutaties, locaties, voorraad, profielen, tellingen, pakbonnen,
+  producten: zietBedragen
+    ? producten
+    : producten.map((x) => ({ ...x, inkoopprijs: 0, statiegeldPerStuk: 0, statiegeldPerVerpakking: 0 })),
+  evenementen: zietBedragen ? evenementen : evenementen.map((e) => ({ ...e, omzet: 0 })),
+  mutaties, locaties, voorraad, profielen, tellingen, pakbonnen,
   zalen, evenementZalen, vulplekken, standaardvulling, koppelingen, machines, metingen,
   leveringen, leveringregels,
+  emballage: zietBedragen ? emballage : emballage.map((e) => ({ ...e, borg: 0 })),
+  emballageRetouren, emballageRetourregels,
 };
 
 /* Eén wachtende boeking, zodat de balk in de preview te beoordelen is. */
@@ -274,6 +300,7 @@ const waarde: Record<string, unknown> = {
   wijzigKoppeling: niets,
   boekLevering: async () => ({ inWachtrij: false }),
   handelVerschilAf: niets,
+  boekEmballageRetour: async () => "er1",
   wachtrij,
   verstuurWachtrij: niets,
   verwijderUitWachtrij: () => {},

@@ -1,4 +1,4 @@
-import type { Product } from "./types";
+import type { Locatie, Product } from "./types";
 
 /**
  * Rekenen met verpakkingen.
@@ -72,8 +72,14 @@ function meervoudVan(naam: string, aantal: number): string {
  * rest over — wat kan, want een koelkast wordt met losse flesjes gevuld —
  * dan staat die er expliciet bij in plaats van dat hij wegvalt.
  */
-export function omschrijfAantal(product: Product, stuks: number): string {
+export function omschrijfAantal(
+  product: Product,
+  stuks: number,
+  opties: { los?: boolean } = {}
+): string {
   if (!heeftVerpakking(product) || stuks === 0) return String(stuks);
+  // In de kantine en de kroeg telt iedereen flesjes; zie losOpLocatie.
+  if (opties.los) return String(stuks);
 
   const heel = Math.floor(stuks / product.stuksPerVerpakking);
   const rest = stuks - heel * product.stuksPerVerpakking;
@@ -107,14 +113,33 @@ export function statiegeldWaarde(product: Product, stuks: number): number {
 }
 
 /**
+ * Wordt er op deze locaties per stuk geteld en gevuld, ook bij een product
+ * dat in het magazijn alleen per krat gaat?
+ *
+ * Ja zodra er een kantine of kroeg bij betrokken is. Daar staat een koelkast
+ * die met losse flesjes bijgevuld wordt, en het personeel pakt ze er ook los
+ * uit — een tekort van 7 flesjes is daar gewoon 7 flesjes, geen 0,29 krat.
+ * Het magazijn zelf blijft per krat werken.
+ */
+export function losOpLocatie(...locaties: (Locatie | null | undefined)[]): boolean {
+  return locaties.some((l) => l?.voorPersoneel === true);
+}
+
+/**
  * Hoe een aantal ingevoerd wordt: in kratten of in stuks.
  *
  * `factor` is waarmee de invoer vermenigvuldigd wordt om op stuks uit te
  * komen. Alleen producten die nooit los gaan wijken af; de rest wordt gewoon
  * in stuks ingevoerd, ook als er een krat omheen zit.
+ *
+ * `los` zet het per-krat-invoeren uit — voor de kantine en de kroeg, zie
+ * `losOpLocatie`.
  */
-export function invoer(product: Product): { label: string; eenheid: string; factor: number } {
-  if (product.alleenPerVerpakking && heeftVerpakking(product)) {
+export function invoer(
+  product: Product,
+  opties: { los?: boolean } = {}
+): { label: string; eenheid: string; factor: number } {
+  if (!opties.los && product.alleenPerVerpakking && heeftVerpakking(product)) {
     return {
       label: `Aantal ${meervoudVan(product.verpakking!, 2)}`,
       eenheid: verpakkingLabel(product),

@@ -4,6 +4,7 @@ import { Modal } from "../../components/ui/Modal";
 import { BarcodeScanner } from "../../components/ui/BarcodeScanner";
 import { Select } from "../../components/ui/Select";
 import { useAppState } from "../../context/AppStateContext";
+import { useAuth } from "../../context/AuthContext";
 import type { Product, ProductCategorie } from "../../data/types";
 import { foutBericht } from "../../utils/fouten";
 
@@ -29,6 +30,10 @@ export function ProductForm({
   barcodeVooraf?: string;
 }) {
   const { voegProductToe, wijzigProduct } = useAppState();
+  /* Prijzen en statiegeld zijn alleen voor de beheerder. Een
+     magazijnmedewerker die een gescand product aanmaakt laat ze leeg; de
+     beheerder vult ze later aan. */
+  const { zietBedragen } = useAuth();
   const [naam, setNaam] = useState("");
   const [categorie, setCategorie] = useState<ProductCategorie>("bier");
   const [inkoopprijs, setInkoopprijs] = useState("");
@@ -41,10 +46,12 @@ export function ProductForm({
   const [statiegeldPerVerpakking, setStatiegeldPerVerpakking] = useState("0");
   const [voorraadloos, setVoorraadloos] = useState(false);
   const [barcode, setBarcode] = useState("");
+  const [barcodeVerpakking, setBarcodeVerpakking] = useState("");
   const [leverancier, setLeverancier] = useState("");
   const [fout, setFout] = useState<string | null>(null);
   const [bezig, setBezig] = useState(false);
-  const [scannen, setScannen] = useState(false);
+  /** Welk barcodeveld de camera vult, of null als er niet gescand wordt. */
+  const [scannen, setScannen] = useState<"stuk" | "verpakking" | null>(null);
 
   useEffect(() => {
     if (!open) return;
@@ -60,9 +67,10 @@ export function ProductForm({
     setStatiegeldPerVerpakking(String(product?.statiegeldPerVerpakking ?? 0));
     setVoorraadloos(product?.voorraadloos ?? false);
     setBarcode(product?.barcode ?? barcodeVooraf ?? "");
+    setBarcodeVerpakking(product?.barcodeVerpakking ?? "");
     setLeverancier(product?.leverancier ?? "");
     setFout(null);
-    setScannen(false);
+    setScannen(null);
     // Bewust op product?.id en niet op product zelf: dat object krijgt bij elke
     // achtergrondverversing een nieuwe referentie, waardoor het formulier zich
     // midden in het typen zou resetten.
@@ -92,6 +100,11 @@ export function ProductForm({
       return;
     }
 
+    if (barcode.trim() && barcode.trim() === barcodeVerpakking.trim()) {
+      setFout("De barcode van het stuk en die van de verpakking kunnen niet dezelfde zijn.");
+      return;
+    }
+
     const velden = {
       naam: naam.trim(),
       categorie,
@@ -105,18 +118,23 @@ export function ProductForm({
       statiegeldPerVerpakking: perVerpakking,
       voorraadloos,
       barcode: barcode.trim() || undefined,
+      barcodeVerpakking: barcodeVerpakking.trim() || undefined,
       leverancier: leverancier.trim() || undefined,
     };
 
     setBezig(true);
     try {
-      if (product) await wijzigProduct(product.id, velden);
+      if (product) {
+        // Zonder bedragen in beeld ook geen bedragen meesturen.
+        const { inkoopprijs: _i, statiegeldPerStuk: _s, statiegeldPerVerpakking: _v, ...basis } = velden;
+        await wijzigProduct(product.id, zietBedragen ? velden : basis);
+      }
       else await voegProductToe(velden);
       onClose();
     } catch (err) {
       const bericht = foutBericht(err);
       setFout(
-        bericht.includes("duplicate") || bericht.includes("unique")
+        bericht.includes("duplicate") || bericht.includes("unique") || bericht.includes("ander product")
           ? "Deze naam of barcode is al aan een ander product gekoppeld."
           : "Opslaan is niet gelukt. Controleer je verbinding en probeer opnieuw."
       );
@@ -154,12 +172,14 @@ export function ProductForm({
             </label>
             <Input id="product-inhoud" placeholder="0,2 L" value={inhoud} onChange={(e) => setInhoud(e.target.value)} />
           </div>
-          <div className="field-group">
-            <label className="field-group__label" htmlFor="product-inkoop">
-              Inkoopprijs <span className="field-group__hint">ex btw, per stuk</span>
-            </label>
-            <Input id="product-inkoop" type="number" min={0} step="0.01" value={inkoopprijs} onChange={(e) => setInkoopprijs(e.target.value)} />
-          </div>
+          {zietBedragen ? (
+            <div className="field-group">
+              <label className="field-group__label" htmlFor="product-inkoop">
+                Inkoopprijs <span className="field-group__hint">ex btw, per stuk</span>
+              </label>
+              <Input id="product-inkoop" type="number" min={0} step="0.01" value={inkoopprijs} onChange={(e) => setInkoopprijs(e.target.value)} />
+            </div>
+          ) : null}
         </div>
 
         {/* Verpakking bepaalt niet wát er geteld wordt — dat blijven stuks —
@@ -191,6 +211,7 @@ export function ProductForm({
               </span>
             </span>
           </label>
+          {zietBedragen ? (
           <div className="field-row">
             <div className="field-group">
               <label className="field-group__label" htmlFor="product-statiegeld-stuk">Statiegeld per stuk</label>
@@ -201,6 +222,7 @@ export function ProductForm({
               <Input id="product-statiegeld-verpakking" type="number" min={0} step="0.01" value={statiegeldPerVerpakking} onChange={(e) => setStatiegeldPerVerpakking(e.target.value)} />
             </div>
           </div>
+          ) : null}
         </fieldset>
 
         <label className="keuzevakje">
@@ -213,28 +235,47 @@ export function ProductForm({
           </span>
         </label>
 
+        {/* Twee barcodes: die op het flesje en die op de krat. In het magazijn
+            scan je meestal de krat; beide leiden naar dit product. */}
         <div className="field-group">
           <div className="product-kiezer__kop">
             <label className="field-group__label" htmlFor="product-barcode">
-              Barcode <span className="field-group__hint">leeg laten voor fusten en losse producten</span>
+              Barcode stuk <span className="field-group__hint">op het flesje of fust</span>
             </label>
-            <Link icon={null} onClick={() => setScannen(!scannen)}>
-              {scannen ? "Stop met scannen" : "Scannen"}
+            <Link icon={null} onClick={() => setScannen(scannen === "stuk" ? null : "stuk")}>
+              {scannen === "stuk" ? "Stop met scannen" : "Scannen"}
             </Link>
           </div>
           <Input id="product-barcode" value={barcode} onChange={(e) => setBarcode(e.target.value)} />
-          <BarcodeScanner
-            actief={scannen}
-            onGevonden={(code) => {
-              setBarcode(code);
-              setScannen(false);
-            }}
-            onFout={(melding) => {
-              setFout(melding);
-              setScannen(false);
-            }}
+        </div>
+        <div className="field-group">
+          <div className="product-kiezer__kop">
+            <label className="field-group__label" htmlFor="product-barcode-verpakking">
+              Barcode verpakking{" "}
+              <span className="field-group__hint">op de {verpakking.trim() || "krat of doos"}</span>
+            </label>
+            <Link icon={null} onClick={() => setScannen(scannen === "verpakking" ? null : "verpakking")}>
+              {scannen === "verpakking" ? "Stop met scannen" : "Scannen"}
+            </Link>
+          </div>
+          <Input
+            id="product-barcode-verpakking"
+            value={barcodeVerpakking}
+            onChange={(e) => setBarcodeVerpakking(e.target.value)}
           />
         </div>
+        <BarcodeScanner
+          actief={scannen !== null}
+          onGevonden={(code) => {
+            if (scannen === "verpakking") setBarcodeVerpakking(code);
+            else setBarcode(code);
+            setScannen(null);
+          }}
+          onFout={(melding) => {
+            setFout(melding);
+            setScannen(null);
+          }}
+        />
         <div className="field-group">
           <label className="field-group__label" htmlFor="product-leverancier">Leverancier (optioneel)</label>
           <Input id="product-leverancier" value={leverancier} onChange={(e) => setLeverancier(e.target.value)} />

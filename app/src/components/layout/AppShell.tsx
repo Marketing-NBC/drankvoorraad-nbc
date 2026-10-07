@@ -24,7 +24,9 @@ interface NavItem {
 
 /** Volgorde in de zijbalk: cijfers eerst, dan het dagelijkse werk. */
 const navItems: NavItem[] = [
-  { to: ROUTES.dashboard, label: "Dashboard", tabLabel: "Cijfers", icon: "grafiek" },
+  /* Het dashboard is cijfers: marges, derving, voorraadwaarde. Dat zijn
+     bedragen, en die zijn alleen voor de beheerder. */
+  { to: ROUTES.dashboard, label: "Dashboard", tabLabel: "Cijfers", icon: "grafiek", rollen: ["beheerder"] },
   { to: ROUTES.overzicht, label: "Evenementen", tabLabel: "Events", icon: "calendar" },
   { to: ROUTES.magazijn, label: "Magazijn", icon: "building" },
   { to: ROUTES.leveringen, label: "Leveringen", tabLabel: "Binnen", icon: "doos" },
@@ -64,6 +66,7 @@ function schermNaam(pad: string): { label: string; terug: boolean } {
   if (pad.startsWith("/pakbonnen/")) return { label: "Pakbon", terug: true };
   if (pad.startsWith("/tellingen/")) return { label: "Telling", terug: true };
   if (pad === ROUTES.leveringNieuw) return { label: "Levering aannemen", terug: true };
+  if (pad === ROUTES.emballage) return { label: "Emballage retour", terug: true };
   const item = navItems.find((n) => n.to === pad);
   return { label: item?.label ?? "Drankvoorraad", terug: false };
 }
@@ -153,7 +156,11 @@ export function AppShell({ children }: { children: ReactNode }) {
     <div className="app-shell">
       {/* Zijbalk: alleen op desktop. Daaronder neemt de onderbalk het over. */}
       <aside className="zijbalk">
-        <NavLink to={ROUTES.dashboard} aria-label="Naar dashboard" className="zijbalk__merk">
+        <NavLink
+          to={mag("beheerder") ? ROUTES.dashboard : ROUTES.overzicht}
+          aria-label={mag("beheerder") ? "Naar dashboard" : "Naar evenementen"}
+          className="zijbalk__merk"
+        >
           <Logo variant="mark-color" height={26} />
         </NavLink>
 

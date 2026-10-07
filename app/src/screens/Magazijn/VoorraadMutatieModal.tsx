@@ -6,11 +6,13 @@ import { ProductKiezer } from "../../components/ui/ProductKiezer";
 import { Select } from "../../components/ui/Select";
 import { useAppState } from "../../context/AppStateContext";
 import type { MutatieType } from "../../data/types";
-import { invoer, verpakkingLabel } from "../../data/verpakking";
+import { invoer, losOpLocatie, verpakkingLabel } from "../../data/verpakking";
 
 export type MagazijnActie =
   | "inkoop"
   | "verplaatsen"
+  /** Verplaatsen van het hoofdmagazijn naar de kantine of de kroeg. */
+  | "aanvullen"
   | "beschadigd"
   | "correctie"
   | "personeelsverbruik";
@@ -18,6 +20,7 @@ export type MagazijnActie =
 const titels: Record<MagazijnActie, string> = {
   inkoop: "Voorraad inboeken",
   verplaatsen: "Voorraad verplaatsen",
+  aanvullen: "Aanvullen vanuit het magazijn",
   beschadigd: "Afschrijven",
   correctie: "Voorraad corrigeren",
   personeelsverbruik: "Personeelsverbruik boeken",
@@ -26,6 +29,8 @@ const titels: Record<MagazijnActie, string> = {
 const toelichting: Record<MagazijnActie, string> = {
   inkoop: "Nieuwe levering toevoegen aan een locatie.",
   verplaatsen: "Voorraad van de ene locatie naar de andere brengen.",
+  aanvullen:
+    "Drank uit het magazijn naar de kantine of de kroeg brengen. Vul losse flesjes in: 12 is 12, ook als het magazijn per krat telt.",
   beschadigd: "Beschadigde of weggegooide producten afboeken. Dit telt mee als derving.",
   correctie: "Handmatige correctie na een telling of vergissing. Gebruik een negatief aantal om af te boeken.",
   personeelsverbruik:
@@ -37,6 +42,7 @@ export function VoorraadMutatieModal({
   onClose,
   actie,
   standaardLocatieId,
+  standaardNaarLocatieId,
   standaardProductId,
   onNieuwProduct,
 }: {
@@ -44,12 +50,14 @@ export function VoorraadMutatieModal({
   onClose: () => void;
   actie: MagazijnActie;
   standaardLocatieId?: string;
+  /** Bij verplaatsen en aanvullen: waar het heen gaat. */
+  standaardNaarLocatieId?: string;
   /** Vooraf gekozen product — gezet door de snelknoppen in de voorraadtabel. */
   standaardProductId?: string;
   /** Onbekende barcode gescand — opent het productformulier met de code alvast ingevuld. */
   onNieuwProduct?: (barcode: string) => void;
 }) {
-  const { state, voegMutatieToe } = useAppState();
+  const { state, voegMutatieToe, hoofdmagazijn } = useAppState();
   const [productId, setProductId] = useState("");
   const [vanLocatieId, setVanLocatieId] = useState("");
   const [naarLocatieId, setNaarLocatieId] = useState("");
@@ -67,9 +75,18 @@ export function VoorraadMutatieModal({
     actie === "personeelsverbruik"
       ? state.locaties.filter((l) => l.voorPersoneel)
       : state.locaties;
+  /* Aanvullen gaat altijd naar een kantine of kroeg. */
+  const naarOpties = actie === "aanvullen" ? state.locaties.filter((l) => l.voorPersoneel) : state.locaties;
+  const verplaatst = actie === "verplaatsen" || actie === "aanvullen";
 
   const product = boekbareProducten.find((p) => p.id === productId) ?? null;
-  const invoerVorm = product ? invoer(product) : { label: "Aantal", eenheid: "", factor: 1 };
+  /* Raakt de boeking de kantine of de kroeg, dan per flesje in plaats van
+     per krat. Zie losOpLocatie in src/data/verpakking.ts. */
+  const perStuk = losOpLocatie(
+    state.locaties.find((l) => l.id === vanLocatieId),
+    verplaatst ? state.locaties.find((l) => l.id === naarLocatieId) : undefined
+  );
+  const invoerVorm = product ? invoer(product, { los: perStuk }) : { label: "Aantal", eenheid: "", factor: 1 };
 
   useEffect(() => {
     if (!open) return;
@@ -77,14 +94,20 @@ export function VoorraadMutatieModal({
     setVanLocatieId(
       actie === "personeelsverbruik"
         ? kiesbareLocaties.find((l) => l.id === standaardLocatieId)?.id ?? kiesbareLocaties[0]?.id ?? ""
-        : standaardLocatieId ?? state.locaties[0]?.id ?? ""
+        : actie === "aanvullen"
+          ? standaardLocatieId ?? hoofdmagazijn?.id ?? state.locaties[0]?.id ?? ""
+          : standaardLocatieId ?? state.locaties[0]?.id ?? ""
     );
-    setNaarLocatieId(state.locaties.find((l) => l.id !== standaardLocatieId)?.id ?? "");
+    setNaarLocatieId(
+      naarOpties.find((l) => l.id === standaardNaarLocatieId)?.id ??
+        naarOpties.find((l) => l.id !== standaardLocatieId)?.id ??
+        ""
+    );
     setAantal("");
     setNotitie("");
     setFout(null);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, actie, standaardLocatieId, standaardProductId, state.producten, state.locaties]);
+  }, [open, actie, standaardLocatieId, standaardNaarLocatieId, standaardProductId, state.producten, state.locaties]);
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
@@ -93,7 +116,10 @@ export function VoorraadMutatieModal({
     if (!productId) return setFout("Kies een product.");
     if (!aantalGetal || Number.isNaN(aantalGetal)) return setFout("Vul een aantal in.");
     if (actie !== "correctie" && aantalGetal <= 0) return setFout("Vul een aantal groter dan 0 in.");
-    if (actie === "verplaatsen" && vanLocatieId === naarLocatieId) {
+    if (verplaatst && !naarLocatieId) {
+      return setFout("Er is nog geen kantine of kroeg om aan te vullen.");
+    }
+    if (verplaatst && vanLocatieId === naarLocatieId) {
       return setFout("Kies twee verschillende locaties.");
     }
     if (actie === "personeelsverbruik" && !vanLocatieId) {
@@ -117,7 +143,7 @@ export function VoorraadMutatieModal({
     } =
       actie === "inkoop"
         ? { type: "inkoop", naarLocatieId: vanLocatieId }
-        : actie === "verplaatsen"
+        : verplaatst
           ? { type: "magazijn-naar-magazijn", vanLocatieId, naarLocatieId }
           : actie === "beschadigd"
             ? { type: "beschadigd", vanLocatieId }
@@ -152,10 +178,11 @@ export function VoorraadMutatieModal({
   }
 
   const locatieOpties = kiesbareLocaties.map((l) => ({ value: l.id, label: l.naam }));
+  const naarLocatieOpties = naarOpties.map((l) => ({ value: l.id, label: l.naam }));
   const eersteLocatieLabel =
     actie === "inkoop"
       ? "Naar locatie"
-      : actie === "verplaatsen" || actie === "personeelsverbruik"
+      : verplaatst || actie === "personeelsverbruik"
         ? "Vanuit locatie"
         : "Locatie";
 
@@ -169,6 +196,7 @@ export function VoorraadMutatieModal({
           productId={productId}
           onProductIdChange={setProductId}
           onOnbekendeBarcode={onNieuwProduct}
+          perStuk={perStuk}
         />
 
         <div className="field-group">
@@ -182,7 +210,7 @@ export function VoorraadMutatieModal({
           />
         </div>
 
-        {actie === "verplaatsen" ? (
+        {verplaatst ? (
           <div className="field-group">
             <label className="field-group__label" htmlFor="mutatie-naar">Naar locatie</label>
             <Select
@@ -190,7 +218,7 @@ export function VoorraadMutatieModal({
               aria-label="Naar locatie"
               value={naarLocatieId}
               onChange={(e) => setNaarLocatieId(e.target.value)}
-              options={locatieOpties}
+              options={naarLocatieOpties}
             />
           </div>
         ) : null}
@@ -202,6 +230,10 @@ export function VoorraadMutatieModal({
               <span className="field-group__hint">negatief = afboeken</span>
             ) : product && invoerVorm.factor > 1 ? (
               <span className="field-group__hint">1 {product.verpakking} = {verpakkingLabel(product)}</span>
+            ) : product && perStuk && product.alleenPerVerpakking ? (
+              <span className="field-group__hint">
+                per {product.eenheid} · 1 {product.verpakking} = {product.stuksPerVerpakking}
+              </span>
             ) : null}
           </label>
           {/* Een correctie mag negatief zijn (afboeken); de rest niet. Daar

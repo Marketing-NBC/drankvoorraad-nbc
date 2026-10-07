@@ -17,13 +17,24 @@ voorraadstand op rust:
   rechtstreeks vanuit de app. Zie `supabase/schema.sql`.
 - **Rollen worden in de database afgedwongen**, niet alleen in het scherm. Een
   knop verbergen is geen beveiliging. De rollen zijn `beheerder`,
-  `magazijnmedewerker` en `evenementmanager`.
+  `magazijnmedewerker` en `evenementmanager`. De evenementmanager boekt
+  uitgifte en retour bij een evenement; pakbonnen, inkoop, verplaatsen,
+  tellen en leveringen zijn magazijnwerk.
+- **Bedragen en marges zijn alleen voor de beheerder.** Inkoopprijs,
+  statiegeld, omzet en borg zijn voor andere rollen ingetrokken en alleen te
+  lezen of te zetten via `productbedragen`, `evenementomzet`,
+  `emballageborg`, `stel_productbedragen` en `stel_omzet` (migratie 019).
+  In de app staan ze dan op 0; schermen tonen ze alleen bij `zietBedragen`.
+  Gevolg: een **nieuwe kolom** op `producten`, `evenementen` of `emballage`
+  is niet vanzelf leesbaar — geef hem in dezelfde migratie een
+  `grant select (kolom)`, anders laadt de app voor niemand.
 - **Voorraad rekent altijd in stuks.** Een verpakking bepaalt alleen hoe er
   ingevoerd en getoond wordt: bij `alleen_per_verpakking` vult het magazijn
   kratten in en rekent de app om (× `stuks_per_verpakking`). De omrekening zit
   op één plek — `app/src/data/verpakking.ts` — en nergens anders. Reden: een
   koelkast wordt met 12 flesjes gevuld, niet met een halve krat, dus het
-  product kán geen krat zijn.
+  product kán geen krat zijn. Raakt een boeking of telling de kantine of de
+  kroeg, dan gaat het altijd per flesje (`losOpLocatie`).
 - **De kantine en de kroeg zijn voor personeel.** Wat daar opgaat telt nooit
   mee bij een evenement. Een trigger weigert elke boeking die die twee mengt;
   zie `supabase/migraties/011_personeelslocaties.sql`.
@@ -73,7 +84,13 @@ Er is geen backend van onszelf: de browser praat rechtstreeks met Supabase,
 afgeschermd door RLS-policies. Serverlogica zit in Postgres, aangeroepen via
 RPC's: `start_telling`, `rond_telling_af`, `annuleer_telling`, `maak_pakbon`,
 `stel_min_voorraad`, `boek_meting`, `boek_levering`, `handel_verschil_af`,
-`gebruikers_overzicht`.
+`gebruikers_overzicht`, `boek_emballage_retour`, en de bedragfuncties uit
+migratie 019.
+
+Lege emballage die terug gaat naar de leverancier wordt vastgelegd op de
+tabellen `emballage` (soorten met borg), `emballage_retouren` (de bon) en
+`emballage_mutaties` (de regels). Dat raakt de drankvoorraad niet; het is
+de controle op de creditnota.
 
 `importeer_metingen` is de enige RPC die de app zelf niet aanroept. Dat is de
 poort waar de koppeling met Franke en Aquablu straks op aansluit: een Edge
@@ -117,7 +134,9 @@ beoordelen zonder op productiedata te werken, en het enige dat er nu voor in
 de plaats is zolang er geen test-Supabase naast productie staat.
 
 Voeg een pad toe met `?pad=`, bijvoorbeeld
-`http://localhost:5173/?pad=/magazijn`. De map `app/preview/` hoort niet in de
+`http://localhost:5173/?pad=/magazijn`. Met `&rol=magazijnmedewerker` of
+`&rol=evenementmanager` zie je het scherm zoals die rol het ziet (zonder
+bedragen). De map `app/preview/` hoort niet in de
 publicatiebuild: die gebruikt `vite.config.ts`.
 
 ## Publiceren
@@ -150,7 +169,7 @@ afmaken ervan. Deze paragraaf mag weg zodra dat plan er ligt.
 Vier dingen die bij "van PoC naar af" waarschijnlijk terugkomen. Geen van deze is
 kapot — het zijn keuzes die passen bij een PoC en knellen zodra het menens wordt:
 
-- **Testdekking.** 74 tests over rekenlogica (`app/src/data/`), de wachtrij
+- **Testdekking.** 81 tests over rekenlogica (`app/src/data/`), de wachtrij
   (`app/src/lib/`) en de Excel-export (`app/src/utils/`). Geen enkel scherm of
   gebruikersstroom is getest, terwijl daar de meeste code zit.
 - **Databasemigraties.** Half opgelost: nieuwe wijzigingen staan genummerd in

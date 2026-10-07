@@ -62,6 +62,11 @@ export interface Product {
   id: string;
   naam: string;
   categorie: ProductCategorie;
+  /**
+   * Inkoopprijs en statiegeld zijn alleen voor de beheerder te lezen
+   * (migratie 019). Voor andere rollen staan ze hier op 0 — reken er dus
+   * alleen mee op een plek die `zietBedragen` respecteert.
+   */
   inkoopprijs: number;
   /** Eenheid waarin geteld wordt: fles, fust, kop, glas. */
   eenheid: string;
@@ -79,6 +84,8 @@ export interface Product {
   voorraadloos: boolean;
   sku?: string;
   barcode?: string;
+  /** Barcode op de krat of doos — in het magazijn scan je meestal die. */
+  barcodeVerpakking?: string;
   leverancier?: string;
 }
 
@@ -104,7 +111,35 @@ export interface EvenementCore {
 }
 
 export interface Evenement extends EvenementCore {
+  /** Alleen voor de beheerder te lezen (migratie 019); anders 0. */
   omzet: number;
+}
+
+/** Een soort emballage waar borg op zit: krat, fust, PET-fles. */
+export interface EmballageSoort {
+  id: string;
+  naam: string;
+  leverancier?: string;
+  actief: boolean;
+  /** Borg per stuk emballage. Alleen voor de beheerder; anders 0. */
+  borg: number;
+}
+
+/** Eén keer lege emballage mee terug naar de leverancier. */
+export interface EmballageRetour {
+  id: string;
+  leverancier: string;
+  bonnummer?: string;
+  opmerking?: string;
+  gebruikerId: string;
+  aangemaaktOp: string;
+}
+
+export interface EmballageRetourregel {
+  id: string;
+  retourId: string;
+  emballageId: string;
+  aantal: number;
 }
 
 export type MutatieType =

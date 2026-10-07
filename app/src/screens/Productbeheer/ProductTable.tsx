@@ -1,5 +1,5 @@
 import { Link } from "../../design-system";
-import { Table } from "../../components/ui/Table";
+import { Table, type TableColumn } from "../../components/ui/Table";
 import type { Product, Voorraad } from "../../data/types";
 import { formatCurrency } from "../../utils/format";
 import { eenheidLabel, heeftVerpakking, omschrijfAantal, verpakkingLabel } from "../../data/verpakking";
@@ -9,6 +9,7 @@ export function ProductTable({
   voorraad,
   magBeheren,
   magVerwijderen,
+  zietBedragen,
   onEdit,
   onDelete,
 }: {
@@ -16,6 +17,8 @@ export function ProductTable({
   voorraad: Voorraad[];
   magBeheren: boolean;
   magVerwijderen: boolean;
+  /** Inkoopprijs en statiegeld zijn alleen voor de beheerder. */
+  zietBedragen: boolean;
   onEdit: (product: Product) => void;
   onDelete: (product: Product) => void;
 }) {
@@ -54,7 +57,18 @@ export function ProductTable({
           header: "Barcode",
           verbergOpMobiel: true,
           render: (p) =>
-            p.barcode ? <code className="barcode-cel">{p.barcode}</code> : <span className="tekst-leeg">—</span>,
+            p.barcode || p.barcodeVerpakking ? (
+              <span className="barcode-cel__lijst">
+                {p.barcode ? <code className="barcode-cel">{p.barcode}</code> : null}
+                {p.barcodeVerpakking ? (
+                  <code className="barcode-cel" title={`Barcode op de ${p.verpakking ?? "verpakking"}`}>
+                    {p.verpakking ?? "verpakking"}: {p.barcodeVerpakking}
+                  </code>
+                ) : null}
+              </span>
+            ) : (
+              <span className="tekst-leeg">—</span>
+            ),
         },
         {
           header: "Voorraad",
@@ -73,28 +87,32 @@ export function ProductTable({
             );
           },
         },
-        {
-          header: "Inkoop",
-          align: "right",
-          render: (p) =>
-            p.inkoopprijs > 0 ? (
-              formatCurrency(p.inkoopprijs)
-            ) : (
-              <span className="tekst-leeg" title="Nog geen inkoopprijs ingevuld">nog invullen</span>
-            ),
-        },
-        {
-          header: "Statiegeld",
-          align: "right",
-          verbergOpMobiel: true,
-          render: (p) => {
-            if (p.statiegeldPerVerpakking > 0) {
-              return `${formatCurrency(p.statiegeldPerVerpakking)} / ${p.verpakking}`;
-            }
-            if (p.statiegeldPerStuk > 0) return `${formatCurrency(p.statiegeldPerStuk)} / ${p.eenheid}`;
-            return <span className="tekst-leeg">—</span>;
-          },
-        },
+        ...(zietBedragen
+          ? ([
+            {
+              header: "Inkoop",
+              align: "right",
+              render: (p) =>
+                p.inkoopprijs > 0 ? (
+                  formatCurrency(p.inkoopprijs)
+                ) : (
+                  <span className="tekst-leeg" title="Nog geen inkoopprijs ingevuld">nog invullen</span>
+                ),
+            },
+            {
+              header: "Statiegeld",
+              align: "right",
+              verbergOpMobiel: true,
+              render: (p) => {
+                if (p.statiegeldPerVerpakking > 0) {
+                  return `${formatCurrency(p.statiegeldPerVerpakking)} / ${p.verpakking}`;
+                }
+                if (p.statiegeldPerStuk > 0) return `${formatCurrency(p.statiegeldPerStuk)} / ${p.eenheid}`;
+                return <span className="tekst-leeg">—</span>;
+              },
+            },
+            ] satisfies TableColumn<Product>[])
+          : []),
         ...(magBeheren
           ? [
               {

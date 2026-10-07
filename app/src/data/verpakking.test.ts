@@ -4,13 +4,14 @@ import {
   heeftVerpakking,
   invoer,
   isHeleVerpakkingen,
+  losOpLocatie,
   omschrijfAantal,
   statiegeldWaarde,
   stuksNaarVerpakkingen,
   verpakkingLabel,
   verpakkingenNaarStuks,
 } from "./verpakking";
-import type { Product } from "./types";
+import type { Locatie, Product } from "./types";
 
 function product(velden: Partial<Product> & Pick<Product, "id" | "naam">): Product {
   return {
@@ -156,5 +157,28 @@ describe("invoer", () => {
   it("laat stuks invullen zodra een product ook los mag", () => {
     expect(invoer(spa).factor).toBe(1);
     expect(invoer(petfles).factor).toBe(1);
+  });
+});
+
+describe("kantine en kroeg: per stuk", () => {
+  const magazijn: Locatie = { id: "l0", naam: "Hoofdmagazijn", type: "magazijn", merk: null, voorPersoneel: false };
+  const kantine: Locatie = { id: "l9", naam: "Kantine", type: "kantine", merk: "NBC", voorPersoneel: true };
+
+  it("werkt per stuk zodra een kantine of kroeg meedoet", () => {
+    expect(losOpLocatie(magazijn)).toBe(false);
+    expect(losOpLocatie(magazijn, kantine)).toBe(true);
+    expect(losOpLocatie(undefined, null)).toBe(false);
+  });
+
+  it("laat 12 losse flesjes invullen in plaats van een halve krat", () => {
+    const vorm = invoer(flesje, { los: true });
+    expect(vorm.factor).toBe(1);
+    expect(vorm.label).toBe("Aantal");
+    expect(12 * vorm.factor).toBe(12);
+  });
+
+  it("toont de stand in flesjes in plaats van kratten plus rest", () => {
+    expect(omschrijfAantal(flesje, 31, { los: true })).toBe("31");
+    expect(omschrijfAantal(flesje, 31)).toBe("1 krat + 7");
   });
 });
