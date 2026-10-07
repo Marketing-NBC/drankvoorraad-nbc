@@ -43,6 +43,8 @@ trigger en de functie zijn weg. De migraties hieronder gaan daarvan uit.
 | `016_wachtrij.sql` | Het kenmerk waarmee een boeking uit de wachtrij niet twee keer kan landen. |
 | `017_gebruikersbeheer.sql` | E-mailadres bij het profiel (alleen voor een beheerder), en wie er toegang heeft. |
 | `018_personeelsverbruik_uit_telling.sql` | Een tekort in de kantine of de kroeg is personeelsverbruik, geen telverschil. |
+| `019_rechten_en_bedragen.sql` | Inkoopprijs, statiegeld en omzet alleen voor de beheerder. **Pas draaien samen met de app-versie die erbij hoort.** |
+| `020_assortiment_v2.sql` | Productlijst V2: fust 0%, dozen van 6, minimumvoorraad, nieuwe standaardvulling. |
 
 ## Waarom `010` en niet `1`
 
