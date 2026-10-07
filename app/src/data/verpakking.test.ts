@@ -4,6 +4,7 @@ import {
   heeftVerpakking,
   invoer,
   aantalTegenMinimum,
+  eenheidVan,
   invoerNaarStuks,
   isHeleVerpakkingen,
   losOpLocatie,
@@ -211,5 +212,17 @@ describe("minimum in kratten", () => {
     expect(aantalTegenMinimum(flesje, 48, 1152)).toBe("2 kratten van 48 kratten");
     expect(aantalTegenMinimum(spa, 0, 120)).toBe("0 van 120");
     expect(aantalTegenMinimum(flesje, 5, 24, { los: true })).toBe("5 van 24");
+  });
+});
+
+describe("eenheidVan", () => {
+  it("zet de eenheid in het meervoud bij meer dan één", () => {
+    expect(eenheidVan(petfles, 120)).toBe("flessen");
+    expect(eenheidVan(petfles, 1)).toBe("fles");
+    expect(eenheidVan(product({ id: "f", naam: "Fust", eenheid: "fust" }), 32)).toBe("fusten");
+  });
+
+  it("laat een onbekende eenheid zoals hij is", () => {
+    expect(eenheidVan(product({ id: "t", naam: "Tray", eenheid: "tray" }), 6)).toBe("tray");
   });
 });

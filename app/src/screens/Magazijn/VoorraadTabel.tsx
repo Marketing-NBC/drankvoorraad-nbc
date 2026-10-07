@@ -4,6 +4,7 @@ import { useAppState } from "../../context/AppStateContext";
 import type { Product, Voorraad } from "../../data/types";
 import { formatNumber } from "../../utils/format";
 import {
+  eenheidVan,
   heeftVerpakking,
   invoer,
   invoerNaarStuks,
@@ -79,13 +80,18 @@ function MinVoorraadCel({
           product dat los mag, hoeveel kratten of dozen het minimum is. */}
       {perKrat ? (
         <span className="min-voorraad__eenheid">{meervoudVan(product.verpakking!, inVeld)}</span>
-      ) : !perStuk && heeftVerpakking(product) && waarde > 0 && waarde % product.stuksPerVerpakking === 0 ? (
-        <span className="min-voorraad__eenheid">
-          = {waarde / product.stuksPerVerpakking}{" "}
-          {meervoudVan(product.verpakking!, waarde / product.stuksPerVerpakking)}
-        </span>
       ) : (
-        <span className="min-voorraad__eenheid" aria-hidden="true" />
+        /* Los ingevuld: de eenheid erbij ("120 flessen"), en als het precies
+           uitkomt hoeveel kratten of dozen dat is. */
+        <span className="min-voorraad__eenheid">
+          {eenheidVan(product, inVeld)}
+          {!perStuk && heeftVerpakking(product) && waarde > 0 && waarde % product.stuksPerVerpakking === 0
+            ? ` (${waarde / product.stuksPerVerpakking} ${meervoudVan(
+                product.verpakking!,
+                waarde / product.stuksPerVerpakking
+              )})`
+            : ""}
+        </span>
       )}
     </span>
   );

@@ -1495,4 +1495,4 @@ body { background: var(--canvas); }
 
 /* Minimum naast de eenheid waarin het ingevuld wordt: "48 kratten". */
 .min-voorraad { display: inline-flex; align-items: center; gap: 8px; justify-content: flex-end; }
-.min-voorraad__eenheid { font: var(--t-ui); color: var(--nbc-stone-600); white-space: nowrap; min-width: 92px; text-align: left; }
+.min-voorraad__eenheid { font: var(--t-ui); color: var(--nbc-stone-600); white-space: nowrap; min-width: 140px; text-align: left; }
