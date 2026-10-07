@@ -179,3 +179,21 @@ export function aantalTegenMinimum(
   }
   return `${omschrijfAantal(product, aantal)} van ${omschrijfAantal(product, minimum)}`;
 }
+
+/** Meervoud van de eenheid waarin geteld wordt: fles, fust, blik, kop, glas. */
+const eenheidMeervoud: Record<string, string> = {
+  fles: "flessen",
+  fust: "fusten",
+  blik: "blikken",
+  kop: "koppen",
+  glas: "glazen",
+};
+
+/**
+ * De eenheid bij een aantal: "1 fles", "120 flessen". Een eenheid die hier
+ * niet staat blijft zoals hij is — beter "6 tray" dan een verzonnen meervoud.
+ */
+export function eenheidVan(product: Product, aantal: number): string {
+  if (aantal === 1) return product.eenheid;
+  return eenheidMeervoud[product.eenheid] ?? product.eenheid;
+}
