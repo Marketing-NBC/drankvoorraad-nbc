@@ -59,7 +59,8 @@ export function eenheidLabel(product: Product): string {
   return `${product.eenheid} ${product.inhoud}`;
 }
 
-function meervoudVan(naam: string, aantal: number): string {
+/** "krat" of "kratten", "doos" of "dozen" — afhankelijk van het aantal. */
+export function meervoudVan(naam: string, aantal: number): string {
   if (aantal === 1) return naam;
   return meervoud[naam] ?? `× ${naam}`;
 }
@@ -147,4 +148,34 @@ export function invoer(
     };
   }
   return { label: "Aantal", eenheid: product.eenheid, factor: 1 };
+}
+
+/**
+ * Een aantal dat in een veld getypt wordt (kratten of stuks, zie `invoer`)
+ * terug naar stuks. Afgerond: 1,5 krat van 24 is 36, geen 36,0000001.
+ */
+export function invoerNaarStuks(product: Product, ingevoerd: number, opties: { los?: boolean } = {}): number {
+  return Math.round(ingevoerd * invoer(product, opties).factor);
+}
+
+/** Omgekeerd: stuks zoals ze in het invoerveld horen te staan. */
+export function stuksNaarInvoer(product: Product, stuks: number, opties: { los?: boolean } = {}): number {
+  const factor = invoer(product, opties).factor;
+  return Math.round((stuks / factor) * 100) / 100;
+}
+
+/**
+ * "0 van 72 kratten" — voorraad tegen het minimum, in de eenheid waarin het
+ * magazijn denkt. Bij een product dat los mag blijft het in stuks.
+ */
+export function aantalTegenMinimum(
+  product: Product,
+  aantal: number,
+  minimum: number,
+  opties: { los?: boolean } = {}
+): string {
+  if (opties.los || !product.alleenPerVerpakking || !heeftVerpakking(product)) {
+    return `${aantal} van ${minimum}`;
+  }
+  return `${omschrijfAantal(product, aantal)} van ${omschrijfAantal(product, minimum)}`;
 }
