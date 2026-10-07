@@ -103,7 +103,7 @@ van Supabase. Ze staan hier zodat de opbouw terug te lezen is:
 | `fase6.sql` | pakbonnen met handtekening |
 | `fase9.sql` | emballage — later teruggedraaid |
 | `fase9-terugdraaien.sql` | emballage uit gebruik genomen |
-| `reset-testdata.sql` | alle testdata wissen en magazijn vullen |
+| `schoon-beginnen.sql` | eenmalig vóór de echte start: alle boekingen en evenementen wissen, proefproducten weg |
 
 ## Rollen
 
