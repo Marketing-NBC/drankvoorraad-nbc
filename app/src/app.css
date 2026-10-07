@@ -1492,3 +1492,7 @@ body { background: var(--canvas); }
    Producten: twee barcodes per product (stuk en verpakking)
    ══════════════════════════════════════════════════════════════════ */
 .barcode-cel__lijst { display: inline-flex; flex-direction: column; gap: 4px; align-items: flex-start; }
+
+/* Minimum naast de eenheid waarin het ingevuld wordt: "48 kratten". */
+.min-voorraad { display: inline-flex; align-items: center; gap: 8px; justify-content: flex-end; }
+.min-voorraad__eenheid { font: var(--t-ui); color: var(--nbc-stone-600); white-space: nowrap; min-width: 92px; text-align: left; }

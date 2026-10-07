@@ -3,7 +3,15 @@ import { Table } from "../../components/ui/Table";
 import { useAppState } from "../../context/AppStateContext";
 import type { Product, Voorraad } from "../../data/types";
 import { formatNumber } from "../../utils/format";
-import { heeftVerpakking, omschrijfAantal, verpakkingLabel } from "../../data/verpakking";
+import {
+  heeftVerpakking,
+  invoer,
+  invoerNaarStuks,
+  meervoudVan,
+  omschrijfAantal,
+  stuksNaarInvoer,
+  verpakkingLabel,
+} from "../../data/verpakking";
 
 export interface VoorraadRegel {
   product: Product;
@@ -11,47 +19,75 @@ export interface VoorraadRegel {
   minVoorraad: number;
 }
 
-/** Inline bewerkbaar minimumvoorraad-veld; slaat op bij verlaten van het veld. */
+/**
+ * Inline bewerkbaar minimumvoorraad-veld; slaat op bij verlaten van het veld.
+ *
+ * Het minimum staat in stuks, net als de voorraad. Bij een product dat per
+ * krat gaat vult en leest het magazijn het in kratten — "48", niet "1152".
+ * De omrekening zit in src/data/verpakking.ts.
+ */
 function MinVoorraadCel({
   locatieId,
-  productId,
+  product,
   waarde,
   bewerkbaar,
+  perStuk,
 }: {
   locatieId: string;
-  productId: string;
+  product: Product;
+  /** In stuks. */
   waarde: number;
   bewerkbaar: boolean;
+  perStuk: boolean;
 }) {
   const { stelMinVoorraadIn } = useAppState();
-  const [lokaal, setLokaal] = useState(String(waarde));
+  const opties = { los: perStuk };
+  const inVeld = stuksNaarInvoer(product, waarde, opties);
+  const [lokaal, setLokaal] = useState(String(inVeld));
+  const perKrat = invoer(product, opties).factor > 1;
 
-  useEffect(() => setLokaal(String(waarde)), [waarde]);
+  useEffect(() => setLokaal(String(inVeld)), [inVeld]);
 
-  if (!bewerkbaar) return <>{formatNumber(waarde)}</>;
+  if (!bewerkbaar) return <>{omschrijfAantal(product, waarde, opties)}</>;
 
   return (
+    <span className="min-voorraad">
     <input
       className="min-voorraad-invoer"
       type="number"
       min={0}
       step={1}
       value={lokaal}
-      aria-label="Minimumvoorraad"
+      aria-label={perKrat ? `Minimumvoorraad in ${product.verpakking}en` : "Minimumvoorraad"}
       onFocus={(e) => e.target.select()}
       onChange={(e) => setLokaal(e.target.value)}
       onBlur={() => {
-        const nieuw = Number(lokaal);
-        if (Number.isNaN(nieuw) || nieuw === waarde || nieuw < 0) {
-          setLokaal(String(waarde));
+        const ingevoerd = Number(lokaal);
+        if (lokaal.trim() === "" || Number.isNaN(ingevoerd) || ingevoerd < 0) {
+          setLokaal(String(inVeld));
           return;
         }
-        void stelMinVoorraadIn(locatieId, productId, nieuw);
+        const nieuw = invoerNaarStuks(product, ingevoerd, opties);
+        if (nieuw === waarde) return;
+        void stelMinVoorraadIn(locatieId, product.id, nieuw);
       }}
       onKeyDown={(e) => {
         if (e.key === "Enter") (e.target as HTMLInputElement).blur();
       }}
     />
+      {/* Bij een product dat per krat gaat staat de eenheid erbij; bij een
+          product dat los mag, hoeveel kratten of dozen het minimum is. */}
+      {perKrat ? (
+        <span className="min-voorraad__eenheid">{meervoudVan(product.verpakking!, inVeld)}</span>
+      ) : !perStuk && heeftVerpakking(product) && waarde > 0 && waarde % product.stuksPerVerpakking === 0 ? (
+        <span className="min-voorraad__eenheid">
+          = {waarde / product.stuksPerVerpakking}{" "}
+          {meervoudVan(product.verpakking!, waarde / product.stuksPerVerpakking)}
+        </span>
+      ) : (
+        <span className="min-voorraad__eenheid" aria-hidden="true" />
+      )}
+    </span>
   );
 }
 
@@ -119,9 +155,10 @@ export function VoorraadTabel({
           render: (r) => (
             <MinVoorraadCel
               locatieId={locatieId}
-              productId={r.product.id}
+              product={r.product}
               waarde={r.minVoorraad}
               bewerkbaar={magBeheren}
+              perStuk={perStuk}
             />
           ),
         },

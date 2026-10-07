@@ -3,8 +3,11 @@ import {
   eenheidLabel,
   heeftVerpakking,
   invoer,
+  aantalTegenMinimum,
+  invoerNaarStuks,
   isHeleVerpakkingen,
   losOpLocatie,
+  stuksNaarInvoer,
   omschrijfAantal,
   statiegeldWaarde,
   stuksNaarVerpakkingen,
@@ -180,5 +183,33 @@ describe("kantine en kroeg: per stuk", () => {
   it("toont de stand in flesjes in plaats van kratten plus rest", () => {
     expect(omschrijfAantal(flesje, 31, { los: true })).toBe("31");
     expect(omschrijfAantal(flesje, 31)).toBe("1 krat + 7");
+  });
+});
+
+describe("minimum in kratten", () => {
+  it("laat het minimum in kratten invullen en slaat stuks op", () => {
+    expect(stuksNaarInvoer(flesje, 1152)).toBe(48);
+    expect(invoerNaarStuks(flesje, 48)).toBe(1152);
+  });
+
+  it("houdt een product dat los mag in stuks", () => {
+    expect(stuksNaarInvoer(spa, 120)).toBe(120);
+    expect(invoerNaarStuks(spa, 120)).toBe(120);
+  });
+
+  it("laat een oud minimum dat geen hele kratten is zien zoals het is", () => {
+    expect(stuksNaarInvoer(flesje, 30)).toBe(1.25);
+    expect(invoerNaarStuks(flesje, 1.25)).toBe(30);
+  });
+
+  it("werkt in de kantine en kroeg gewoon per flesje", () => {
+    expect(stuksNaarInvoer(flesje, 12, { los: true })).toBe(12);
+  });
+
+  it("zet voorraad en minimum in dezelfde eenheid", () => {
+    expect(aantalTegenMinimum(flesje, 0, 1728)).toBe("0 van 72 kratten");
+    expect(aantalTegenMinimum(flesje, 48, 1152)).toBe("2 kratten van 48 kratten");
+    expect(aantalTegenMinimum(spa, 0, 120)).toBe("0 van 120");
+    expect(aantalTegenMinimum(flesje, 5, 24, { los: true })).toBe("5 van 24");
   });
 });

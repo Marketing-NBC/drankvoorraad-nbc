@@ -1,6 +1,7 @@
 import { Link as RouterLink } from "react-router-dom";
 import { useAppState } from "../../context/AppStateContext";
 import { lageVoorraad } from "../../data/calculations";
+import { aantalTegenMinimum, losOpLocatie } from "../../data/verpakking";
 import { ROUTES } from "../../routes/routes";
 
 /**
@@ -28,8 +29,8 @@ export function LageVoorraadMelding({
 
   if (regels.length === 0) return null;
 
-  const productNaam = new Map(state.producten.map((p) => [p.id, p.naam]));
-  const locatieNaam = new Map(state.locaties.map((l) => [l.id, l.naam]));
+  const productById = new Map(state.producten.map((p) => [p.id, p]));
+  const locatieById = new Map(state.locaties.map((l) => [l.id, l]));
 
   // Meer dan een handvol namen leest niemand meer; dan is het aantal het bericht.
   const toon = regels.slice(0, 3);
@@ -49,9 +50,15 @@ export function LageVoorraadMelding({
       <span className="lage-voorraad__lijst">
         {toon
           .map((regel) => {
-            const naam = productNaam.get(regel.productId) ?? "onbekend product";
-            const plek = locatieId ? "" : ` (${locatieNaam.get(regel.locatieId) ?? "onbekende locatie"})`;
-            return `${naam}${plek} (${regel.aantal} van ${regel.minVoorraad})`;
+            const product = productById.get(regel.productId);
+            const locatie = locatieById.get(regel.locatieId);
+            const naam = product?.naam ?? "onbekend product";
+            const plek = locatieId ? "" : ` (${locatie?.naam ?? "onbekende locatie"})`;
+            /* In kratten waar het magazijn in kratten denkt: "0 van 72 kratten". */
+            const stand = product
+              ? aantalTegenMinimum(product, regel.aantal, regel.minVoorraad, { los: losOpLocatie(locatie) })
+              : `${regel.aantal} van ${regel.minVoorraad}`;
+            return `${naam}${plek} (${stand})`;
           })
           .join(" · ")}
         {rest > 0 ? ` · en nog ${rest} ${rest === 1 ? "product" : "producten"}` : ""}
