@@ -1,10 +1,10 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Navigate, useNavigate, useParams } from "react-router-dom";
 import { Badge, Button, Card, Icon } from "../../design-system";
 import { PageHeader } from "../../components/layout/PageHeader";
 import { AppIcon } from "../../components/ui/AppIcon";
 import { hoortBijProduct } from "../../data/barcode";
-import { BarcodeScanner } from "../../components/ui/BarcodeScanner";
+import { BarcodeScanner, type ScanUitkomst } from "../../components/ui/BarcodeScanner";
 import { FoutMelding } from "../../components/ui/FoutMelding";
 import { KaartKop } from "../../components/ui/KaartKop";
 import { useAppState } from "../../context/AppStateContext";
@@ -31,6 +31,7 @@ export function TellingDetail() {
   const [fout, setFout] = useState<string | null>(null);
   const [scannen, setScannen] = useState(false);
   const [gemarkeerd, setGemarkeerd] = useState<string | null>(null);
+  const teFocussen = useRef<string | null>(null);
   const [bezig, setBezig] = useState(false);
 
   const telling = state.tellingen.find((t) => t.id === id);
@@ -121,18 +122,23 @@ export function TellingDetail() {
     }
   }
 
-  function verwerkScan(code: string) {
+  function verwerkScan(code: string): ScanUitkomst {
     const regel = regels.find((r) => hoortBijProduct(r.product, code));
-    if (!regel) {
-      setFout(`Barcode ${code.trim()} hoort niet bij een product in deze lijst.`);
-      return;
-    }
+    if (!regel) return `Barcode ${code} hoort niet bij een product in deze lijst.`;
     setFout(null);
     setGemarkeerd(regel.id);
+    teFocussen.current = regel.id;
+  }
+
+  /** Na het scannen krijgt het veld van het gescande product focus, zodat je
+   *  meteen het aantal kunt intypen. */
+  function sluitScanner() {
     setScannen(false);
-    // Het veld krijgt focus zodat je meteen het aantal kunt intypen.
+    const regelId = teFocussen.current;
+    teFocussen.current = null;
+    if (!regelId) return;
     requestAnimationFrame(() => {
-      const veld = document.getElementById(`telling-${regel.id}`) as HTMLInputElement | null;
+      const veld = document.getElementById(`telling-${regelId}`) as HTMLInputElement | null;
       veld?.focus();
       veld?.select();
       veld?.scrollIntoView({ block: "center", behavior: "smooth" });
@@ -209,6 +215,14 @@ export function TellingDetail() {
 
       {fout ? <FoutMelding melding={fout} /> : null}
 
+      <BarcodeScanner
+        open={scannen}
+        titel="Product scannen"
+        context={locatie ? `Telling · ${locatie.naam}` : "Telling"}
+        onGevonden={verwerkScan}
+        onSluit={sluitScanner}
+      />
+
       {/* Voortgang en de scanknop staan samen bovenaan: dit is wat je op de
           vloer nodig hebt zonder te scrollen. */}
       <Card>
@@ -232,14 +246,13 @@ export function TellingDetail() {
           {!afgerond ? (
             <div className="telling-voortgang__acties">
               <Button
-                variant={scannen ? "ghost-dark" : "primary"}
                 icon={null}
                 onClick={() => {
                   setFout(null);
-                  setScannen(!scannen);
+                  setScannen(true);
                 }}
               >
-                {scannen ? "Stop met scannen" : "Scan een product"}
+                Scan een product
               </Button>
             </div>
           ) : null}
@@ -326,30 +339,19 @@ export function TellingDetail() {
 
         <div className="detail-grid__kolom">
           {!afgerond ? (
-            <Card className={scannen ? undefined : "scan-kaart--leeg"}>
+            <Card className="scan-kaart--leeg">
               <div className="scanpaneel">
-                {scannen ? (
-                  <BarcodeScanner
-                    actief={scannen}
-                    onGevonden={verwerkScan}
-                    onFout={(m) => {
-                      setFout(m);
-                      setScannen(false);
-                    }}
-                  />
-                ) : (
-                  <button
-                    type="button"
-                    className="scanpaneel__vlak"
-                    aria-label="Scannen starten"
-                    onClick={() => {
-                      setFout(null);
-                      setScannen(true);
-                    }}
-                  >
-                    <AppIcon name="scan" size={80} />
-                  </button>
-                )}
+                <button
+                  type="button"
+                  className="scanpaneel__vlak"
+                  aria-label="Scannen starten"
+                  onClick={() => {
+                    setFout(null);
+                    setScannen(true);
+                  }}
+                >
+                  <AppIcon name="scan" size={80} />
+                </button>
                 <span className="scanpaneel__uitleg">
                   Houd de barcode in beeld. Het veld van dat product krijgt meteen focus.
                 </span>
