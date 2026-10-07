@@ -103,15 +103,18 @@ van Supabase. Ze staan hier zodat de opbouw terug te lezen is:
 | `fase6.sql` | pakbonnen met handtekening |
 | `fase9.sql` | emballage — later teruggedraaid |
 | `fase9-terugdraaien.sql` | emballage uit gebruik genomen |
-| `reset-testdata.sql` | alle testdata wissen en magazijn vullen |
+| `schoon-beginnen.sql` | eenmalig vóór de echte start: alle boekingen en evenementen wissen, proefproducten weg |
 
 ## Rollen
 
 | rol | mag |
 |---|---|
-| **beheerder** | alles, inclusief gebruikers, producten, locaties en prijzen |
-| **magazijnmedewerker** | inboeken, pakbonnen, tellingen, producten aanmaken |
-| **evenementmanager** | evenementen beheren, boeken en retourneren, alles inzien |
+| **beheerder** | alles, inclusief gebruikers, producten, locaties, prijzen, omzet en marges |
+| **magazijnmedewerker** | inboeken, verplaatsen, aanvullen, pakbonnen, tellingen, leveringen, emballage retour, producten aanmaken — zonder bedragen |
+| **evenementmanager** | evenementen beheren, uitgifte en retour boeken bij een evenement — zonder bedragen |
+
+Bedragen en marges (inkoopprijs, statiegeld, omzet, borg) ziet alleen de
+beheerder; dat staat in de database, niet alleen in het scherm (migratie 019).
 
 De rollen worden afgedwongen in de database, niet alleen in het scherm.
 

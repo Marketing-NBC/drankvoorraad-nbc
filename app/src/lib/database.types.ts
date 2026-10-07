@@ -70,6 +70,8 @@ export type ProductRow = {
   naam: string;
   sku: string | null;
   barcode: string | null;
+  /** Barcode op de krat of doos. Zie migratie 022. */
+  barcode_verpakking: string | null;
   categorie: ProductCategorie;
   leverancier: string | null;
   inkoopprijs: number;
@@ -83,6 +85,16 @@ export type ProductRow = {
   voorraadloos: boolean;
   aangemaakt_op: string;
 };
+
+/**
+ * Wat iedereen van een product mag lezen. De geldkolommen zijn sinds
+ * migratie 019 alleen via productbedragen() te lezen, en alleen door een
+ * beheerder.
+ */
+export type ProductBasisRow = Omit<
+  ProductRow,
+  "inkoopprijs" | "statiegeld_per_stuk" | "statiegeld_per_verpakking"
+>;
 
 export type ZaalRow = {
   id: string;
@@ -166,6 +178,41 @@ export type EvenementRow = {
   aangemaakt_op: string;
 };
 
+/** Zonder omzet: die is alleen via evenementomzet() te lezen (migratie 019). */
+export type EvenementBasisRow = Omit<EvenementRow, "omzet">;
+
+/** Een soort emballage. De borg is alleen via emballageborg() te lezen. */
+export type EmballageRow = {
+  id: string;
+  naam: string;
+  leverancier: string | null;
+  actief: boolean;
+  aangemaakt_op: string;
+};
+
+export type EmballageRetourRow = {
+  id: string;
+  leverancier: string;
+  bonnummer: string | null;
+  opmerking: string | null;
+  gebruiker_id: string;
+  client_id: string | null;
+  aangemaakt_op: string;
+};
+
+export type EmballageMutatieRow = {
+  id: string;
+  emballage_id: string;
+  aantal: number;
+  type: "uit" | "retour" | "naar-leverancier" | "vermist";
+  evenement_id: string | null;
+  mutatie_id: string | null;
+  retour_id: string | null;
+  gebruiker_id: string;
+  notitie: string | null;
+  datum_tijd: string;
+};
+
 export type MutatieRow = {
   id: string;
   product_id: string;
@@ -233,7 +280,7 @@ export type Database = {
         Row: ProductRow;
         Insert: MetDefaults<
           ProductRow,
-          | "id" | "sku" | "barcode" | "categorie" | "leverancier"
+          | "id" | "sku" | "barcode" | "barcode_verpakking" | "categorie" | "leverancier"
           | "inkoopprijs" | "eenheid" | "inhoud" | "verpakking"
           | "stuks_per_verpakking" | "alleen_per_verpakking"
           | "statiegeld_per_stuk" | "statiegeld_per_verpakking"
@@ -339,6 +386,30 @@ export type Database = {
         Update: Partial<LeveringregelRow>;
         Relationships: [];
       };
+      emballage: {
+        Row: EmballageRow;
+        Insert: MetDefaults<EmballageRow, "id" | "leverancier" | "actief" | "aangemaakt_op">;
+        Update: Partial<EmballageRow>;
+        Relationships: [];
+      };
+      emballage_retouren: {
+        Row: EmballageRetourRow;
+        Insert: MetDefaults<
+          EmballageRetourRow,
+          "id" | "bonnummer" | "opmerking" | "client_id" | "aangemaakt_op"
+        >;
+        Update: Partial<EmballageRetourRow>;
+        Relationships: [];
+      };
+      emballage_mutaties: {
+        Row: EmballageMutatieRow;
+        Insert: MetDefaults<
+          EmballageMutatieRow,
+          "id" | "evenement_id" | "mutatie_id" | "retour_id" | "notitie" | "datum_tijd"
+        >;
+        Update: Partial<EmballageMutatieRow>;
+        Relationships: [];
+      };
       machine_metingen: {
         Row: MetingRow;
         Insert: MetDefaults<
@@ -421,6 +492,47 @@ export type Database = {
           p_metingen: { machine: string; datum: string; aantal: number; extern_id?: string }[];
         };
         Returns: { verwerkt: number; onbekende_machines: string[] };
+      };
+      /* ─── Bedragen: alleen voor de beheerder (migratie 019 en 021) ─── */
+      productbedragen: {
+        Args: Record<string, never>;
+        Returns: {
+          id: string;
+          inkoopprijs: number;
+          statiegeld_per_stuk: number;
+          statiegeld_per_verpakking: number;
+        }[];
+      };
+      evenementomzet: {
+        Args: Record<string, never>;
+        Returns: { id: string; omzet: number }[];
+      };
+      emballageborg: {
+        Args: Record<string, never>;
+        Returns: { id: string; borg: number }[];
+      };
+      stel_productbedragen: {
+        Args: {
+          p_product_id: string;
+          p_inkoopprijs: number;
+          p_statiegeld_per_stuk: number;
+          p_statiegeld_per_verpakking: number;
+        };
+        Returns: undefined;
+      };
+      stel_omzet: {
+        Args: { p_evenement_id: string; p_omzet: number };
+        Returns: undefined;
+      };
+      boek_emballage_retour: {
+        Args: {
+          p_leverancier: string;
+          p_bonnummer: string | null;
+          p_opmerking: string | null;
+          p_regels: { emballage_id: string; aantal: number }[];
+          p_client_id?: string | null;
+        };
+        Returns: string;
       };
       maak_pakbon: {
         Args: {

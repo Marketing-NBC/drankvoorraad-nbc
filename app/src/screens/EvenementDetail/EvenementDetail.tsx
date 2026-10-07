@@ -31,7 +31,7 @@ export function EvenementDetail() {
   const { id } = useParams<{ id: string }>();
   const { state, laden, wijzigEvenement, verwijderEvenement, mutatiesPerEvenement, metingenPerEvenement } =
     useAppState();
-  const { mag } = useAuth();
+  const { mag, zietBedragen } = useAuth();
   const navigate = useNavigate();
   const evenement = useEvenement(id);
   const [modal, setModal] = useState<{ richting: BoekingRichting; productId?: string } | null>(null);
@@ -44,7 +44,10 @@ export function EvenementDetail() {
   const mutaties = mutatiesPerEvenement.get(evenement.id) ?? [];
   const pakbonnen = state.pakbonnen.filter((p) => p.evenementId === evenement.id);
   const magPakbon = mag("beheerder", "magazijnmedewerker");
-  const magBoeken = mag("beheerder", "magazijnmedewerker");
+  /* Uitgeven en retour boeken hoort bij het werk van de evenementmanager —
+     zo stond het in het oorspronkelijke plan (README, Rollen). Een pakbon
+     maken blijft magazijnwerk. */
+  const magBoeken = mag("beheerder", "magazijnmedewerker", "evenementmanager");
   const productenById = new Map(state.producten.map((p) => [p.id, p]));
 
   /* Koffie en water komen niet uit het magazijn maar wel op de rekening: de
@@ -128,14 +131,23 @@ export function EvenementDetail() {
           { header: "Uitgegeven", opmaak: "getal", value: (r) => r.aantalUitgegeven },
           { header: "Retour", opmaak: "getal", value: (r) => r.aantalRetour },
           { header: "Werkelijk verbruik", opmaak: "getal", value: (r) => r.werkelijkVerbruik },
-          { header: "Inkoopprijs", opmaak: "bedrag", value: (r) => productenById.get(r.productId)?.inkoopprijs ?? 0 },
-          {
-            header: "Kostprijs",
-            opmaak: "bedrag",
-            value: (r) => r.werkelijkVerbruik * (productenById.get(r.productId)?.inkoopprijs ?? 0),
-          },
+          ...(zietBedragen
+            ? [
+                {
+                  header: "Inkoopprijs",
+                  opmaak: "bedrag" as const,
+                  value: (r: ProductVerbruik) => productenById.get(r.productId)?.inkoopprijs ?? 0,
+                },
+                {
+                  header: "Kostprijs",
+                  opmaak: "bedrag" as const,
+                  value: (r: ProductVerbruik) =>
+                    r.werkelijkVerbruik * (productenById.get(r.productId)?.inkoopprijs ?? 0),
+                },
+              ]
+            : []),
         ],
-        totalen: { 0: "Totaal kostprijs verbruik", 6: marge.kostprijsVerbruik },
+        ...(zietBedragen && { totalen: { 0: "Totaal kostprijs verbruik", 6: marge.kostprijsVerbruik } }),
       });
     } finally {
       setExporteert(false);
@@ -281,21 +293,26 @@ export function EvenementDetail() {
         </div>
 
         <div className="detail-grid__kolom">
-          <Card>
-            <OmzetInput
-              value={evenement.omzet}
-              onSave={(omzet) => void wijzigEvenement(evenement.id, { omzet })}
-            />
-          </Card>
-          <Card>
-            <KaartKop titel="Marge" />
-            <MargeSummary marge={marge} />
-            {machineKosten > 0 ? (
-              <p className="veld-toelichting">
-                Inclusief {formatCurrency(machineKosten)} aan koffie en water uit de machines.
-              </p>
-            ) : null}
-          </Card>
+          {/* Omzet en marge zijn alleen voor de beheerder (migratie 019). */}
+          {zietBedragen ? (
+            <>
+              <Card>
+                <OmzetInput
+                  value={evenement.omzet}
+                  onSave={(omzet) => void wijzigEvenement(evenement.id, { omzet })}
+                />
+              </Card>
+              <Card>
+                <KaartKop titel="Marge" />
+                <MargeSummary marge={marge} />
+                {machineKosten > 0 ? (
+                  <p className="veld-toelichting">
+                    Inclusief {formatCurrency(machineKosten)} aan koffie en water uit de machines.
+                  </p>
+                ) : null}
+              </Card>
+            </>
+          ) : null}
 
           <Card>
             <KaartKop titel="Zalen" sub="waar dit evenement zit" />
@@ -314,7 +331,7 @@ export function EvenementDetail() {
                     <span>{productenById.get(regel.productId)?.naam ?? "Onbekend"}</span>
                     <span>
                       {formatNumber(regel.aantal)}
-                      {regel.waarde > 0 ? ` · ${formatCurrency(regel.waarde)}` : ""}
+                      {zietBedragen && regel.waarde > 0 ? ` · ${formatCurrency(regel.waarde)}` : ""}
                     </span>
                   </div>
                 ))}
@@ -332,7 +349,7 @@ export function EvenementDetail() {
               </div>
               <span className="kaart-kop__sub" style={{ color: "inherit" }}>
                 Boek retour zodra de bar leeg is, anders telt het als verbruik
-                ({formatCurrency(marge.kostprijsVerbruik)}).
+                {zietBedragen ? ` (${formatCurrency(marge.kostprijsVerbruik)})` : ""}.
               </span>
               {magBoeken ? (
                 <div className="button-row no-print" style={{ marginTop: 14 }}>

@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom";
 import { BrandBadge } from "../../components/ui/BrandBadge";
 import { StatusBadge } from "../../components/ui/StatusBadge";
+import { useAuth } from "../../context/AuthContext";
 import type { Evenement, Mutatie, Product } from "../../data/types";
 import { berekenMarge } from "../../data/calculations";
 import { formatDateKort } from "../../utils/format";
@@ -20,6 +21,7 @@ export function EventRow({
   mutaties: Mutatie[];
   producten: Product[];
 }) {
+  const { zietBedragen } = useAuth();
   const marge = berekenMarge(evenement.omzet, mutaties, producten);
 
   return (
@@ -35,9 +37,14 @@ export function EventRow({
         </span>
       </span>
 
+      {/* Marge alleen voor de beheerder; de rij houdt zijn vorm met een leeg vlak. */}
       <span className="event-rij__marge">
-        <span className="event-rij__marge-label">brutomarge</span>
-        <span className="event-rij__marge-waarde">{margeKort(marge.brutomarge)}</span>
+        {zietBedragen ? (
+          <>
+            <span className="event-rij__marge-label">brutomarge</span>
+            <span className="event-rij__marge-waarde">{margeKort(marge.brutomarge)}</span>
+          </>
+        ) : null}
       </span>
 
       {/* Geen knop in een link; dit vlak lift mee op de hele rij. */}

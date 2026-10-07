@@ -2,7 +2,10 @@
 import type { ReactNode } from "react";
 import type { GebruikerRol } from "../src/data/types";
 
-const profiel = { id: "u1", naam: "Abel Bakker", rol: "beheerder" as GebruikerRol };
+/* Rol kiezen met ?rol=magazijnmedewerker of ?rol=evenementmanager, om te
+   zien wat een andere rol wel en niet te zien krijgt. Standaard beheerder. */
+const rolUitAdres = new URLSearchParams(window.location.search).get("rol") as GebruikerRol | null;
+const profiel = { id: "u1", naam: "Abel Bakker", rol: rolUitAdres ?? ("beheerder" as GebruikerRol) };
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   return <>{children}</>;
@@ -17,5 +20,6 @@ export function useAuth(): any {
     inloggen: async () => ({ fout: null }),
     uitloggen: async () => {},
     mag: (...rollen: GebruikerRol[]) => rollen.includes(profiel.rol),
+    zietBedragen: profiel.rol === "beheerder",
   };
 }

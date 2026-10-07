@@ -62,6 +62,7 @@ export function VoorraadTabel({
   magBeheren,
   onInboeken,
   onVerplaatsen,
+  perStuk = false,
 }: {
   locatieId: string;
   producten: Product[];
@@ -70,6 +71,8 @@ export function VoorraadTabel({
   /** Snelknop per rij; weglaten verbergt de kolom. */
   onInboeken?: (product: Product) => void;
   onVerplaatsen?: (product: Product) => void;
+  /** Kantine of kroeg: voorraad in losse flesjes tonen, niet in kratten. */
+  perStuk?: boolean;
 }) {
   const perProduct = new Map(voorraad.filter((v) => v.locatieId === locatieId).map((v) => [v.productId, v]));
 
@@ -95,7 +98,7 @@ export function VoorraadTabel({
           header: "Eenheid",
           verbergOpMobiel: true,
           render: (r) =>
-            heeftVerpakking(r.product) ? verpakkingLabel(r.product) : r.product.eenheid,
+            !perStuk && heeftVerpakking(r.product) ? verpakkingLabel(r.product) : r.product.eenheid,
         },
         {
           header: "Voorraad",
@@ -104,7 +107,7 @@ export function VoorraadTabel({
             const laag = r.minVoorraad > 0 && r.aantal < r.minVoorraad;
             return (
               <span className={laag ? "voorraad-laag" : undefined} title={laag ? "Onder de minimumvoorraad" : undefined}>
-                {omschrijfAantal(r.product, r.aantal)}{" "}
+                {omschrijfAantal(r.product, r.aantal, { los: perStuk })}{" "}
                 {laag ? <span className="voorraad-laag-label">te laag</span> : null}
               </span>
             );
@@ -132,10 +135,10 @@ export function VoorraadTabel({
                     <button
                       type="button"
                       className="snelknop snelknop--primair"
-                      title={`${r.product.naam} inboeken`}
+                      title={`${r.product.naam} ${perStuk ? "aanvullen vanuit het magazijn" : "inboeken"}`}
                       onClick={() => onInboeken(r.product)}
                     >
-                      + in
+                      {perStuk ? "+ aanvullen" : "+ in"}
                     </button>
                     <button
                       type="button"

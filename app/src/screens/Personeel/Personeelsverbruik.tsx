@@ -47,11 +47,13 @@ interface Regel {
  */
 export function Personeelsverbruik() {
   const { state, laden, fout, herlaad, startTelling } = useAppState();
-  const { mag } = useAuth();
+  const { mag, zietBedragen } = useAuth();
   const navigate = useNavigate();
   const [vanaf, setVanaf] = useState(() => eersteVanDeMaand(new Date()));
   const [tot, setTot] = useState(() => new Date().toISOString().slice(0, 10));
   const [boeken, setBoeken] = useState<string | null>(null);
+  /** De kantine of kroeg die aangevuld wordt vanuit het magazijn. */
+  const [aanvullen, setAanvullen] = useState<string | null>(null);
   const [exporteert, setExporteert] = useState(false);
   const [actieFout, setActieFout] = useState<string | null>(null);
 
@@ -137,9 +139,11 @@ export function Personeelsverbruik() {
           { header: "Aangevuld", opmaak: "getal", value: (r) => r.aangevuld },
           { header: "Verbruikt", opmaak: "getal", value: (r) => r.verbruikt },
           { header: "Nu in voorraad", opmaak: "getal", value: (r) => r.voorraad },
-          { header: "Inkoopwaarde verbruik", opmaak: "bedrag", value: (r) => r.waardeVerbruikt },
+          ...(zietBedragen
+            ? [{ header: "Inkoopwaarde verbruik", opmaak: "bedrag" as const, value: (r: (typeof rijen)[number]) => r.waardeVerbruikt }]
+            : []),
         ],
-        totalen: { 0: "Totaal verbruik", 5: totaalVerbruik },
+        ...(zietBedragen && { totalen: { 0: "Totaal verbruik", 5: totaalVerbruik } }),
       });
     } finally {
       setExporteert(false);
@@ -153,16 +157,16 @@ export function Personeelsverbruik() {
       <PageHeader
         eyebrow="intern"
         title="Personeelsverbruik"
-        toelichting="De kantine en de kroeg zijn voor het personeel. Wat daar opgaat telt nooit mee bij een evenement — de database weigert die koppeling zelfs. Het verbruik komt uit de telling: wat erin ging min wat er nog staat."
+        toelichting="De kantine en de kroeg zijn voor het personeel. Vul ze aan vanuit het magazijn en tel ze af en toe, allebei in losse flesjes. Het verbruik komt uit de telling: wat erin ging min wat er nog staat. Het telt nooit mee bij een evenement."
         actions={
           <>
             {magBoeken && samenvattingen.length > 0 ? (
               <Button
                 icon="plus"
                 iconPosition="leading"
-                onClick={() => void tellen(samenvattingen[0].locatie.id)}
+                onClick={() => setAanvullen(samenvattingen[0].locatie.id)}
               >
-                {samenvattingen[0].locatie.naam} tellen
+                Aanvullen
               </Button>
             ) : null}
             <ActieMenu
@@ -170,6 +174,10 @@ export function Personeelsverbruik() {
               items={[
                 ...(magBoeken && samenvattingen.length > 0
                   ? [
+                      ...samenvattingen.map((sv) => ({
+                        label: `${sv.locatie.naam} tellen`,
+                        onClick: () => void tellen(sv.locatie.id),
+                      })),
                       {
                         label: "Handmatig afboeken",
                         onClick: () => setBoeken(samenvattingen[0].locatie.id),
@@ -196,6 +204,7 @@ export function Personeelsverbruik() {
             <label className="field-group__label" htmlFor="personeel-tot">Tot en met</label>
             <Input id="personeel-tot" type="date" value={tot} onChange={(e) => setTot(e.target.value)} />
           </div>
+          {zietBedragen ? (
           <div className="periode-cijfers">
             <span className="periode-cijfer">
               <span className="periode-cijfer__label">Verbruikt</span>
@@ -206,6 +215,7 @@ export function Personeelsverbruik() {
               <strong className="periode-cijfer__waarde">{formatCurrency(totaalAangevuld)}</strong>
             </span>
           </div>
+          ) : null}
         </div>
       </Card>
 
@@ -229,15 +239,26 @@ export function Personeelsverbruik() {
                 }
                 rechts={
                   <span className="kaart-kop__cijfers">
-                    <Badge variant="neutral">{formatCurrency(samenvatting.waardeVerbruik)} verbruikt</Badge>
+                    {zietBedragen ? (
+                      <Badge variant="neutral">{formatCurrency(samenvatting.waardeVerbruik)} verbruikt</Badge>
+                    ) : null}
                     {magBoeken ? (
-                      <Button
-                        variant="ghost-dark"
-                        icon={null}
-                        onClick={() => void tellen(samenvatting.locatie.id)}
-                      >
-                        Tellen
-                      </Button>
+                      <>
+                        <Button
+                          variant="ghost-dark"
+                          icon={null}
+                          onClick={() => setAanvullen(samenvatting.locatie.id)}
+                        >
+                          Aanvullen
+                        </Button>
+                        <Button
+                          variant="ghost-dark"
+                          icon={null}
+                          onClick={() => void tellen(samenvatting.locatie.id)}
+                        >
+                          Tellen
+                        </Button>
+                      </>
                     ) : null}
                   </span>
                 }
@@ -253,7 +274,7 @@ export function Personeelsverbruik() {
                     align: "right",
                     render: (r) => {
                       const product = productNaam.get(r.productId);
-                      return product ? omschrijfAantal(product, r.aangevuld) : r.aangevuld;
+                      return product ? omschrijfAantal(product, r.aangevuld, { los: true }) : r.aangevuld;
                     },
                   },
                   {
@@ -261,7 +282,7 @@ export function Personeelsverbruik() {
                     align: "right",
                     render: (r) => {
                       const product = productNaam.get(r.productId);
-                      return product ? omschrijfAantal(product, r.verbruikt) : r.verbruikt;
+                      return product ? omschrijfAantal(product, r.verbruikt, { los: true }) : r.verbruikt;
                     },
                   },
                   {
@@ -270,24 +291,27 @@ export function Personeelsverbruik() {
                     verbergOpMobiel: true,
                     render: (r) => {
                       const product = productNaam.get(r.productId);
-                      return product ? omschrijfAantal(product, r.voorraad) : r.voorraad;
+                      return product ? omschrijfAantal(product, r.voorraad, { los: true }) : r.voorraad;
                     },
                   },
-                  {
-                    header: "Waarde verbruik",
-                    align: "right",
-                    render: (r) => formatCurrency(r.waardeVerbruikt),
-                  },
+                  ...(zietBedragen
+                    ? [
+                        {
+                          header: "Waarde verbruik",
+                          align: "right" as const,
+                          render: (r: Regel) => formatCurrency(r.waardeVerbruikt),
+                        },
+                      ]
+                    : []),
                 ]}
-                totaal={[
-                  "Totaal",
-                  null,
-                  null,
-                  null,
-                  formatCurrency(samenvatting.waardeVerbruik),
-                ]}
+                totaal={
+                  zietBedragen
+                    ? ["Totaal", null, null, null, formatCurrency(samenvatting.waardeVerbruik)]
+                    : undefined
+                }
               />
-              {samenvatting.waardeAangevuld > 0 &&
+              {zietBedragen &&
+              samenvatting.waardeAangevuld > 0 &&
               samenvatting.waardeAangevuld > samenvatting.waardeVerbruik * 2 ? (
                 <p className="kaart-tekst">
                   Er is meer bijgevuld dan er afgeboekt is. Dat kan kloppen — het staat er dan nog —
@@ -300,6 +324,12 @@ export function Personeelsverbruik() {
         })
       )}
 
+      <VoorraadMutatieModal
+        open={aanvullen !== null}
+        actie="aanvullen"
+        standaardNaarLocatieId={aanvullen ?? undefined}
+        onClose={() => setAanvullen(null)}
+      />
       <VoorraadMutatieModal
         open={boeken !== null}
         actie="personeelsverbruik"

@@ -1487,3 +1487,8 @@ body { background: var(--canvas); }
   .pakbon__tabel tr { break-inside: avoid; }
   .pakbon__tabel thead { display: table-header-group; }
 }
+
+/* ══════════════════════════════════════════════════════════════════
+   Producten: twee barcodes per product (stuk en verpakking)
+   ══════════════════════════════════════════════════════════════════ */
+.barcode-cel__lijst { display: inline-flex; flex-direction: column; gap: 4px; align-items: flex-start; }

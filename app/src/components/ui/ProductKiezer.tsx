@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Badge, Link } from "../../design-system";
+import { zoekOpBarcode } from "../../data/barcode";
 import type { Product } from "../../data/types";
 import { eenheidLabel, heeftVerpakking, verpakkingLabel } from "../../data/verpakking";
 import { BarcodeInvoer, BarcodeScanner } from "./BarcodeScanner";
@@ -15,12 +16,15 @@ export function ProductKiezer({
   productId,
   onProductIdChange,
   onOnbekendeBarcode,
+  perStuk = false,
 }: {
   producten: Product[];
   productId: string;
   onProductIdChange: (id: string) => void;
   /** Aangeroepen wanneer een gescande code bij geen enkel product hoort. */
   onOnbekendeBarcode?: (barcode: string) => void;
+  /** Kantine of kroeg: er wordt per flesje ingevuld, dus geen krat in de naam. */
+  perStuk?: boolean;
 }) {
   const [modus, setModus] = useState<"handmatig" | "scannen">("handmatig");
   const [handmatigeCode, setHandmatigeCode] = useState("");
@@ -34,7 +38,7 @@ export function ProductKiezer({
     const genormaliseerd = code.trim();
     if (!genormaliseerd) return;
 
-    const gevonden = producten.find((p) => p.barcode && p.barcode === genormaliseerd);
+    const gevonden = zoekOpBarcode(producten, genormaliseerd);
     if (gevonden) {
       onProductIdChange(gevonden.id);
       setLaatstGescand(gevonden.naam);
@@ -98,7 +102,7 @@ export function ProductKiezer({
           options={producten.map((p) => ({
             value: p.id,
             label: `${p.naam} (${
-              p.alleenPerVerpakking && heeftVerpakking(p) ? verpakkingLabel(p) : eenheidLabel(p)
+              !perStuk && p.alleenPerVerpakking && heeftVerpakking(p) ? verpakkingLabel(p) : eenheidLabel(p)
             })`,
           }))}
         />
