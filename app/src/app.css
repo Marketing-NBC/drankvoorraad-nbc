@@ -1125,6 +1125,13 @@ body { background: var(--canvas); }
 .scanpaneel__vlak:hover { background: var(--nbc-stone-800); }
 .scanpaneel__uitleg { font: var(--t-ui-sm); color: var(--fg-secondary); text-align: center; }
 
+/* Scannen kan alleen met een camera in de hand. Op een computer met muis of
+   trackpad verdwijnen de scanknoppen; een telefoon of tablet heeft een
+   grove aanwijzer en houdt ze. */
+@media (hover: hover) and (pointer: fine) {
+  .alleen-touch { display: none !important; }
+}
+
 /* ══════════════════════════════════════════════════════════════════
    Barcodescanner
    ══════════════════════════════════════════════════════════════════ */
@@ -1577,3 +1584,14 @@ body { background: var(--canvas); }
 /* Minimum naast de eenheid waarin het ingevuld wordt: "48 kratten". */
 .min-voorraad { display: inline-flex; align-items: center; gap: 8px; justify-content: flex-end; }
 .min-voorraad__eenheid { font: var(--t-ui); color: var(--nbc-stone-600); white-space: nowrap; min-width: 140px; text-align: left; }
+
+/* De tabs Voorraad | Emballage boven het magazijn zijn links, geen knoppen. */
+.magazijn-tab { display: inline-flex; align-items: center; text-decoration: none; }
+
+/* ─── Tekorten bij een telling: wat is er gebeurd? ─────────────────── */
+.tekort-lijst { display: flex; flex-direction: column; gap: 14px; }
+.tekort-regel { display: flex; flex-direction: column; gap: 8px; }
+.tekort-regel__kop { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.tekort-regel__aantal { font: var(--t-ui-sm); font-weight: 700; }
+.tekort-regel__keuzes { display: flex; gap: 6px; flex-wrap: wrap; }
+.tekort-regel__toelichting { width: 100%; }

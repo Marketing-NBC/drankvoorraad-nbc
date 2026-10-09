@@ -19,6 +19,7 @@ import type {
   EvenementBasisRow,
   EvenementZaalRow,
   KoppelingRow,
+  LeverancierArtikelRow,
   LeveringRow,
   LeveringregelRow,
   LocatieRow,
@@ -43,6 +44,7 @@ import type {
   GebruikerRol,
   Gebruiker,
   Koppeling,
+  LeverancierArtikel,
   Levering,
   Leveringregel,
   Locatie,
@@ -56,12 +58,14 @@ import type {
   Product,
   Profiel,
   Telling,
+  TellingReden,
   Tellingregel,
   Voorraad,
   Vulplek,
   VulplekRegel,
   Zaal,
 } from "../data/types";
+import type { BonFoto, GelezenBon } from "../data/bon";
 import { useAuth } from "./AuthContext";
 
 // ─── Row → app-model mapping (snake_case in de database, camelCase in de app) ──
@@ -73,8 +77,8 @@ import { useAuth } from "./AuthContext";
  */
 // Eén letterlijke string: supabase-js leidt het rijtype af uit de tekst zelf.
 const productKolommen =
-  "id, naam, sku, barcode, barcode_verpakking, categorie, leverancier, eenheid, inhoud, verpakking, stuks_per_verpakking, alleen_per_verpakking, voorraadloos, aangemaakt_op";
-const evenementKolommen = "id, naam, datum, merk, opdrachtgever, status, aangemaakt_op";
+  "id, naam, sku, barcode, barcode_verpakking, categorie, leverancier, eenheid, inhoud, verpakking, stuks_per_verpakking, alleen_per_verpakking, voorraadloos, voor_personeel, aangemaakt_op";
+const evenementKolommen = "id, naam, datum, merk, opdrachtgever, status, aantal_personen, aangemaakt_op";
 
 interface Productbedragen {
   inkoopprijs: number;
@@ -102,6 +106,17 @@ function naarProduct(r: ProductBasisRow, bedragen: Productbedragen = geenBedrage
     barcode: r.barcode ?? undefined,
     barcodeVerpakking: r.barcode_verpakking ?? undefined,
     leverancier: r.leverancier ?? undefined,
+    voorPersoneel: r.voor_personeel ?? false,
+  };
+}
+
+function naarLeverancierArtikel(r: LeverancierArtikelRow): LeverancierArtikel {
+  return {
+    leverancier: r.leverancier,
+    artikelnummer: r.artikelnummer,
+    omschrijving: r.omschrijving ?? undefined,
+    productId: r.product_id,
+    stuksPerEenheid: r.stuks_per_eenheid,
   };
 }
 
@@ -163,6 +178,7 @@ function naarEvenement(r: EvenementBasisRow, omzet = 0): Evenement {
     merk: r.merk,
     opdrachtgever: r.opdrachtgever ?? undefined,
     status: r.status,
+    aantalPersonen: r.aantal_personen ?? undefined,
     omzet,
   };
 }
@@ -172,6 +188,7 @@ function naarEmballage(r: EmballageRow, borg = 0): EmballageSoort {
     id: r.id,
     naam: r.naam,
     leverancier: r.leverancier ?? undefined,
+    artikelnummer: r.artikelnummer ?? undefined,
     actief: r.actief,
     borg,
   };
@@ -267,6 +284,8 @@ function naarTellingregel(r: TellingregelRow): Tellingregel {
     productId: r.product_id,
     verwachtAantal: r.verwacht_aantal,
     geteldAantal: r.geteld_aantal,
+    reden: r.reden ?? undefined,
+    redenToelichting: r.reden_toelichting ?? undefined,
   };
 }
 
@@ -318,6 +337,7 @@ export interface AppState {
   emballage: EmballageSoort[];
   emballageRetouren: EmballageRetour[];
   emballageRetourregels: EmballageRetourregel[];
+  leverancierArtikelen: LeverancierArtikel[];
 }
 
 interface AppStateContextValue {
@@ -329,6 +349,8 @@ interface AppStateContextValue {
   metingenPerEvenement: Map<string, Meting[]>;
   /** Het gedeelde hoofdmagazijn (merk === null). */
   hoofdmagazijn: Locatie | undefined;
+  /** Koelcel NBC: daar komt alle drank voor een evenement vandaan, ook bij Green Village. */
+  uitgiftelocatie: Locatie | undefined;
   herlaad: () => Promise<void>;
   voegEvenementToe: (evenement: Evenement) => Promise<void>;
   wijzigEvenement: (id: string, changes: Partial<Omit<Evenement, "id">>) => Promise<void>;
@@ -354,6 +376,8 @@ interface AppStateContextValue {
   startTelling: (locatieId: string) => Promise<string>;
   haalTellingregels: (tellingId: string) => Promise<Tellingregel[]>;
   zetGeteldAantal: (regelId: string, aantal: number | null) => Promise<void>;
+  /** Wat er met een tekort gebeurd is. Zonder reden rondt de database niet af. */
+  zetTelReden: (regelId: string, reden: TellingReden | null, toelichting: string | null) => Promise<void>;
   rondTellingAf: (tellingId: string) => Promise<number>;
   annuleerTelling: (tellingId: string) => Promise<void>;
   maakPakbon: (pakbon: {
@@ -389,6 +413,10 @@ interface AppStateContextValue {
     regels: NieuweLeveringregel[];
   }) => Promise<{ inWachtrij: boolean }>;
   handelVerschilAf: (regelId: string, notitie: string) => Promise<void>;
+  /** Een foto van de afleverbon laten lezen. Zie supabase/functions/lees-bon. */
+  leesBon: (fotos: BonFoto[]) => Promise<GelezenBon>;
+  /** Onthouden welk product bij een artikelnummer van de leverancier hoort. */
+  koppelArtikel: (artikel: LeverancierArtikel) => Promise<void>;
   /** Lege emballage mee terug naar de leverancier. Geeft het id van de bon. */
   boekEmballageRetour: (retour: {
     leverancier: string;
@@ -421,6 +449,7 @@ const legeState: AppState = {
   profielen: [], tellingen: [], pakbonnen: [], zalen: [], evenementZalen: [],
   vulplekken: [], standaardvulling: [], koppelingen: [], machines: [], metingen: [],
   leveringen: [], leveringregels: [], emballage: [], emballageRetouren: [], emballageRetourregels: [],
+  leverancierArtikelen: [],
 };
 
 export function AppStateProvider({ children }: { children: ReactNode }) {
@@ -454,6 +483,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
         producten, evenementen, mutaties, locaties, voorraad, profielen, tellingen, pakbonnen,
         zalen, evenementZalen, vulplekken, standaardvulling, koppelingen, machines, metingen,
         leveringen, leveringregels, emballage, emballageRetouren, emballageRetourregels,
+        leverancierArtikelen,
       ] = await Promise.all([
         supabase.from("producten").select(productKolommen).order("naam"),
         supabase.from("evenementen").select(evenementKolommen).order("datum"),
@@ -476,9 +506,13 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
         supabase.from("machine_metingen").select("*").order("datum", { ascending: false }),
         supabase.from("leveringen").select("*").order("aangemaakt_op", { ascending: false }),
         supabase.from("leveringregels").select("*"),
-        supabase.from("emballage").select("id, naam, leverancier, actief, aangemaakt_op").order("naam"),
+        supabase
+          .from("emballage")
+          .select("id, naam, leverancier, artikelnummer, actief, aangemaakt_op")
+          .order("naam"),
         supabase.from("emballage_retouren").select("*").order("aangemaakt_op", { ascending: false }),
         supabase.from("emballage_mutaties").select("*").not("retour_id", "is", null),
+        supabase.from("leverancier_artikelen").select("*"),
       ]);
       const eersteFout =
         producten.error ?? evenementen.error ?? mutaties.error ?? locaties.error ??
@@ -486,7 +520,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
         zalen.error ?? evenementZalen.error ?? vulplekken.error ?? standaardvulling.error ??
         koppelingen.error ?? machines.error ?? metingen.error ??
         leveringen.error ?? leveringregels.error ?? emballage.error ??
-        emballageRetouren.error ?? emballageRetourregels.error;
+        emballageRetouren.error ?? emballageRetourregels.error ?? leverancierArtikelen.error;
 
       /* Bedragen apart en alleen voor de beheerder: voor ieder ander weigert
          de database ze, en dan blijven ze op 0. */
@@ -503,6 +537,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
         producten, evenementen, mutaties, locaties, voorraad, profielen, tellingen, pakbonnen,
         zalen, evenementZalen, vulplekken, standaardvulling, koppelingen, machines, metingen,
         leveringen, leveringregels, emballage, emballageRetouren, emballageRetourregels,
+        leverancierArtikelen,
         productbedragen: bedragen?.[0].data ?? [],
         evenementomzet: bedragen?.[1].data ?? [],
         emballageborg: bedragen?.[2].data ?? [],
@@ -564,6 +599,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       emballage: (resultaat.emballage.data ?? []).map((r) => naarEmballage(r, borgPerSoort.get(r.id))),
       emballageRetouren: (resultaat.emballageRetouren.data ?? []).map(naarEmballageRetour),
       emballageRetourregels: (resultaat.emballageRetourregels.data ?? []).map(naarEmballageRetourregel),
+      leverancierArtikelen: (resultaat.leverancierArtikelen.data ?? []).map(naarLeverancierArtikel),
     });
     alEensGeladen.current = true;
     setLaden(false);
@@ -753,6 +789,11 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     [state.locaties]
   );
 
+  const uitgiftelocatie = useMemo(
+    () => state.locaties.find((l) => l.type === "koelcel" && l.merk === "NBC" && !l.voorPersoneel),
+    [state.locaties]
+  );
+
   const value = useMemo<AppStateContextValue>(
     () => ({
       state,
@@ -761,6 +802,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       mutatiesPerEvenement,
       metingenPerEvenement,
       hoofdmagazijn,
+      uitgiftelocatie,
       herlaad,
 
       async voegEvenementToe(evenement) {
@@ -771,6 +813,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
           merk: evenement.merk,
           opdrachtgever: evenement.opdrachtgever ?? null,
           status: evenement.status,
+          aantal_personen: evenement.aantalPersonen ?? null,
         });
         if (error) throw error;
         // Omzet is een bedrag en gaat dus apart, alleen door de beheerder.
@@ -791,6 +834,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
           ...(changes.merk !== undefined && { merk: changes.merk }),
           ...(changes.opdrachtgever !== undefined && { opdrachtgever: changes.opdrachtgever ?? null }),
           ...(changes.status !== undefined && { status: changes.status }),
+          ...("aantalPersonen" in changes && { aantal_personen: changes.aantalPersonen ?? null }),
         };
         if (Object.keys(velden).length > 0) {
           const { error } = await supabase.from("evenementen").update(velden).eq("id", id);
@@ -830,6 +874,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
             stuks_per_verpakking: product.stuksPerVerpakking,
             alleen_per_verpakking: product.alleenPerVerpakking,
             voorraadloos: product.voorraadloos,
+            voor_personeel: product.voorPersoneel,
             sku: product.sku ?? null,
             barcode: product.barcode ?? null,
             barcode_verpakking: product.barcodeVerpakking ?? null,
@@ -839,7 +884,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
           .single();
         if (error) throw error;
         /* Prijzen zijn bedragen: die zet alleen een beheerder, via een eigen
-           functie. Een magazijnmedewerker die een gescand product aanmaakt
+           functie. Wie geen beheerder is en een gescand product aanmaakt
            laat ze leeg; de beheerder vult ze later aan. */
         const bedragen = {
           inkoopprijs: product.inkoopprijs,
@@ -873,6 +918,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
             alleen_per_verpakking: changes.alleenPerVerpakking,
           }),
           ...(changes.voorraadloos !== undefined && { voorraadloos: changes.voorraadloos }),
+          ...(changes.voorPersoneel !== undefined && { voor_personeel: changes.voorPersoneel }),
           ...(changes.sku !== undefined && { sku: changes.sku ?? null }),
           ...(changes.barcode !== undefined && { barcode: changes.barcode ?? null }),
           ...(changes.barcodeVerpakking !== undefined && {
@@ -1016,6 +1062,14 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
         const { error } = await supabase
           .from("tellingregels")
           .update({ geteld_aantal: aantal })
+          .eq("id", regelId);
+        if (error) throw error;
+      },
+
+      async zetTelReden(regelId, reden, toelichting) {
+        const { error } = await supabase
+          .from("tellingregels")
+          .update({ reden, reden_toelichting: toelichting })
           .eq("id", regelId);
         if (error) throw error;
       },
@@ -1222,6 +1276,30 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
         await herlaad();
       },
 
+      async leesBon(fotos) {
+        const { data, error } = await supabase.functions.invoke("lees-bon", { body: { fotos } });
+        if (error) {
+          /* De functie zegt zelf wat er mis is ("API-sleutel ontbreekt", "te
+             groot"). Die tekst zit in het antwoord, niet in de foutmelding. */
+          const antwoord = (error as { context?: Response }).context;
+          const inhoud = await antwoord?.json?.().catch(() => null);
+          throw new Error(inhoud?.fout ?? "Bon lezen lukt nu niet. Vul hem met de hand in.");
+        }
+        return (data as { bon: GelezenBon }).bon;
+      },
+
+      async koppelArtikel(artikel) {
+        const { error } = await supabase.rpc("koppel_artikel", {
+          p_leverancier: artikel.leverancier,
+          p_artikelnummer: artikel.artikelnummer,
+          p_omschrijving: artikel.omschrijving ?? null,
+          p_product_id: artikel.productId,
+          p_stuks_per_eenheid: artikel.stuksPerEenheid,
+        });
+        if (error) throw error;
+        await herlaad();
+      },
+
       async boekEmballageRetour(retour) {
         /* Geen wachtrij: een retour wordt bij de vrachtwagen afgetekend en
            moet dan ook echt binnen zijn. Lukt het niet, dan ziet de gebruiker
@@ -1301,7 +1379,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       },
     }),
     [
-      state, laden, fout, mutatiesPerEvenement, metingenPerEvenement, hoofdmagazijn, herlaad,
+      state, laden, fout, mutatiesPerEvenement, metingenPerEvenement, hoofdmagazijn, uitgiftelocatie, herlaad,
       session, wachtrij, verstuurWachtrij,
     ]
   );

@@ -34,7 +34,8 @@ const cors = {
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
-const ROLLEN = ["beheerder", "magazijnmedewerker", "evenementmanager"];
+/** Sinds migratie 026: magazijnmedewerker en evenementmanager zijn samen "medewerker". */
+const ROLLEN = ["beheerder", "medewerker", "housekeeping"];
 
 /** Lang genoeg om "voor altijd" te betekenen; Supabase kent geen oneindig. */
 const VOORGOED = "876000h";
@@ -85,7 +86,7 @@ Deno.serve(async (verzoek: Request) => {
     const naam = String(opdracht.naam ?? "").trim();
     const email = String(opdracht.email ?? "").trim().toLowerCase();
     const wachtwoord = String(opdracht.wachtwoord ?? "");
-    const rol = String(opdracht.rol ?? "evenementmanager");
+    const rol = String(opdracht.rol ?? "medewerker");
 
     if (!naam) return antwoord({ fout: "Vul een naam in." }, 400);
     if (!email.includes("@")) return antwoord({ fout: "Vul een geldig e-mailadres in." }, 400);

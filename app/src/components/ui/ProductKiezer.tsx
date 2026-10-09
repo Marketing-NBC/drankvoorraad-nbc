@@ -52,6 +52,7 @@ export function ProductKiezer({
       <div className="product-kiezer__kop">
         <span className="field-group__label">Product</span>
         <Link
+          className="alleen-touch"
           icon={null}
           onClick={() => {
             setMelding(null);

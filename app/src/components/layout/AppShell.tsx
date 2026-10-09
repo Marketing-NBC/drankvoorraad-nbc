@@ -6,6 +6,7 @@ import { useAppState } from "../../context/AppStateContext";
 import type { GebruikerRol } from "../../data/types";
 import { useAuth } from "../../context/AuthContext";
 import { ROUTES } from "../../routes/routes";
+import { rolLabel } from "../../screens/Gebruikers/rollen";
 import { Wachtbalk } from "./Wachtbalk";
 import { Zoekbalk } from "./Zoekbalk";
 
@@ -22,17 +23,20 @@ interface NavItem {
   buitenTabbalk?: boolean;
 }
 
+/** Iedereen behalve housekeeping: die regelt alleen de kantine en de kroeg. */
+const WERK: GebruikerRol[] = ["beheerder", "medewerker"];
+
 /** Volgorde in de zijbalk: cijfers eerst, dan het dagelijkse werk. */
 const navItems: NavItem[] = [
   /* Het dashboard is cijfers: marges, derving, voorraadwaarde. Dat zijn
      bedragen, en die zijn alleen voor de beheerder. */
   { to: ROUTES.dashboard, label: "Dashboard", tabLabel: "Cijfers", icon: "grafiek", rollen: ["beheerder"] },
-  { to: ROUTES.overzicht, label: "Evenementen", tabLabel: "Events", icon: "calendar" },
-  { to: ROUTES.magazijn, label: "Magazijn", icon: "building" },
-  { to: ROUTES.leveringen, label: "Leveringen", tabLabel: "Binnen", icon: "doos" },
+  { to: ROUTES.overzicht, label: "Evenementen", tabLabel: "Events", icon: "calendar", rollen: WERK },
+  { to: ROUTES.magazijn, label: "Magazijn", icon: "building", rollen: WERK },
+  { to: ROUTES.leveringen, label: "Leveringen", tabLabel: "Binnen", icon: "doos", rollen: WERK },
   { to: ROUTES.tellingen, label: "Tellingen", tabLabel: "Tellen", icon: "scan" },
-  { to: ROUTES.producten, label: "Producten", icon: "doos" },
-  { to: ROUTES.historie, label: "Mutaties", icon: "clock" },
+  { to: ROUTES.producten, label: "Producten", icon: "doos", rollen: WERK },
+  { to: ROUTES.historie, label: "Mutaties", icon: "clock", rollen: WERK },
   /* Koffie, water en personeel zijn beheerwerk dat niet dagelijks op de vloer
      gebeurt. Ze horen in de zijbalk en het accountmenu, niet in de zes vakken
      van de onderbalk — die is voor wat je met een kar in je hand doet. */
@@ -42,7 +46,7 @@ const navItems: NavItem[] = [
     tabLabel: "Koffie",
     icon: "doos",
     buitenTabbalk: true,
-    rollen: ["beheerder", "magazijnmedewerker"],
+    rollen: ["beheerder"],
   },
   { to: ROUTES.personeel, label: "Personeel", icon: "gebruikers", buitenTabbalk: true },
   { to: ROUTES.gebruikers, label: "Gebruikers", icon: "gebruikers", alleenBeheerder: true, buitenTabbalk: true },
@@ -66,7 +70,7 @@ function schermNaam(pad: string): { label: string; terug: boolean } {
   if (pad.startsWith("/pakbonnen/")) return { label: "Pakbon", terug: true };
   if (pad.startsWith("/tellingen/")) return { label: "Telling", terug: true };
   if (pad === ROUTES.leveringNieuw) return { label: "Levering aannemen", terug: true };
-  if (pad === ROUTES.emballage) return { label: "Emballage retour", terug: true };
+  if (pad === ROUTES.emballage) return { label: "Emballage", terug: false };
   const item = navItems.find((n) => n.to === pad);
   return { label: item?.label ?? "Drankvoorraad", terug: false };
 }
@@ -95,9 +99,13 @@ export function AppShell({ children }: { children: ReactNode }) {
   const tabbalkNav = tabVolgorde
     .map((to) => zichtbareNav.find((item) => item.to === to))
     .filter((item): item is NavItem => item !== undefined);
-  const tabs = opGebruikers && mag("beheerder")
-    ? [...tabbalkNav.slice(0, 5), { ...gebruikersItem, tabLabel: "Meer" }]
-    : tabbalkNav;
+  /* Housekeeping heeft maar twee schermen: personeel en tellen. Die staan
+     dan gewoon allebei in de onderbalk. */
+  const tabs = mag("housekeeping")
+    ? zichtbareNav
+    : opGebruikers && mag("beheerder")
+      ? [...tabbalkNav.slice(0, 5), { ...gebruikersItem, tabLabel: "Meer" }]
+      : tabbalkNav;
 
   const kop = schermNaam(pad);
   const maand = maandNotatie.format(new Date());
@@ -116,7 +124,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         <span className="avatar" aria-hidden="true">{initiaal}</span>
         <span className="app-shell__gebruiker">
           <span>{profiel?.naam}</span>
-          <span className="app-shell__rol">{profiel?.rol}</span>
+          <span className="app-shell__rol">{profiel ? rolLabel[profiel.rol] : ""}</span>
         </span>
       </button>
 
@@ -131,7 +139,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           <div className="app-shell__menu" role="menu">
             <span className="app-shell__menu-naam">
               {profiel?.naam}
-              <span className="app-shell__rol">{profiel?.rol}</span>
+              <span className="app-shell__rol">{profiel ? rolLabel[profiel.rol] : ""}</span>
             </span>
             {menuNav.map((item) => (
               <NavLink
@@ -157,8 +165,10 @@ export function AppShell({ children }: { children: ReactNode }) {
       {/* Zijbalk: alleen op desktop. Daaronder neemt de onderbalk het over. */}
       <aside className="zijbalk">
         <NavLink
-          to={mag("beheerder") ? ROUTES.dashboard : ROUTES.overzicht}
-          aria-label={mag("beheerder") ? "Naar dashboard" : "Naar evenementen"}
+          to={mag("beheerder") ? ROUTES.dashboard : mag("housekeeping") ? ROUTES.personeel : ROUTES.overzicht}
+          aria-label={
+            mag("beheerder") ? "Naar dashboard" : mag("housekeeping") ? "Naar personeel" : "Naar evenementen"
+          }
           className="zijbalk__merk"
         >
           <Logo variant="mark-color" height={26} />
@@ -205,20 +215,12 @@ export function AppShell({ children }: { children: ReactNode }) {
           </button>
         </nav>
 
-        {/* Tellen gebeurt op de vloer, niet achter dit scherm — vandaar de
-            snelste weg ernaartoe onderaan de zijbalk. */}
-        {mag("beheerder", "magazijnmedewerker", "evenementmanager") ? (
-          <NavLink to={ROUTES.tellingen} className="zijbalk__promo">
-            <span className="zijbalk__promo-titel">Telling<br />op de vloer</span>
-            <span className="zijbalk__promo-sub">Scan met de tablet in de koelcel.</span>
-            <span className="zijbalk__promo-knop">Start telling</span>
-          </NavLink>
-        ) : null}
       </aside>
 
       <div className="app-shell__kolom">
         <header className="topbalk">
-          <Zoekbalk />
+          {/* Zoeken gaat over evenementen en producten: niets voor housekeeping. */}
+          {mag("housekeeping") ? <span style={{ flex: 1 }} /> : <Zoekbalk />}
           <span className="topbalk__maand">{maand.charAt(0).toUpperCase() + maand.slice(1)}</span>
           {accountMenu}
         </header>

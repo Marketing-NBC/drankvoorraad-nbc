@@ -28,7 +28,7 @@ export function Leveringen() {
   const routeState = useLocation().state as { inWachtrij?: boolean } | null;
   const [actieFout, setActieFout] = useState<string | null>(null);
 
-  const magAannemen = mag("beheerder", "magazijnmedewerker", "evenementmanager");
+  const magAannemen = mag("beheerder", "medewerker");
 
   const productNaam = useMemo(
     () => new Map(state.producten.map((p) => [p.id, p])),
@@ -67,18 +67,11 @@ export function Leveringen() {
         title="Leveringen"
         toelichting="Wat er op de bon staat en wat er werkelijk kwam. De voorraad gaat omhoog met wat er werkelijk stond; het verschil blijft openstaan tot iemand het afhandelt."
         actions={
-          <>
-            {magAannemen ? (
-              <Button icon="plus" iconPosition="leading" onClick={() => navigate(ROUTES.leveringNieuw)}>
-                Levering aannemen
-              </Button>
-            ) : null}
-            {/* Lege emballage gaat de andere kant op, maar met dezelfde
-                leveranciers en dezelfde kar — daarom hier. */}
-            <Button variant="zacht" icon={null} onClick={() => navigate(ROUTES.emballage)}>
-              Emballage retour
+          magAannemen ? (
+            <Button icon="plus" iconPosition="leading" onClick={() => navigate(ROUTES.leveringNieuw)}>
+              Levering aannemen
             </Button>
-          </>
+          ) : null
         }
       />
 

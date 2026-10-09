@@ -29,7 +29,7 @@ export function Koppelingen() {
   const [metingOpen, setMetingOpen] = useState(false);
   const [actieFout, setActieFout] = useState<string | null>(null);
 
-  const magBeheren = mag("beheerder", "magazijnmedewerker");
+  const magBeheren = mag("beheerder");
   const magKoppelingInstellen = mag("beheerder");
 
   const productNaam = useMemo(

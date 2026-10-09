@@ -16,12 +16,22 @@ voorraadstand op rust:
 - **`voorraad` wordt alleen door een databasetrigger bijgewerkt**, nooit
   rechtstreeks vanuit de app. Zie `supabase/schema.sql`.
 - **Rollen worden in de database afgedwongen**, niet alleen in het scherm. Een
-  knop verbergen is geen beveiliging. De rollen zijn `beheerder`,
-  `magazijnmedewerker` en `evenementmanager`. Magazijnwerk (pakbonnen,
-  inkoop, verplaatsen, tellen, leveringen, emballage retour) mogen alle drie;
-  zie `mag_magazijnwerk()` in migratie 024. De evenementmanager beheert
-  daarnaast evenementen, maar richt niets in: geen producten, minimumvoorraad,
-  vulplekken of koppelingen — dat blijft beheerder en magazijnmedewerker.
+  knop verbergen is geen beveiliging. De rollen zijn `beheerder`, `medewerker`
+  en `housekeeping` (migratie 026; `magazijnmedewerker` bestaat nog als
+  enumwaarde maar een controle op `profiles` laat hem niet meer toe).
+  Magazijnwerk (pakbonnen, inkoop, verplaatsen, tellen, leveringen, emballage)
+  mogen beheerder en medewerker; zie `mag_magazijnwerk()`. De medewerker
+  beheert daarnaast evenementen, maar richt niets in: producten,
+  minimumvoorraad, vulplekken en koppelingen zijn voor de beheerder.
+  Housekeeping doet alleen de kantine en de kroeg: aanvullen, tellen en
+  afboeken (`mag_tellen()` en de trigger `controleer_mutatie_rol`).
+- **Afronden is voor de beheerder.** Een evenement op Afgerond zetten, en het
+  daarna nog wijzigen of erop boeken, mag alleen de beheerder: na afloop
+  controleert die alles en sluit het af. Zie `controleer_evenement` en
+  `controleer_mutatie_rol` in migratie 027.
+- **Uitgifte voor een evenement komt altijd uit Koelcel NBC**, ook bij Green
+  Village. De app kiest die locatie zelf (`uitgiftelocatie` in
+  `AppStateContext`); er is geen keuze meer.
 - **Bedragen en marges zijn alleen voor de beheerder.** Inkoopprijs,
   statiegeld, omzet en borg zijn voor andere rollen ingetrokken en alleen te
   lezen of te zetten via `productbedragen`, `evenementomzet`,
@@ -39,25 +49,36 @@ voorraadstand op rust:
   kroeg, dan gaat het altijd per flesje (`losOpLocatie`).
 - **De kantine en de kroeg zijn voor personeel.** Wat daar opgaat telt nooit
   mee bij een evenement. Een trigger weigert elke boeking die die twee mengt;
-  zie `supabase/migraties/011_personeelslocaties.sql`.
+  zie `supabase/migraties/011_personeelslocaties.sql`. Er komen alleen
+  producten met `voor_personeel` in: de grote flessen fris (1,25 en 1,5 L),
+  radler, alcoholvrij bier en wijn (migratie 027).
 - **In de kantine en de kroeg meet de telling het verbruik.** Een tekort wordt
   daar geboekt als `personeelsverbruik` en niet als `correctie` — niemand houdt
   achter de bar bij wie wat pakt. Een overschot blijft wél een correctie: meer
   vinden dan verwacht is een telfout of een niet-geboekte aanvulling. Zo blijft
   het telverschillenrapport gaan over voorraad die zoek is. Zie
   `supabase/migraties/018_personeelsverbruik_uit_telling.sql`.
+- **In het magazijn heeft een tekort een reden.** Over datum of kapot wordt
+  `beschadigd` (derving); een andere reden blijft een `correctie` met notitie
+  "Voorraadtelling: <reden>". Zonder reden rondt `rond_telling_af` niet af
+  (migratie 027).
 - **Koffie en water hebben geen voorraad.** Franke en Aquablu leveren verbruik,
   geen kratten. Een meting is daarom géén mutatie: `mutaties` blijft over
   voorraadbewegingen gaan. Het verbruik telt wel mee in de marge.
 - **Een levering boekt wat er werkelijk stond**, nooit wat de bon beweert. Het
   verschil blijft staan als openstaand punt richting de leverancier tot iemand
-  het afhandelt. Zie `supabase/migraties/015_leveringen.sql`.
+  het afhandelt. Zie `supabase/migraties/015_leveringen.sql`. Een gelezen
+  foto van de bon vult alleen "op de bon" in. Een levering gaat naar het
+  hoofdmagazijn of een koelcel, van Swinkels of Bidfood.
 - **De wachtrij verliest nooit een boeking en boekt er nooit één dubbel.** Bij
   een haperende verbinding wacht de boeking op de telefoon; bij een weigering
   van de database krijgt de gebruiker de melding meteen. Het onderscheid zit in
   `isNetwerkfout` (`app/src/lib/wachtrij.ts`), en dubbel boeken wordt
   tegengehouden door een unieke index op `client_id`. Tellingen gaan er bewust
   niet in: die rekenen af tegen de voorraad van dát moment.
+- **De API-sleutel van Anthropic komt nooit in de browser.** Een foto van de
+  afleverbon gaat naar de Edge Function `supabase/functions/lees-bon`, die
+  zelf controleert of de aanvrager leveringen mag aannemen.
 - **De servicesleutel komt nooit in de browser.** Accounts aanmaken, een
   wachtwoord zetten en toegang intrekken gaat via de Edge Function
   `supabase/functions/gebruikers`, die zelf controleert of de aanvrager
@@ -86,13 +107,25 @@ Er is geen backend van onszelf: de browser praat rechtstreeks met Supabase,
 afgeschermd door RLS-policies. Serverlogica zit in Postgres, aangeroepen via
 RPC's: `start_telling`, `rond_telling_af`, `annuleer_telling`, `maak_pakbon`,
 `stel_min_voorraad`, `boek_meting`, `boek_levering`, `handel_verschil_af`,
-`gebruikers_overzicht`, `boek_emballage_retour`, en de bedragfuncties uit
-migratie 019.
+`gebruikers_overzicht`, `boek_emballage_retour`, `koppel_artikel`, en de
+bedragfuncties uit migratie 019.
 
 Lege emballage die terug gaat naar de leverancier wordt vastgelegd op de
-tabellen `emballage` (soorten met borg), `emballage_retouren` (de bon) en
-`emballage_mutaties` (de regels). Dat raakt de drankvoorraad niet; het is
-de controle op de creditnota.
+tabellen `emballage` (soorten met borg en het artikelnummer van de
+retourbon), `emballage_retouren` (de bon) en `emballage_mutaties` (de regels).
+Dat raakt de drankvoorraad niet; het is de controle op de creditnota. In de
+app is het de tweede kop onder Magazijn. De retourbon wordt met de hand
+overgenomen van het papier.
+
+Welk product bij een artikelnummer op de afleverbon hoort, staat in
+`leverancier_artikelen` (met het aantal stuks per eenheid: krat 24, tray 12).
+Een onbekend artikel koppelt het magazijn bij het uitpakken; de app onthoudt
+het via `koppel_artikel`. De omzetting van een gelezen bon naar regels zit in
+`app/src/data/bon.ts`.
+
+Consumpties per persoon (`app/src/data/consumpties.ts`) rekenen met het
+werkelijke verbruik en `aantal_personen` op het evenement. Een flesje is één
+consumptie; fust en wijn tellen in glazen van 25 cl.
 
 `importeer_metingen` is de enige RPC die de app zelf niet aanroept. Dat is de
 poort waar de koppeling met Franke en Aquablu straks op aansluit: een Edge
@@ -109,10 +142,11 @@ Inloggen gaat uitsluitend met e-mail en wachtwoord (`signInWithPassword`). Er is
 geen magic link, geen OAuth en geen wachtwoordherstel — dus ook geen
 redirect-URL's die in Supabase geconfigureerd moeten staan.
 
-Serverwerk dat niet in Postgres kan staat in `supabase/functions/`. Nu één
-functie: `gebruikers`. Die moet apart neergezet worden (`supabase functions
-deploy gebruikers`) — zie de README daar, inclusief wat er in het dashboard nog
-uit moet staan.
+Serverwerk dat niet in Postgres kan staat in `supabase/functions/`: de
+functies `gebruikers` en `lees-bon`. Die moeten apart neergezet worden
+(`supabase functions deploy …`, en voor `lees-bon` eerst het geheim
+`ANTHROPIC_API_KEY`) — zie de README daar, inclusief wat er in het dashboard
+nog uit moet staan.
 
 ## Databasewijzigingen
 
@@ -136,8 +170,8 @@ beoordelen zonder op productiedata te werken, en het enige dat er nu voor in
 de plaats is zolang er geen test-Supabase naast productie staat.
 
 Voeg een pad toe met `?pad=`, bijvoorbeeld
-`http://localhost:5173/?pad=/magazijn`. Met `&rol=magazijnmedewerker` of
-`&rol=evenementmanager` zie je het scherm zoals die rol het ziet (zonder
+`http://localhost:5173/?pad=/magazijn`. Met `&rol=medewerker` of
+`&rol=housekeeping` zie je het scherm zoals die rol het ziet (zonder
 bedragen). De map `app/preview/` hoort niet in de
 publicatiebuild: die gebruikt `vite.config.ts`.
 
@@ -171,7 +205,7 @@ afmaken ervan. Deze paragraaf mag weg zodra dat plan er ligt.
 Vier dingen die bij "van PoC naar af" waarschijnlijk terugkomen. Geen van deze is
 kapot — het zijn keuzes die passen bij een PoC en knellen zodra het menens wordt:
 
-- **Testdekking.** 88 tests over rekenlogica (`app/src/data/`), de wachtrij
+- **Testdekking.** 110 tests over rekenlogica (`app/src/data/`), de wachtrij
   (`app/src/lib/`) en de Excel-export (`app/src/utils/`). Geen enkel scherm of
   gebruikersstroom is getest, terwijl daar de meeste code zit.
 - **Databasemigraties.** Half opgelost: nieuwe wijzigingen staan genummerd in

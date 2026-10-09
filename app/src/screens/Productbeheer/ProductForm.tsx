@@ -30,9 +30,9 @@ export function ProductForm({
   barcodeVooraf?: string;
 }) {
   const { voegProductToe, wijzigProduct } = useAppState();
-  /* Prijzen en statiegeld zijn alleen voor de beheerder. Een
-     magazijnmedewerker die een gescand product aanmaakt laat ze leeg; de
-     beheerder vult ze later aan. */
+  /* Prijzen en statiegeld zijn alleen voor de beheerder. Wie een gescand
+     product aanmaakt zonder beheerder te zijn, laat ze leeg; de beheerder
+     vult ze later aan. */
   const { zietBedragen } = useAuth();
   const [naam, setNaam] = useState("");
   const [categorie, setCategorie] = useState<ProductCategorie>("bier");
@@ -45,6 +45,7 @@ export function ProductForm({
   const [statiegeldPerStuk, setStatiegeldPerStuk] = useState("0");
   const [statiegeldPerVerpakking, setStatiegeldPerVerpakking] = useState("0");
   const [voorraadloos, setVoorraadloos] = useState(false);
+  const [voorPersoneel, setVoorPersoneel] = useState(false);
   const [barcode, setBarcode] = useState("");
   const [barcodeVerpakking, setBarcodeVerpakking] = useState("");
   const [leverancier, setLeverancier] = useState("");
@@ -66,6 +67,7 @@ export function ProductForm({
     setStatiegeldPerStuk(String(product?.statiegeldPerStuk ?? 0));
     setStatiegeldPerVerpakking(String(product?.statiegeldPerVerpakking ?? 0));
     setVoorraadloos(product?.voorraadloos ?? false);
+    setVoorPersoneel(product?.voorPersoneel ?? false);
     setBarcode(product?.barcode ?? barcodeVooraf ?? "");
     setBarcodeVerpakking(product?.barcodeVerpakking ?? "");
     setLeverancier(product?.leverancier ?? "");
@@ -117,6 +119,7 @@ export function ProductForm({
       statiegeldPerStuk: perStuk,
       statiegeldPerVerpakking: perVerpakking,
       voorraadloos,
+      voorPersoneel,
       barcode: barcode.trim() || undefined,
       barcodeVerpakking: barcodeVerpakking.trim() || undefined,
       leverancier: leverancier.trim() || undefined,
@@ -235,6 +238,16 @@ export function ProductForm({
           </span>
         </label>
 
+        <label className="keuzevakje">
+          <input type="checkbox" checked={voorPersoneel} onChange={(e) => setVoorPersoneel(e.target.checked)} />
+          <span>
+            Voor personeel
+            <span className="field-group__hint">
+              mag in de kantine en de kroeg: de grote flessen fris, radler, alcoholvrij bier en wijn
+            </span>
+          </span>
+        </label>
+
         {/* Twee barcodes: die op het flesje en die op de krat. In het magazijn
             scan je meestal de krat; beide leiden naar dit product. */}
         <div className="field-group">
@@ -242,7 +255,7 @@ export function ProductForm({
             <label className="field-group__label" htmlFor="product-barcode">
               Barcode stuk <span className="field-group__hint">op het flesje of fust</span>
             </label>
-            <Link icon={null} onClick={() => setScannen("stuk")}>
+            <Link className="alleen-touch" icon={null} onClick={() => setScannen("stuk")}>
               Scannen
             </Link>
           </div>
@@ -254,7 +267,7 @@ export function ProductForm({
               Barcode verpakking{" "}
               <span className="field-group__hint">op de {verpakking.trim() || "krat of doos"}</span>
             </label>
-            <Link icon={null} onClick={() => setScannen("verpakking")}>
+            <Link className="alleen-touch" icon={null} onClick={() => setScannen("verpakking")}>
               Scannen
             </Link>
           </div>

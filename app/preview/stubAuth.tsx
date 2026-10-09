@@ -2,7 +2,7 @@
 import type { ReactNode } from "react";
 import type { GebruikerRol } from "../src/data/types";
 
-/* Rol kiezen met ?rol=magazijnmedewerker of ?rol=evenementmanager, om te
+/* Rol kiezen met ?rol=medewerker of ?rol=housekeeping, om te
    zien wat een andere rol wel en niet te zien krijgt. Standaard beheerder. */
 const rolUitAdres = new URLSearchParams(window.location.search).get("rol") as GebruikerRol | null;
 const profiel = { id: "u1", naam: "Abel Bakker", rol: rolUitAdres ?? ("beheerder" as GebruikerRol) };

@@ -8,10 +8,10 @@ import type {
 
 const profielen: Profiel[] = [
   { id: "u1", naam: "Abel Bakker", rol: "beheerder", actief: true },
-  { id: "u2", naam: "Sanne Vos", rol: "magazijnmedewerker", actief: true },
-  { id: "u3", naam: "Jeroen de Wit", rol: "evenementmanager", actief: true },
-  { id: "u4", naam: "Fleur Janssen", rol: "magazijnmedewerker", actief: true },
-  { id: "u5", naam: "Daan Peters", rol: "evenementmanager", actief: false },
+  { id: "u2", naam: "Sanne Vos", rol: "medewerker", actief: true },
+  { id: "u3", naam: "Jeroen de Wit", rol: "housekeeping", actief: true },
+  { id: "u4", naam: "Fleur Janssen", rol: "medewerker", actief: true },
+  { id: "u5", naam: "Daan Peters", rol: "medewerker", actief: false },
 ];
 
 const gebruikers: Gebruiker[] = profielen.map((p, i) => ({
@@ -41,6 +41,7 @@ function p(velden: Partial<Product> & Pick<Product, "id" | "naam">): Product {
     statiegeldPerStuk: 0,
     statiegeldPerVerpakking: 0,
     voorraadloos: false,
+    voorPersoneel: false,
     ...velden,
   };
 }
@@ -49,9 +50,9 @@ const producten: Product[] = [
   p({ id: "p1", naam: "Fust Swinckels 20 L", categorie: "bier", inhoud: "20 L", eenheid: "fust", inkoopprijs: 40.7, statiegeldPerStuk: 30, barcode: "8712000012345", leverancier: "Swinkels" }),
   p({ id: "p2", naam: "Swinckels 0,3 L", categorie: "bier", inhoud: "0,3 L", inkoopprijs: 0.53, verpakking: "krat", stuksPerVerpakking: 24, alleenPerVerpakking: true, statiegeldPerVerpakking: 3.9, barcode: "8712000098765", leverancier: "Swinkels" }),
   p({ id: "p3", naam: "Spa blauw 1 L", inhoud: "1 L", inkoopprijs: 0.95, verpakking: "krat", stuksPerVerpakking: 12, statiegeldPerVerpakking: 5, barcode: "8712000055512", leverancier: "Bidfood" }),
-  p({ id: "p4", naam: "Coca Cola 0,2 L", inhoud: "0,2 L", inkoopprijs: 0.46, verpakking: "krat", stuksPerVerpakking: 24, alleenPerVerpakking: true, statiegeldPerVerpakking: 5, barcode: "8712000044421", leverancier: "Bidfood" }),
-  p({ id: "p5", naam: "Coca Cola 1,25 L", inhoud: "1,25 L", inkoopprijs: 2.05, statiegeldPerStuk: 0.25, leverancier: "Bidfood" }),
-  p({ id: "p6", naam: "Witte wijn 0,7 L", categorie: "wijn", inhoud: "0,7 L", inkoopprijs: 4.15, barcode: "8712000033310" }),
+  p({ id: "p4", naam: "Coca Cola 0,2 L", inhoud: "0,2 L", inkoopprijs: 0.46, verpakking: "krat", stuksPerVerpakking: 24, alleenPerVerpakking: true, statiegeldPerVerpakking: 5, barcode: "8712000044421", leverancier: "Swinkels" }),
+  p({ id: "p5", naam: "Coca Cola 1,25 L", inhoud: "1,25 L", inkoopprijs: 2.05, statiegeldPerStuk: 0.25, leverancier: "Swinkels", voorPersoneel: true }),
+  p({ id: "p6", naam: "Witte wijn 0,7 L", categorie: "wijn", inhoud: "0,7 L", inkoopprijs: 4.15, voorPersoneel: true, barcode: "8712000033310" }),
   p({ id: "p7", naam: "Prosecco 0,7 L", categorie: "wijn", inhoud: "0,7 L", inkoopprijs: 7.15, barcode: "8712000022209" }),
   p({ id: "p8", naam: "Koffie", categorie: "koffie", eenheid: "kop", inkoopprijs: 0.12, voorraadloos: true, leverancier: "Franke" }),
   p({ id: "p9", naam: "Water koud", categorie: "water", eenheid: "glas", inkoopprijs: 0, voorraadloos: true, leverancier: "Aquablu" }),
@@ -70,10 +71,10 @@ const voorraad: Voorraad[] = voorraadRuw.map(([locatieId, productId, aantal, min
 }));
 
 const evenementen: Evenement[] = [
-  { id: "NBC-2026-014", naam: "Rabobank Jaarcongres", datum: "2026-05-14", merk: "NBC", status: "Actief", opdrachtgever: "Rabobank", omzet: 5400 },
+  { id: "NBC-2026-014", naam: "Rabobank Jaarcongres", datum: "2026-05-14", merk: "NBC", status: "Actief", opdrachtgever: "Rabobank", omzet: 5400, aantalPersonen: 180 },
   { id: "NBC-2026-015", naam: "Zorggroep Symposium", datum: "2026-05-19", merk: "NBC", status: "Gepland", omzet: 0 },
   { id: "GV-2026-004", naam: "Green Village Zomerborrel", datum: "2026-05-22", merk: "Green Village", status: "Gepland", omzet: 0 },
-  { id: "NBC-2026-011", naam: "ASML Leiderschapsdag", datum: "2026-04-28", merk: "NBC", status: "Afgerond", omzet: 7200 },
+  { id: "NBC-2026-011", naam: "ASML Leiderschapsdag", datum: "2026-04-28", merk: "NBC", status: "Afgerond", omzet: 7200, aantalPersonen: 240 },
   { id: "GV-2026-003", naam: "Provincie Utrecht Netwerkcafé", datum: "2026-04-21", merk: "Green Village", status: "Afgerond", omzet: 3100 },
   { id: "NBC-2026-009", naam: "KPN Kick-off", datum: "2026-04-09", merk: "NBC", status: "Afgerond", omzet: 4800 },
 ];
@@ -197,7 +198,7 @@ const tellingregels: Record<string, Tellingregel[]> = {
   t1: [
     { id: "tr1", tellingId: "t1", productId: "p5", verwachtAantal: 180, geteldAantal: 180 },
     { id: "tr2", tellingId: "t1", productId: "p6", verwachtAantal: 96, geteldAantal: 92 },
-    { id: "tr3", tellingId: "t1", productId: "p4", verwachtAantal: 860, geteldAantal: 860 },
+    { id: "tr3", tellingId: "t1", productId: "p4", verwachtAantal: 864, geteldAantal: 840, reden: "kapot" },
     { id: "tr4", tellingId: "t1", productId: "p1", verwachtAantal: 38, geteldAantal: 38 },
     { id: "tr5", tellingId: "t1", productId: "p2", verwachtAantal: 16, geteldAantal: 18 },
     { id: "tr6", tellingId: "t1", productId: "p7", verwachtAantal: 54, geteldAantal: null },
@@ -206,18 +207,37 @@ const tellingregels: Record<string, Tellingregel[]> = {
   t2: [],
 };
 
+/* Zoals na migratie 027: de soorten van de retourbon van Swinkels. */
 const emballage = [
-  { id: "e1", naam: "Krat Coca-Cola 24 × 0,2 L", leverancier: "Bidfood", actief: true, borg: 5 },
-  { id: "e2", naam: "PET-fles Coca-Cola", leverancier: "Bidfood", actief: true, borg: 0.25 },
+  { id: "e1", naam: "Krat fris handel 8 t/m 28 vaks", artikelnummer: "800163", leverancier: "Swinkels", actief: true, borg: 5 },
+  { id: "e2", naam: "PET-fles Coca-Cola", leverancier: "Swinkels", actief: true, borg: 0.25 },
   { id: "e3", naam: "Krat Spa 12 × 1 L", leverancier: "Bidfood", actief: true, borg: 5 },
-  { id: "e4", naam: "Bierkrat Swinkels 24 × 0,3 L", leverancier: "Swinkels", actief: true, borg: 3.9 },
-  { id: "e5", naam: "Fust Swinkels 20 L", leverancier: "Swinkels", actief: true, borg: 30 },
+  { id: "e4", naam: "Bierkrat Swinkels 24 × 0,3 L", artikelnummer: "800022", leverancier: "Swinkels", actief: true, borg: 3.9 },
+  { id: "e5", naam: "Fust Swinkels 20 L", artikelnummer: "800004", leverancier: "Swinkels", actief: true, borg: 30 },
   { id: "e6", naam: "Blikje", leverancier: "Bidfood", actief: true, borg: 0.1 },
-  { id: "e7", naam: "Rolcontainer", leverancier: "Bidfood", actief: true, borg: 150 },
-  { id: "e8", naam: "Koolzuurcilinder", leverancier: "Swinkels", actief: true, borg: 180 },
+  { id: "e7", naam: "Rolcontainer", artikelnummer: "800307", leverancier: "Swinkels", actief: true, borg: 150 },
+  { id: "e8", naam: "Koolzuurcilinder", artikelnummer: "800158", leverancier: "Swinkels", actief: true, borg: 120 },
+  { id: "e9", naam: "Big bag PET (2,5 m)", artikelnummer: "800136", leverancier: "Swinkels", actief: true, borg: 0 },
 ];
+const leverancierArtikelen = [
+  { leverancier: "Swinkels", artikelnummer: "117919", productId: "p2", stuksPerEenheid: 24 },
+  { leverancier: "Swinkels", artikelnummer: "200084", productId: "p4", stuksPerEenheid: 24 },
+  { leverancier: "Swinkels", artikelnummer: "108244", productId: "p1", stuksPerEenheid: 1 },
+];
+/* Wat de functie lees-bon van de afleverbon van 2 oktober zou maken. */
+const gelezenBon = {
+  leverancier: "Swinkels",
+  bonnummer: "800758649",
+  datum: "2026-10-02",
+  regels: [
+    { artikelnummer: "117919", omschrijving: "Swinckels Pilsener Crate 4x6x30", besteld: 24, uitgeleverd: 24 },
+    { artikelnummer: "200084", omschrijving: "Coca-Cola Regular Crate Bot 24x20", besteld: 24, uitgeleverd: 24 },
+    { artikelnummer: "205570", omschrijving: "Chaudf. Blauw Crate 12x100", besteld: 3, uitgeleverd: 3 },
+    { artikelnummer: "108244", omschrijving: "Swinckels' Pilsener 20L A-Kopp", besteld: 16, uitgeleverd: 16 },
+  ],
+};
 const emballageRetouren = [
-  { id: "er1", leverancier: "Bidfood", bonnummer: "CC-88123", gebruikerId: "u2", aangemaaktOp: dagenGeleden(3) },
+  { id: "er1", leverancier: "Swinkels", bonnummer: "800758649", gebruikerId: "u2", aangemaaktOp: dagenGeleden(3) },
   { id: "er2", leverancier: "Swinkels", gebruikerId: "u4", aangemaaktOp: dagenGeleden(9) },
 ];
 const emballageRetourregels = [
@@ -238,7 +258,7 @@ const state = {
   zalen, evenementZalen, vulplekken, standaardvulling, koppelingen, machines, metingen,
   leveringen, leveringregels,
   emballage: zietBedragen ? emballage : emballage.map((e) => ({ ...e, borg: 0 })),
-  emballageRetouren, emballageRetourregels,
+  emballageRetouren, emballageRetourregels, leverancierArtikelen,
 };
 
 /* Eén wachtende boeking, zodat de balk in de preview te beoordelen is. */
@@ -275,6 +295,7 @@ const waarde: Record<string, unknown> = {
   mutatiesPerEvenement,
   metingenPerEvenement,
   hoofdmagazijn: locaties[0],
+  uitgiftelocatie: locaties[1],
   herlaad: niets,
   voegEvenementToe: niets,
   wijzigEvenement: niets,
@@ -291,6 +312,7 @@ const waarde: Record<string, unknown> = {
   startTelling: async () => "t1",
   haalTellingregels: async (id: string) => tellingregels[id] ?? [],
   zetGeteldAantal: niets,
+  zetTelReden: niets,
   rondTellingAf: async () => 2,
   annuleerTelling: niets,
   maakPakbon: async () => pakbonnen[0].id,
@@ -304,6 +326,11 @@ const waarde: Record<string, unknown> = {
   boekLevering: async () => ({ inWachtrij: false }),
   handelVerschilAf: niets,
   boekEmballageRetour: async () => "er1",
+  leesBon: async () => {
+    await new Promise((r) => setTimeout(r, 1200));
+    return gelezenBon;
+  },
+  koppelArtikel: niets,
   wachtrij,
   verstuurWachtrij: niets,
   verwijderUitWachtrij: () => {},

@@ -1,6 +1,13 @@
 export type Merk = "NBC" | "Green Village";
 
-export type GebruikerRol = "beheerder" | "magazijnmedewerker" | "evenementmanager";
+/**
+ * Sinds migratie 026: de magazijnmedewerker en de evenementmanager zijn samen
+ * "medewerker". Housekeeping regelt alleen het personeelsverbruik.
+ */
+export type GebruikerRol = "beheerder" | "medewerker" | "housekeeping";
+
+/** De enige twee leveranciers (025, 027). */
+export const LEVERANCIERS = ["Swinkels", "Bidfood"] as const;
 
 export type EvenementStatus = "Gepland" | "Actief" | "Afgerond";
 
@@ -87,6 +94,11 @@ export interface Product {
   /** Barcode op de krat of doos — in het magazijn scan je meestal die. */
   barcodeVerpakking?: string;
   leverancier?: string;
+  /**
+   * Mag in de kantine en de kroeg: de grote flessen fris, radler,
+   * alcoholvrij bier en wijn. Zie migratie 027.
+   */
+  voorPersoneel: boolean;
 }
 
 /** Voorraadstand van één product op één locatie. */
@@ -108,6 +120,8 @@ export interface EvenementCore {
   merk: Merk;
   opdrachtgever?: string;
   status: EvenementStatus;
+  /** Hoeveel gasten er waren — voor de consumpties per persoon. */
+  aantalPersonen?: number;
 }
 
 export interface Evenement extends EvenementCore {
@@ -119,6 +133,8 @@ export interface Evenement extends EvenementCore {
 export interface EmballageSoort {
   id: string;
   naam: string;
+  /** Het nummer op de retourbon van de leverancier, bijvoorbeeld 800163. */
+  artikelnummer?: string;
   leverancier?: string;
   actief: boolean;
   /** Borg per stuk emballage. Alleen voor de beheerder; anders 0. */
@@ -220,6 +236,25 @@ export interface Tellingregel {
   verwachtAantal: number;
   /** null = nog niet geteld; die producten blijven bij afronden ongemoeid. */
   geteldAantal: number | null;
+  /** Wat er met een tekort in het magazijn gebeurd is. */
+  reden?: TellingReden;
+  redenToelichting?: string;
+}
+
+/**
+ * Over datum en kapot worden derving; een andere reden blijft een
+ * telverschil, met die reden erbij. Zie migratie 027.
+ */
+export type TellingReden = "over_datum" | "kapot" | "anders";
+
+/** Welk product er hoort bij een artikelnummer op de afleverbon. */
+export interface LeverancierArtikel {
+  leverancier: string;
+  artikelnummer: string;
+  omschrijving?: string;
+  productId: string;
+  /** Stuks in één eenheid op de bon: krat 24, tray 12, fust 1. */
+  stuksPerEenheid: number;
 }
 
 /** Personeelsverbruik: gaat van de kantine of de kroeg af en nergens heen. */

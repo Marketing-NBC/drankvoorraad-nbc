@@ -29,7 +29,7 @@ export function GebruikerForm({
   const [naam, setNaam] = useState("");
   const [email, setEmail] = useState("");
   const [wachtwoord, setWachtwoord] = useState("");
-  const [rol, setRol] = useState<GebruikerRol>("evenementmanager");
+  const [rol, setRol] = useState<GebruikerRol>("medewerker");
   const [fout, setFout] = useState<string | null>(null);
   const [bezig, setBezig] = useState(false);
   const [gelukt, setGelukt] = useState(false);
@@ -39,7 +39,7 @@ export function GebruikerForm({
     setNaam(gebruiker?.naam ?? "");
     setEmail(gebruiker?.email ?? "");
     setWachtwoord("");
-    setRol(gebruiker?.rol ?? "evenementmanager");
+    setRol(gebruiker?.rol ?? "medewerker");
     setFout(null);
     setGelukt(false);
   }, [open, gebruiker]);

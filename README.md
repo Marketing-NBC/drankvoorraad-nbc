@@ -109,9 +109,13 @@ van Supabase. Ze staan hier zodat de opbouw terug te lezen is:
 
 | rol | mag |
 |---|---|
-| **beheerder** | alles, inclusief gebruikers, producten, locaties, prijzen, omzet en marges |
-| **magazijnmedewerker** | inboeken, verplaatsen, aanvullen, pakbonnen, tellingen, leveringen, emballage retour, producten aanmaken — zonder bedragen |
-| **evenementmanager** | evenementen beheren, uitgifte en retour boeken bij een evenement — zonder bedragen |
+| **beheerder** | alles, inclusief gebruikers, producten, locaties, prijzen, omzet en marges, pakbonnen, en evenementen afronden |
+| **medewerker** | evenementen aanmaken, uitgifte en retour boeken, inboeken, verplaatsen, aanvullen, tellingen, leveringen, emballage — zonder bedragen, zonder inrichting |
+| **housekeeping** | alleen de kantine en de kroeg: aanvullen, tellen en afboeken — zonder bedragen |
+
+Sinds migratie 026 zijn de magazijnmedewerker en de evenementmanager samen één
+rol: medewerker. Bij een evenement ziet de medewerker alleen de geboekte
+producten, de historie, de zalen en de knoppen om te boeken.
 
 Bedragen en marges (inkoopprijs, statiegeld, omzet, borg) ziet alleen de
 beheerder; dat staat in de database, niet alleen in het scherm (migratie 019).

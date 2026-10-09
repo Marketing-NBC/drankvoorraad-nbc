@@ -402,7 +402,11 @@ export function uitstaandPerEvenement(
     .sort((a, b) => b.aantalUitstaand - a.aantalUitstaand);
 }
 
-/** Notitie die `rond_telling_af` op zijn correctiemutaties zet. */
+/**
+ * Notitie die `rond_telling_af` op zijn correctiemutaties zet. Sinds
+ * migratie 027 staat bij een tekort met een andere reden die reden erachter:
+ * "Voorraadtelling: meegegeven aan klant". Ook dat is een telverschil.
+ */
 const TELLING_NOTITIE = "Voorraadtelling";
 
 export interface Voorraadverschil {
@@ -426,7 +430,7 @@ export interface Voorraadverschil {
 export function voorraadverschillen(mutaties: Mutatie[], producten: Product[]): Voorraadverschil[] {
   const productenById = new Map(producten.map((p) => [p.id, p]));
   return mutaties
-    .filter((m) => m.type === "correctie" && m.notitie === TELLING_NOTITIE)
+    .filter((m) => m.type === "correctie" && (m.notitie ?? "").startsWith(TELLING_NOTITIE))
     .map((m) => {
       const meerGevonden = Boolean(m.naarLocatieId);
       const verschil = meerGevonden ? m.aantal : -m.aantal;
