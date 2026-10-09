@@ -57,8 +57,7 @@ begin
 end;
 $$;
 
-drop trigger if exists evenement_gecontroleerd on evenementen;
-create trigger evenement_gecontroleerd
+create or replace trigger evenement_gecontroleerd
   before insert or update on evenementen
   for each row execute function controleer_evenement();
 
@@ -143,8 +142,7 @@ begin
 end;
 $$;
 
-drop trigger if exists mutatie_rol_gecontroleerd on mutaties;
-create trigger mutatie_rol_gecontroleerd
+create or replace trigger mutatie_rol_gecontroleerd
   before insert on mutaties
   for each row execute function controleer_mutatie_rol();
 
@@ -162,9 +160,15 @@ create table if not exists leverancier_artikelen (
 );
 
 alter table leverancier_artikelen enable row level security;
-drop policy if exists "artikelen zichtbaar" on leverancier_artikelen;
-create policy "artikelen zichtbaar" on leverancier_artikelen
-  for select to authenticated using (true);
+do $$
+begin
+  if not exists (
+    select 1 from pg_policies where tablename = 'leverancier_artikelen' and policyname = 'artikelen zichtbaar'
+  ) then
+    create policy "artikelen zichtbaar" on leverancier_artikelen
+      for select to authenticated using (true);
+  end if;
+end $$;
 grant select on public.leverancier_artikelen to authenticated;
 
 -- Een onbekend artikel koppelen hoort bij het aannemen van een levering,

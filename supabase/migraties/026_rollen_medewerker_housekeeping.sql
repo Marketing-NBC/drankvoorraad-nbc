@@ -96,27 +96,21 @@ as $$
       );
 $$;
 
-drop policy if exists "tellingen uitvoeren" on tellingen;
-create policy "tellingen uitvoeren" on tellingen
-  for insert to authenticated
+-- `alter policy` en geen drop + create: de policies bestaan al (024 en
+-- fase 6), en zo blijft er geen moment zonder policy.
+alter policy "tellingen uitvoeren" on tellingen
   with check (gebruiker_id = auth.uid() and mag_tellen(locatie_id));
 
-drop policy if exists "tellingen afronden" on tellingen;
-create policy "tellingen afronden" on tellingen
-  for update to authenticated
+alter policy "tellingen afronden" on tellingen
   using (mag_tellen(locatie_id));
 
-drop policy if exists "tellingregels beheren" on tellingregels;
-create policy "tellingregels beheren" on tellingregels
-  for all to authenticated
+alter policy "tellingregels beheren" on tellingregels
   using (mag_tellen((select t.locatie_id from tellingen t where t.id = telling_id)))
   with check (mag_tellen((select t.locatie_id from tellingen t where t.id = telling_id)));
 
 -- Een pakbon hoort bij magazijnwerk. Hij komt via maak_pakbon(), maar
 -- de tabel stond nog open voor iedereen die op eigen naam schreef.
-drop policy if exists "pakbonnen aanmaken" on pakbonnen;
-create policy "pakbonnen aanmaken" on pakbonnen
-  for insert to authenticated
+alter policy "pakbonnen aanmaken" on pakbonnen
   with check (gebruiker_id = auth.uid() and mag_magazijnwerk());
 
 -- ─── Housekeeping boekt alleen rond de kantine en de kroeg ────────
@@ -159,8 +153,7 @@ begin
 end;
 $$;
 
-drop trigger if exists mutatie_rol_gecontroleerd on mutaties;
-create trigger mutatie_rol_gecontroleerd
+create or replace trigger mutatie_rol_gecontroleerd
   before insert on mutaties
   for each row execute function controleer_mutatie_rol();
 
