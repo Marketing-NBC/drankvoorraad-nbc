@@ -60,7 +60,7 @@ export function App() {
                 <Route
                   path={ROUTES.leveringNieuw}
                   element={
-                    <RequireAuth rollen={["beheerder", "magazijnmedewerker"]}>
+                    <RequireAuth rollen={["beheerder", "magazijnmedewerker", "evenementmanager"]}>
                       <LeveringNieuw />
                     </RequireAuth>
                   }

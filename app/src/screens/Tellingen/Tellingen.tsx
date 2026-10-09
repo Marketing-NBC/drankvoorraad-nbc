@@ -24,7 +24,7 @@ export function Tellingen() {
   const [startFout, setStartFout] = useState<string | null>(null);
   const [bezig, setBezig] = useState(false);
 
-  const magTellen = mag("beheerder", "magazijnmedewerker");
+  const magTellen = mag("beheerder", "magazijnmedewerker", "evenementmanager");
   const lopend = state.tellingen.filter((t) => t.status === "open").length;
   const locatieNaam = new Map(state.locaties.map((l) => [l.id, l.naam]));
   const gebruikerNaam = new Map(state.profielen.map((p) => [p.id, p.naam]));

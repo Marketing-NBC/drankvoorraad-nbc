@@ -28,7 +28,7 @@ export function Leveringen() {
   const routeState = useLocation().state as { inWachtrij?: boolean } | null;
   const [actieFout, setActieFout] = useState<string | null>(null);
 
-  const magAannemen = mag("beheerder", "magazijnmedewerker");
+  const magAannemen = mag("beheerder", "magazijnmedewerker", "evenementmanager");
 
   const productNaam = useMemo(
     () => new Map(state.producten.map((p) => [p.id, p])),

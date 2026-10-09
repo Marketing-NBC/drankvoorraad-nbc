@@ -28,7 +28,10 @@ export function Magazijn() {
   const [actieFout, setActieFout] = useState<string | null>(null);
   const [nieuweBarcode, setNieuweBarcode] = useState<string | null>(null);
 
+  /* Boeken (inkoop, verplaatsen, aanvullen) mag ook de evenementmanager.
+     Inrichten — minimum zetten, producten aanmaken — blijft magazijn. */
   const magBeheren = mag("beheerder", "magazijnmedewerker");
+  const magBoeken = mag("beheerder", "magazijnmedewerker", "evenementmanager");
   const magLocatiesBeheren = mag("beheerder");
 
   useEffect(() => {
@@ -126,7 +129,7 @@ export function Magazijn() {
         title="Magazijn"
         toelichting="Het hoofdmagazijn vult alle andere locaties. Minimumvoorraad pas je in de tabel aan; hij bewaart bij verlaten van het veld."
         actions={
-          magBeheren ? (
+          magBoeken ? (
             <>
               {opPersoneelslocatie ? (
                 <Button icon="plus" iconPosition="leading" onClick={() => setActie({ soort: "aanvullen" })}>
@@ -259,7 +262,7 @@ export function Magazijn() {
               <LageVoorraadMelding
                 locatieId={actieveLocatie.id}
                 locatieNaam={actieveLocatie.naam}
-                onBijbestellen={magBeheren ? () => setActie({ soort: "inkoop" }) : undefined}
+                onBijbestellen={magBoeken ? () => setActie({ soort: "inkoop" }) : undefined}
               />
               <Card className="card--tabel">
                 <KaartKop
@@ -287,6 +290,7 @@ export function Magazijn() {
                   producten={state.producten}
                   voorraad={state.voorraad}
                   magBeheren={magBeheren}
+                  magBoeken={magBoeken}
                   onInboeken={(product) =>
                     setActie({ soort: opPersoneelslocatie ? "aanvullen" : "inkoop", productId: product.id })
                   }

@@ -17,9 +17,11 @@ voorraadstand op rust:
   rechtstreeks vanuit de app. Zie `supabase/schema.sql`.
 - **Rollen worden in de database afgedwongen**, niet alleen in het scherm. Een
   knop verbergen is geen beveiliging. De rollen zijn `beheerder`,
-  `magazijnmedewerker` en `evenementmanager`. De evenementmanager boekt
-  uitgifte en retour bij een evenement; pakbonnen, inkoop, verplaatsen,
-  tellen en leveringen zijn magazijnwerk.
+  `magazijnmedewerker` en `evenementmanager`. Magazijnwerk (pakbonnen,
+  inkoop, verplaatsen, tellen, leveringen, emballage retour) mogen alle drie;
+  zie `mag_magazijnwerk()` in migratie 024. De evenementmanager beheert
+  daarnaast evenementen, maar richt niets in: geen producten, minimumvoorraad,
+  vulplekken of koppelingen — dat blijft beheerder en magazijnmedewerker.
 - **Bedragen en marges zijn alleen voor de beheerder.** Inkoopprijs,
   statiegeld, omzet en borg zijn voor andere rollen ingetrokken en alleen te
   lezen of te zetten via `productbedragen`, `evenementomzet`,

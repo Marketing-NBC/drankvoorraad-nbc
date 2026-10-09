@@ -57,7 +57,7 @@ export function Personeelsverbruik() {
   const [exporteert, setExporteert] = useState(false);
   const [actieFout, setActieFout] = useState<string | null>(null);
 
-  const magBoeken = mag("beheerder", "magazijnmedewerker");
+  const magBoeken = mag("beheerder", "magazijnmedewerker", "evenementmanager");
 
   /**
    * Tellen is hier de manier waarop het verbruik binnenkomt: er ging 96 in,

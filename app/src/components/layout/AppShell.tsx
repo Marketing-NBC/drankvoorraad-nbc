@@ -207,7 +207,7 @@ export function AppShell({ children }: { children: ReactNode }) {
 
         {/* Tellen gebeurt op de vloer, niet achter dit scherm — vandaar de
             snelste weg ernaartoe onderaan de zijbalk. */}
-        {mag("beheerder", "magazijnmedewerker") ? (
+        {mag("beheerder", "magazijnmedewerker", "evenementmanager") ? (
           <NavLink to={ROUTES.tellingen} className="zijbalk__promo">
             <span className="zijbalk__promo-titel">Telling<br />op de vloer</span>
             <span className="zijbalk__promo-sub">Scan met de tablet in de koelcel.</span>
