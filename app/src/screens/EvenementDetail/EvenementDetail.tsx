@@ -43,10 +43,9 @@ export function EvenementDetail() {
 
   const mutaties = mutatiesPerEvenement.get(evenement.id) ?? [];
   const pakbonnen = state.pakbonnen.filter((p) => p.evenementId === evenement.id);
-  const magPakbon = mag("beheerder", "magazijnmedewerker");
-  /* Uitgeven en retour boeken hoort bij het werk van de evenementmanager —
-     zo stond het in het oorspronkelijke plan (README, Rollen). Een pakbon
-     maken blijft magazijnwerk. */
+  const magPakbon = mag("beheerder", "magazijnmedewerker", "evenementmanager");
+  /* Uitgeven en retour boeken hoort bij het werk van de evenementmanager.
+     Een pakbon maken mag hij sinds 024 ook: hij werkt ook in het magazijn. */
   const magBoeken = mag("beheerder", "magazijnmedewerker", "evenementmanager");
   const productenById = new Map(state.producten.map((p) => [p.id, p]));
 

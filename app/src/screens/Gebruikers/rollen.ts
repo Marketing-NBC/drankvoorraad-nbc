@@ -10,5 +10,5 @@ export const rolOpties: { value: GebruikerRol; label: string }[] = [
 export const rolToelichting: Record<GebruikerRol, string> = {
   beheerder: "Mag alles, inclusief gebruikers en locaties beheren.",
   magazijnmedewerker: "Neemt leveringen aan, boekt voorraad en doet tellingen.",
-  evenementmanager: "Beheert evenementen en bekijkt kosten en marges.",
+  evenementmanager: "Beheert evenementen en werkt in het magazijn (boeken, tellen, leveringen). Ziet geen bedragen en richt niets in.",
 };

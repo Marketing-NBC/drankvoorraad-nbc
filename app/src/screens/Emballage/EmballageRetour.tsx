@@ -27,7 +27,7 @@ import { formatCurrency, formatDateTimeKort, formatNumber } from "../../utils/fo
 export function EmballageRetour() {
   const { state, laden, fout, herlaad, boekEmballageRetour } = useAppState();
   const { mag, zietBedragen } = useAuth();
-  const magBoeken = mag("beheerder", "magazijnmedewerker");
+  const magBoeken = mag("beheerder", "magazijnmedewerker", "evenementmanager");
 
   const actieveSoorten = state.emballage.filter((e) => e.actief);
   const leveranciers = Array.from(

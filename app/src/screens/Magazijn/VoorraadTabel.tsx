@@ -102,6 +102,7 @@ export function VoorraadTabel({
   producten,
   voorraad,
   magBeheren,
+  magBoeken,
   onInboeken,
   onVerplaatsen,
   perStuk = false,
@@ -109,7 +110,10 @@ export function VoorraadTabel({
   locatieId: string;
   producten: Product[];
   voorraad: Voorraad[];
+  /** Minimum zetten. */
   magBeheren: boolean;
+  /** Snelknoppen om in te boeken en te verplaatsen. */
+  magBoeken: boolean;
   /** Snelknop per rij; weglaten verbergt de kolom. */
   onInboeken?: (product: Product) => void;
   onVerplaatsen?: (product: Product) => void;
@@ -126,7 +130,7 @@ export function VoorraadTabel({
   });
 
   const totaal = regels.reduce((som, r) => som + r.aantal, 0);
-  const snelBoeken = magBeheren && onInboeken && onVerplaatsen;
+  const snelBoeken = magBoeken && onInboeken && onVerplaatsen;
 
   return (
     <Table<VoorraadRegel>

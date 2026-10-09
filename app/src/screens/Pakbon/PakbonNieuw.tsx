@@ -109,7 +109,7 @@ export function PakbonNieuw() {
 
   if (laden) return <p className="app-laden">Bezig met laden…</p>;
   if (!evenement) return <Navigate to={ROUTES.overzicht} replace />;
-  if (!mag("beheerder", "magazijnmedewerker")) {
+  if (!mag("beheerder", "magazijnmedewerker", "evenementmanager")) {
     return <Navigate to={ROUTES.evenementDetail(evenement.id)} replace />;
   }
 
