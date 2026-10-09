@@ -49,6 +49,7 @@ trigger en de functie zijn weg. De migraties hieronder gaan daarvan uit.
 | `022_barcode_verpakking.sql` | Tweede barcode per product: die op de krat. |
 | `023_antwoorden_robin.sql` | Fust 0% naar € 93,21, 24 Jus d'orange op Bar HOS 1, emballage blikje, rolcontainer en koolzuurcilinder. |
 | `024_evenementmanager_magazijnwerk.sql` | De evenementmanager mag ook tellen, leveringen aannemen, pakbonnen maken en emballage retour boeken. Geen inrichting, geen bedragen. |
+| `025_leveranciers_swinkels_bidfood.sql` | Alleen Swinkels en Bidfood als leverancier; Coca-Cola en Spadel gaan naar Bidfood. |
 
 ## Waarom `010` en niet `1`
 
