@@ -2,10 +2,12 @@ import type { LeverancierArtikel, Product } from "./types";
 import { heeftVerpakking } from "./verpakking";
 
 /**
- * Een afleverbon die Claude van een foto heeft gelezen.
+ * Een afleverbon, gelezen van een foto.
  *
- * De vorm ligt vast in supabase/functions/lees-bon. Alles kan null zijn:
- * wat niet te lezen was, wordt niet gegokt.
+ * Nu door tekstherkenning op de telefoon (src/lib/bonHerkenning.ts en
+ * src/data/bonTekst.ts); dezelfde vorm komt uit supabase/functions/lees-bon
+ * als daar later een API-sleutel bij komt. Alles kan null zijn: wat niet te
+ * lezen was, wordt niet gegokt.
  */
 export interface GelezenBon {
   leverancier: string | null;
@@ -19,12 +21,8 @@ export interface GelezenBonregel {
   omschrijving: string;
   besteld: number | null;
   uitgeleverd: number | null;
-}
-
-/** Eén foto zoals hij naar de functie gaat: base64 zonder `data:`-voorvoegsel. */
-export interface BonFoto {
-  data: string;
-  mediaType: "image/jpeg" | "image/png" | "image/webp";
+  /** De tekstherkenning twijfelt over deze regel: even nakijken. */
+  onzeker?: boolean;
 }
 
 /**
@@ -43,6 +41,8 @@ export interface Bonvoorstel {
   eenheden: number;
   /** Uitgeleverd in stuks — wat "op de bon" wordt. */
   aantalBon: number;
+  /** Twijfel bij het lezen, of het artikelnummer week één cijfer af. */
+  onzeker: boolean;
 }
 
 /** "Swinkels Family Brewers" en "SWINKELS" worden allebei Swinkels. */
@@ -72,9 +72,13 @@ export function bonNaarVoorstel(
   );
 
   return bon.regels.map((regel) => {
-    const artikel = regel.artikelnummer
-      ? perNummer.get(normaliseerArtikelnummer(regel.artikelnummer))
-      : undefined;
+    const nummer = regel.artikelnummer ? normaliseerArtikelnummer(regel.artikelnummer) : undefined;
+    const precies = nummer ? perNummer.get(nummer) : undefined;
+    /* Tekstherkenning leest soms één cijfer verkeerd (408244 voor 108244).
+       Lijkt het nummer op precies één bekend artikel, dan is het dat — met
+       twijfel, zodat iemand even kijkt. */
+    const bijna = !precies && nummer ? bijnaGelijk(nummer, Array.from(perNummer.keys())) : undefined;
+    const artikel = precies ?? (bijna ? perNummer.get(bijna) : undefined);
     const stuksPerEenheid = artikel?.stuksPerEenheid ?? 1;
     const eenheden = Math.max(0, regel.uitgeleverd ?? regel.besteld ?? 0);
     return {
@@ -83,8 +87,17 @@ export function bonNaarVoorstel(
       stuksPerEenheid,
       eenheden,
       aantalBon: eenheden * stuksPerEenheid,
+      onzeker: Boolean(regel.onzeker) || Boolean(bijna),
     };
   });
+}
+
+/** Het enige bekende nummer dat op één cijfer na gelijk is, of undefined. */
+export function bijnaGelijk(nummer: string, bekend: string[]): string | undefined {
+  const kandidaten = bekend.filter(
+    (b) => b.length === nummer.length && b.split("").filter((c, i) => c !== nummer[i]).length === 1
+  );
+  return kandidaten.length === 1 ? kandidaten[0] : undefined;
 }
 
 /** "0118573" en "118573" zijn hetzelfde artikel; spaties tellen niet. */

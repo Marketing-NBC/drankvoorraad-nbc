@@ -224,18 +224,6 @@ const leverancierArtikelen = [
   { leverancier: "Swinkels", artikelnummer: "200084", productId: "p4", stuksPerEenheid: 24 },
   { leverancier: "Swinkels", artikelnummer: "108244", productId: "p1", stuksPerEenheid: 1 },
 ];
-/* Wat de functie lees-bon van de afleverbon van 2 oktober zou maken. */
-const gelezenBon = {
-  leverancier: "Swinkels",
-  bonnummer: "800758649",
-  datum: "2026-10-02",
-  regels: [
-    { artikelnummer: "117919", omschrijving: "Swinckels Pilsener Crate 4x6x30", besteld: 24, uitgeleverd: 24 },
-    { artikelnummer: "200084", omschrijving: "Coca-Cola Regular Crate Bot 24x20", besteld: 24, uitgeleverd: 24 },
-    { artikelnummer: "205570", omschrijving: "Chaudf. Blauw Crate 12x100", besteld: 3, uitgeleverd: 3 },
-    { artikelnummer: "108244", omschrijving: "Swinckels' Pilsener 20L A-Kopp", besteld: 16, uitgeleverd: 16 },
-  ],
-};
 const emballageRetouren = [
   { id: "er1", leverancier: "Swinkels", bonnummer: "800758649", gebruikerId: "u2", aangemaaktOp: dagenGeleden(3) },
   { id: "er2", leverancier: "Swinkels", gebruikerId: "u4", aangemaaktOp: dagenGeleden(9) },
@@ -326,10 +314,6 @@ const waarde: Record<string, unknown> = {
   boekLevering: async () => ({ inWachtrij: false }),
   handelVerschilAf: niets,
   boekEmballageRetour: async () => "er1",
-  leesBon: async () => {
-    await new Promise((r) => setTimeout(r, 1200));
-    return gelezenBon;
-  },
   koppelArtikel: niets,
   wachtrij,
   verstuurWachtrij: niets,

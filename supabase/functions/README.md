@@ -4,7 +4,11 @@ Serverwerk dat niet in de browser kan. Twee functies:
 
 - `gebruikers` — accounts aanmaken, wachtwoord zetten, toegang intrekken.
 - `lees-bon` — een foto van de afleverbon laten lezen door Claude (bonnummer,
-  leverancier en regels). Leest alleen; boekt en bewaart niets.
+  leverancier en regels). Leest alleen; boekt en bewaart niets. **Nog niet in
+  gebruik:** de app leest de bon nu zelf met tekstherkenning op de telefoon
+  (`app/src/lib/bonHerkenning.ts`). Komt er later een API-sleutel, dan levert
+  deze functie dezelfde vorm (`GelezenBon` in `app/src/data/bon.ts`) en is
+  het een kleine wissel in `BonLezen.tsx`.
 
 ## Neerzetten
 

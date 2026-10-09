@@ -76,9 +76,14 @@ voorraadstand op rust:
   `isNetwerkfout` (`app/src/lib/wachtrij.ts`), en dubbel boeken wordt
   tegengehouden door een unieke index op `client_id`. Tellingen gaan er bewust
   niet in: die rekenen af tegen de voorraad van dát moment.
-- **De API-sleutel van Anthropic komt nooit in de browser.** Een foto van de
-  afleverbon gaat naar de Edge Function `supabase/functions/lees-bon`, die
-  zelf controleert of de aanvrager leveringen mag aannemen.
+- **Een foto van de afleverbon verlaat de telefoon niet.** Tekstherkenning
+  (Tesseract) draait in de browser: `app/src/lib/bonHerkenning.ts` leest de
+  foto, `app/src/data/bonTekst.ts` maakt er bonnummer en regels van en zegt
+  waar hij twijfelt. De herkenning zelf komt de eerste keer van
+  cdn.jsdelivr.net. De Edge Function `supabase/functions/lees-bon` (Claude)
+  staat klaar voor later, maar de app gebruikt hem niet zolang er geen
+  API-sleutel is; die sleutel hoort dan alleen in Supabase, nooit in de
+  browser.
 - **De servicesleutel komt nooit in de browser.** Accounts aanmaken, een
   wachtwoord zetten en toegang intrekken gaat via de Edge Function
   `supabase/functions/gebruikers`, die zelf controleert of de aanvrager
@@ -121,7 +126,11 @@ Welk product bij een artikelnummer op de afleverbon hoort, staat in
 `leverancier_artikelen` (met het aantal stuks per eenheid: krat 24, tray 12).
 Een onbekend artikel koppelt het magazijn bij het uitpakken; de app onthoudt
 het via `koppel_artikel`. De omzetting van een gelezen bon naar regels zit in
-`app/src/data/bon.ts`.
+`app/src/data/bon.ts`; een artikelnummer dat op één cijfer na gelijk is aan
+een bekend nummer telt als dat artikel, met de markering "nakijken". De test
+`bonTekst.test.ts` draait op de echte herkende tekst van een gekreukte bon
+van Swinkels; verander je de instellingen van de herkenning, maak die fixture
+dan opnieuw.
 
 Consumpties per persoon (`app/src/data/consumpties.ts`) rekenen met het
 werkelijke verbruik en `aantal_personen` op het evenement. Een flesje is één
@@ -143,10 +152,9 @@ geen magic link, geen OAuth en geen wachtwoordherstel — dus ook geen
 redirect-URL's die in Supabase geconfigureerd moeten staan.
 
 Serverwerk dat niet in Postgres kan staat in `supabase/functions/`: de
-functies `gebruikers` en `lees-bon`. Die moeten apart neergezet worden
-(`supabase functions deploy …`, en voor `lees-bon` eerst het geheim
-`ANTHROPIC_API_KEY`) — zie de README daar, inclusief wat er in het dashboard
-nog uit moet staan.
+functies `gebruikers` en `lees-bon` (die laatste nog niet in gebruik). Die
+moeten apart neergezet worden (`supabase functions deploy …`) — zie de README
+daar, inclusief wat er in het dashboard nog uit moet staan.
 
 ## Databasewijzigingen
 
@@ -205,7 +213,7 @@ afmaken ervan. Deze paragraaf mag weg zodra dat plan er ligt.
 Vier dingen die bij "van PoC naar af" waarschijnlijk terugkomen. Geen van deze is
 kapot — het zijn keuzes die passen bij een PoC en knellen zodra het menens wordt:
 
-- **Testdekking.** 110 tests over rekenlogica (`app/src/data/`), de wachtrij
+- **Testdekking.** 121 tests over rekenlogica (`app/src/data/`), de wachtrij
   (`app/src/lib/`) en de Excel-export (`app/src/utils/`). Geen enkel scherm of
   gebruikersstroom is getest, terwijl daar de meeste code zit.
 - **Databasemigraties.** Half opgelost: nieuwe wijzigingen staan genummerd in

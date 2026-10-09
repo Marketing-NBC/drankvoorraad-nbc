@@ -60,6 +60,8 @@ export function LeveringNieuw() {
      geen product heeft wacht hier op koppelen. */
   const [teKoppelen, setTeKoppelen] = useState<Bonvoorstel[]>([]);
   const [vanDeBon, setVanDeBon] = useState<Set<string>>(new Set());
+  /** Regels waar de tekstherkenning twijfelde: die moet iemand nakijken. */
+  const [nakijken, setNakijken] = useState<Set<string>>(new Set());
   const [bonMelding, setBonMelding] = useState<string | null>(null);
 
   const boekbareProducten = useMemo(
@@ -112,9 +114,13 @@ export function LeveringNieuw() {
     );
     const onbekend = voorstel.filter((v) => !v.productId && v.eenheden > 0);
     setTeKoppelen(onbekend);
+    const twijfel = bekend.filter((v) => v.onzeker);
+    setNakijken(new Set(twijfel.map((v) => v.productId!)));
     setBonMelding(
       `${bon.regels.length} ${bon.regels.length === 1 ? "regel" : "regels"} gelezen` +
-        (onbekend.length > 0 ? `, ${onbekend.length} nog te koppelen bij het uitpakken.` : ".") +
+        (onbekend.length > 0 ? `, ${onbekend.length} nog te koppelen bij het uitpakken` : "") +
+        (twijfel.length > 0 ? `, ${twijfel.length} om na te kijken` : "") +
+        ". Mist er een regel, voeg hem dan met de hand toe." +
         (bon.leverancier && !herkenLeverancier(bon.leverancier, LEVERANCIERS)
           ? ` Leverancier "${bon.leverancier}" is geen Swinkels of Bidfood — kies hem zelf.`
           : "")
@@ -337,8 +343,9 @@ export function LeveringNieuw() {
 
           {vanDeBon.size > 0 ? (
             <p className="melding-waarschuwing">
-              De regels van de bon staan er al, met werkelijk gelijk aan de bon. Tel na wat er staat
-              en tik een regel aan als het anders is — de voorraad gaat omhoog met wat er werkelijk is.
+              De regels van de bon staan er al, met werkelijk gelijk aan de bon. Kijk de regels met
+              "nakijken" na tegen het papier — daar twijfelde de herkenning. Tel na wat er staat en tik
+              een regel aan als het anders is: de voorraad gaat omhoog met wat er werkelijk is.
             </p>
           ) : null}
           {regels.length > 0 ? (
@@ -359,11 +366,18 @@ export function LeveringNieuw() {
                           setAantalBon(r.aantalBon / factor);
                           setAantalWerkelijk(r.aantalWerkelijk / factor);
                           setRegels((huidig) => huidig.filter((x) => x.productId !== r.productId));
+                          setNakijken((huidig) => {
+                            const rest = new Set(huidig);
+                            rest.delete(r.productId);
+                            return rest;
+                          });
                         }}
                       >
                         <span className="regel-lijst__naam">
                           {p?.naam ?? r.productId}
-                          {vanDeBon.has(r.productId) ? (
+                          {nakijken.has(r.productId) ? (
+                            <Badge variant="gold">nakijken</Badge>
+                          ) : vanDeBon.has(r.productId) ? (
                             <span className="field-group__hint"> van de bon</span>
                           ) : null}
                         </span>

@@ -65,7 +65,6 @@ import type {
   VulplekRegel,
   Zaal,
 } from "../data/types";
-import type { BonFoto, GelezenBon } from "../data/bon";
 import { useAuth } from "./AuthContext";
 
 // ─── Row → app-model mapping (snake_case in de database, camelCase in de app) ──
@@ -413,8 +412,6 @@ interface AppStateContextValue {
     regels: NieuweLeveringregel[];
   }) => Promise<{ inWachtrij: boolean }>;
   handelVerschilAf: (regelId: string, notitie: string) => Promise<void>;
-  /** Een foto van de afleverbon laten lezen. Zie supabase/functions/lees-bon. */
-  leesBon: (fotos: BonFoto[]) => Promise<GelezenBon>;
   /** Onthouden welk product bij een artikelnummer van de leverancier hoort. */
   koppelArtikel: (artikel: LeverancierArtikel) => Promise<void>;
   /** Lege emballage mee terug naar de leverancier. Geeft het id van de bon. */
@@ -1274,18 +1271,6 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
         });
         if (error) throw error;
         await herlaad();
-      },
-
-      async leesBon(fotos) {
-        const { data, error } = await supabase.functions.invoke("lees-bon", { body: { fotos } });
-        if (error) {
-          /* De functie zegt zelf wat er mis is ("API-sleutel ontbreekt", "te
-             groot"). Die tekst zit in het antwoord, niet in de foutmelding. */
-          const antwoord = (error as { context?: Response }).context;
-          const inhoud = await antwoord?.json?.().catch(() => null);
-          throw new Error(inhoud?.fout ?? "Bon lezen lukt nu niet. Vul hem met de hand in.");
-        }
-        return (data as { bon: GelezenBon }).bon;
       },
 
       async koppelArtikel(artikel) {
