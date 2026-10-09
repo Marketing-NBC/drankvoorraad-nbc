@@ -47,6 +47,7 @@ trigger en de functie zijn weg. De migraties hieronder gaan daarvan uit.
 | `020_assortiment_v2.sql` | Productlijst V2: fust 0%, dozen van 6, minimumvoorraad, nieuwe standaardvulling. |
 | `021_emballage_retour.sql` | Lege emballage retour naar de leverancier vastleggen; borg alleen voor de beheerder. |
 | `022_barcode_verpakking.sql` | Tweede barcode per product: die op de krat. |
+| `023_antwoorden_robin.sql` | Fust 0% naar € 93,21, 24 Jus d'orange op Bar HOS 1, emballage blikje, rolcontainer en koolzuurcilinder. |
 
 ## Waarom `010` en niet `1`
 

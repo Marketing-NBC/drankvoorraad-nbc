@@ -212,6 +212,9 @@ const emballage = [
   { id: "e3", naam: "Krat Spa 12 × 1 L", leverancier: "Spadel", actief: true, borg: 5 },
   { id: "e4", naam: "Bierkrat Swinkels 24 × 0,3 L", leverancier: "Swinkels", actief: true, borg: 3.9 },
   { id: "e5", naam: "Fust Swinkels 20 L", leverancier: "Swinkels", actief: true, borg: 30 },
+  { id: "e6", naam: "Blikje", leverancier: "Overig", actief: true, borg: 0.1 },
+  { id: "e7", naam: "Rolcontainer", leverancier: "Overig", actief: true, borg: 150 },
+  { id: "e8", naam: "Koolzuurcilinder", leverancier: "Overig", actief: true, borg: 180 },
 ];
 const emballageRetouren = [
   { id: "er1", leverancier: "Coca-Cola", bonnummer: "CC-88123", gebruikerId: "u2", aangemaaktOp: dagenGeleden(3) },
