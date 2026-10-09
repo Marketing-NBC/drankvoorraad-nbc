@@ -48,9 +48,9 @@ function p(velden: Partial<Product> & Pick<Product, "id" | "naam">): Product {
 const producten: Product[] = [
   p({ id: "p1", naam: "Fust Swinckels 20 L", categorie: "bier", inhoud: "20 L", eenheid: "fust", inkoopprijs: 40.7, statiegeldPerStuk: 30, barcode: "8712000012345", leverancier: "Swinkels" }),
   p({ id: "p2", naam: "Swinckels 0,3 L", categorie: "bier", inhoud: "0,3 L", inkoopprijs: 0.53, verpakking: "krat", stuksPerVerpakking: 24, alleenPerVerpakking: true, statiegeldPerVerpakking: 3.9, barcode: "8712000098765", leverancier: "Swinkels" }),
-  p({ id: "p3", naam: "Spa blauw 1 L", inhoud: "1 L", inkoopprijs: 0.95, verpakking: "krat", stuksPerVerpakking: 12, statiegeldPerVerpakking: 5, barcode: "8712000055512", leverancier: "Spadel" }),
-  p({ id: "p4", naam: "Coca Cola 0,2 L", inhoud: "0,2 L", inkoopprijs: 0.46, verpakking: "krat", stuksPerVerpakking: 24, alleenPerVerpakking: true, statiegeldPerVerpakking: 5, barcode: "8712000044421", leverancier: "Coca-Cola" }),
-  p({ id: "p5", naam: "Coca Cola 1,25 L", inhoud: "1,25 L", inkoopprijs: 2.05, statiegeldPerStuk: 0.25, leverancier: "Coca-Cola" }),
+  p({ id: "p3", naam: "Spa blauw 1 L", inhoud: "1 L", inkoopprijs: 0.95, verpakking: "krat", stuksPerVerpakking: 12, statiegeldPerVerpakking: 5, barcode: "8712000055512", leverancier: "Bidfood" }),
+  p({ id: "p4", naam: "Coca Cola 0,2 L", inhoud: "0,2 L", inkoopprijs: 0.46, verpakking: "krat", stuksPerVerpakking: 24, alleenPerVerpakking: true, statiegeldPerVerpakking: 5, barcode: "8712000044421", leverancier: "Bidfood" }),
+  p({ id: "p5", naam: "Coca Cola 1,25 L", inhoud: "1,25 L", inkoopprijs: 2.05, statiegeldPerStuk: 0.25, leverancier: "Bidfood" }),
   p({ id: "p6", naam: "Witte wijn 0,7 L", categorie: "wijn", inhoud: "0,7 L", inkoopprijs: 4.15, barcode: "8712000033310" }),
   p({ id: "p7", naam: "Prosecco 0,7 L", categorie: "wijn", inhoud: "0,7 L", inkoopprijs: 7.15, barcode: "8712000022209" }),
   p({ id: "p8", naam: "Koffie", categorie: "koffie", eenheid: "kop", inkoopprijs: 0.12, voorraadloos: true, leverancier: "Franke" }),
@@ -169,7 +169,7 @@ mutaties.push(
 
 const leveringen: Levering[] = [
   { id: "lv1", locatieId: "l0", leverancier: "Swinkels", bonnummer: "BON-8842", aangenomenDoor: "Ricardo", gebruikerId: "u2", aangemaaktOp: dagenGeleden(2) },
-  { id: "lv2", locatieId: "l0", leverancier: "Coca-Cola", bonnummer: "CC-19334", aangenomenDoor: "Mo", gebruikerId: "u4", aangemaaktOp: dagenGeleden(6) },
+  { id: "lv2", locatieId: "l0", leverancier: "Bidfood", bonnummer: "CC-19334", aangenomenDoor: "Mo", gebruikerId: "u4", aangemaaktOp: dagenGeleden(6) },
 ];
 
 const leveringregels: Leveringregel[] = [
@@ -207,17 +207,17 @@ const tellingregels: Record<string, Tellingregel[]> = {
 };
 
 const emballage = [
-  { id: "e1", naam: "Krat Coca-Cola 24 × 0,2 L", leverancier: "Coca-Cola", actief: true, borg: 5 },
-  { id: "e2", naam: "PET-fles Coca-Cola", leverancier: "Coca-Cola", actief: true, borg: 0.25 },
-  { id: "e3", naam: "Krat Spa 12 × 1 L", leverancier: "Spadel", actief: true, borg: 5 },
+  { id: "e1", naam: "Krat Coca-Cola 24 × 0,2 L", leverancier: "Bidfood", actief: true, borg: 5 },
+  { id: "e2", naam: "PET-fles Coca-Cola", leverancier: "Bidfood", actief: true, borg: 0.25 },
+  { id: "e3", naam: "Krat Spa 12 × 1 L", leverancier: "Bidfood", actief: true, borg: 5 },
   { id: "e4", naam: "Bierkrat Swinkels 24 × 0,3 L", leverancier: "Swinkels", actief: true, borg: 3.9 },
   { id: "e5", naam: "Fust Swinkels 20 L", leverancier: "Swinkels", actief: true, borg: 30 },
-  { id: "e6", naam: "Blikje", leverancier: "Overig", actief: true, borg: 0.1 },
-  { id: "e7", naam: "Rolcontainer", leverancier: "Overig", actief: true, borg: 150 },
-  { id: "e8", naam: "Koolzuurcilinder", leverancier: "Overig", actief: true, borg: 180 },
+  { id: "e6", naam: "Blikje", leverancier: "Bidfood", actief: true, borg: 0.1 },
+  { id: "e7", naam: "Rolcontainer", leverancier: "Bidfood", actief: true, borg: 150 },
+  { id: "e8", naam: "Koolzuurcilinder", leverancier: "Swinkels", actief: true, borg: 180 },
 ];
 const emballageRetouren = [
-  { id: "er1", leverancier: "Coca-Cola", bonnummer: "CC-88123", gebruikerId: "u2", aangemaaktOp: dagenGeleden(3) },
+  { id: "er1", leverancier: "Bidfood", bonnummer: "CC-88123", gebruikerId: "u2", aangemaaktOp: dagenGeleden(3) },
   { id: "er2", leverancier: "Swinkels", gebruikerId: "u4", aangemaaktOp: dagenGeleden(9) },
 ];
 const emballageRetourregels = [
