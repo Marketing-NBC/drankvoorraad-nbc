@@ -50,6 +50,8 @@ trigger en de functie zijn weg. De migraties hieronder gaan daarvan uit.
 | `023_antwoorden_robin.sql` | Fust 0% naar € 93,21, 24 Jus d'orange op Bar HOS 1, emballage blikje, rolcontainer en koolzuurcilinder. |
 | `024_evenementmanager_magazijnwerk.sql` | De evenementmanager mag ook tellen, leveringen aannemen, pakbonnen maken en emballage retour boeken. Geen inrichting, geen bedragen. |
 | `025_leveranciers_swinkels_bidfood.sql` | Alleen Swinkels en Bidfood als leverancier; Coca-Cola en Spadel gaan naar Bidfood. |
+| `026_rollen_medewerker_housekeeping.sql` | Magazijnmedewerker en evenementmanager worden samen `medewerker`; nieuwe rol `housekeeping` (alleen kantine en kroeg). **Daarna `gebruikers` opnieuw neerzetten.** |
+| `027_uitkomsten_robin.sql` | Aantal personen bij een evenement; afronden alleen door de beheerder; leveringen alleen naar magazijn of koelcel; artikelnummers van de leverancier; reden bij een tekort; producten voor personeel; emballage volgens de retourbon van Swinkels; Coca-Cola weer bij Swinkels. Draai na 026. |
 
 ## Waarom `010` en niet `1`
 

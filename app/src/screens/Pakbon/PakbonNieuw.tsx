@@ -6,7 +6,6 @@ import { FoutMelding } from "../../components/ui/FoutMelding";
 import { KaartKop } from "../../components/ui/KaartKop";
 import { Handtekening, type HandtekeningHandle } from "../../components/ui/Handtekening";
 import { ProductKiezer } from "../../components/ui/ProductKiezer";
-import { Select } from "../../components/ui/Select";
 import { useAppState, useEvenement } from "../../context/AppStateContext";
 import { useAuth } from "../../context/AuthContext";
 import type { PakbonRegel } from "../../data/types";
@@ -17,17 +16,11 @@ import { ROUTES } from "../../routes/routes";
 export function PakbonNieuw() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { state, laden, hoofdmagazijn, maakPakbon } = useAppState();
+  const { state, laden, uitgiftelocatie, maakPakbon } = useAppState();
   const { mag } = useAuth();
   const evenement = useEvenement(id);
   const handtekeningRef = useRef<HandtekeningHandle>(null);
 
-  const magazijnen = useMemo(
-    () => state.locaties.filter((l) => l.type === "magazijn" || l.type === "koelcel"),
-    [state.locaties]
-  );
-
-  const [locatieId, setLocatieId] = useState("");
   const [regels, setRegels] = useState<PakbonRegel[]>([]);
   const [productId, setProductId] = useState("");
   const [aantal, setAantal] = useState("");
@@ -35,7 +28,8 @@ export function PakbonNieuw() {
   const [fout, setFout] = useState<string | null>(null);
   const [bezig, setBezig] = useState(false);
 
-  const gekozenLocatie = locatieId || hoofdmagazijn?.id || magazijnen[0]?.id || "";
+  /* Alles voor een evenement komt uit Koelcel NBC, ook bij Green Village. */
+  const gekozenLocatie = uitgiftelocatie?.id ?? "";
   const productenById = useMemo(
     () => new Map(state.producten.map((p) => [p.id, p])),
     [state.producten]
@@ -109,7 +103,7 @@ export function PakbonNieuw() {
 
   if (laden) return <p className="app-laden">Bezig met laden…</p>;
   if (!evenement) return <Navigate to={ROUTES.overzicht} replace />;
-  if (!mag("beheerder", "magazijnmedewerker", "evenementmanager")) {
+  if (!mag("beheerder", "medewerker")) {
     return <Navigate to={ROUTES.evenementDetail(evenement.id)} replace />;
   }
 
@@ -120,23 +114,14 @@ export function PakbonNieuw() {
       <PageHeader
         eyebrow={`${evenement.id} · ${formatDate(evenement.datum)}`}
         title={`Pakbon voor ${evenement.naam}`}
-        toelichting="Zet de producten op de pakbon die daadwerkelijk meegaan, laat de ontvanger tekenen en leg de pakbon vast. De voorraad wordt dan in één keer afgeboekt van de gekozen locatie."
+        toelichting="Zet de producten op de pakbon die daadwerkelijk meegaan, laat de ontvanger tekenen en leg de pakbon vast. De voorraad wordt dan in één keer afgeboekt van Koelcel NBC."
       />
 
       {fout ? <FoutMelding melding={fout} /> : null}
 
       <Card>
         <KaartKop titel="Wat gaat er mee" sub="scan of kies een product en zet het aantal erbij" />
-        <div className="field-group">
-          <label className="field-group__label" htmlFor="pakbon-locatie">Uitgifte vanaf</label>
-          <Select
-            id="pakbon-locatie"
-            aria-label="Uitgiftelocatie"
-            value={gekozenLocatie}
-            onChange={(e) => setLocatieId(e.target.value)}
-            options={magazijnen.map((l) => ({ value: l.id, label: l.naam }))}
-          />
-        </div>
+        <p className="veld-toelichting">Uitgifte vanuit {uitgiftelocatie?.naam ?? "Koelcel NBC"}.</p>
 
         <ProductKiezer
           producten={state.producten}

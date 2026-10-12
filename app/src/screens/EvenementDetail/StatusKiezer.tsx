@@ -25,9 +25,13 @@ export function StatusKiezer({ evenement }: { evenement: Evenement }) {
   const [bezig, setBezig] = useState(false);
   const [fout, setFout] = useState(false);
 
-  if (!mag("beheerder", "evenementmanager")) {
+  /* Afronden is voor de beheerder: Robin checkt na afloop alles en rondt
+     dan af. Daarna verandert de medewerker er niets meer aan (027). */
+  const isBeheerder = mag("beheerder");
+  if (!mag("beheerder", "medewerker") || (evenement.status === "Afgerond" && !isBeheerder)) {
     return <StatusBadge status={evenement.status} />;
   }
+  const keuzes = isBeheerder ? opties : opties.filter((o) => o.value !== "Afgerond");
 
   async function wijzig(status: EvenementStatus) {
     setBezig(true);
@@ -50,7 +54,7 @@ export function StatusKiezer({ evenement }: { evenement: Evenement }) {
         value={evenement.status}
         disabled={bezig}
         onChange={(e) => void wijzig(e.target.value as EvenementStatus)}
-        options={opties}
+        options={keuzes}
       />
       {fout ? <span className="status-kiezer__fout">niet opgeslagen</span> : null}
     </span>

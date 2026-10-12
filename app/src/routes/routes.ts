@@ -17,7 +17,7 @@ export const ROUTES = {
   koppelingen: "/koppelingen",
   leveringen: "/leveringen",
   leveringNieuw: "/leveringen/nieuw",
-  emballage: "/leveringen/emballage",
+  emballage: "/magazijn/emballage",
   personeel: "/personeel",
   dashboard: "/dashboard",
 } as const;

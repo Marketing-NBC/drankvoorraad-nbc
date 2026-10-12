@@ -17,6 +17,7 @@ import type {
   MetingBron,
   MutatieType,
   ProductCategorie,
+  TellingReden,
   TellingStatus,
   VulplekType,
 } from "../data/types";
@@ -83,6 +84,8 @@ export type ProductRow = {
   statiegeld_per_stuk: number;
   statiegeld_per_verpakking: number;
   voorraadloos: boolean;
+  /** Mag in de kantine en de kroeg. Zie migratie 027. */
+  voor_personeel: boolean;
   aangemaakt_op: string;
 };
 
@@ -175,6 +178,8 @@ export type EvenementRow = {
   opdrachtgever: string | null;
   status: EvenementStatus;
   omzet: number;
+  /** Voor de consumpties per persoon. Zie migratie 027. */
+  aantal_personen: number | null;
   aangemaakt_op: string;
 };
 
@@ -186,6 +191,8 @@ export type EmballageRow = {
   id: string;
   naam: string;
   leverancier: string | null;
+  /** Het nummer op de retourbon van de leverancier. Zie migratie 027. */
+  artikelnummer: string | null;
   actief: boolean;
   aangemaakt_op: string;
 };
@@ -245,6 +252,19 @@ export type TellingregelRow = {
   product_id: string;
   verwacht_aantal: number;
   geteld_aantal: number | null;
+  /** Wat er met een tekort gebeurd is. Zie migratie 027. */
+  reden: TellingReden | null;
+  reden_toelichting: string | null;
+};
+
+/** Welk product hoort bij een artikelnummer op de bon. Zie migratie 027. */
+export type LeverancierArtikelRow = {
+  leverancier: string;
+  artikelnummer: string;
+  omschrijving: string | null;
+  product_id: string;
+  stuks_per_eenheid: number;
+  aangemaakt_op: string;
 };
 
 export type PakbonRow = {
@@ -284,7 +304,7 @@ export type Database = {
           | "inkoopprijs" | "eenheid" | "inhoud" | "verpakking"
           | "stuks_per_verpakking" | "alleen_per_verpakking"
           | "statiegeld_per_stuk" | "statiegeld_per_verpakking"
-          | "voorraadloos" | "aangemaakt_op"
+          | "voorraadloos" | "voor_personeel" | "aangemaakt_op"
         >;
         Update: Partial<ProductRow>;
         Relationships: [];
@@ -297,7 +317,7 @@ export type Database = {
       };
       evenementen: {
         Row: EvenementRow;
-        Insert: MetDefaults<EvenementRow, "opdrachtgever" | "status" | "omzet" | "aangemaakt_op">;
+        Insert: MetDefaults<EvenementRow, "opdrachtgever" | "status" | "omzet" | "aantal_personen" | "aangemaakt_op">;
         Update: Partial<EvenementRow>;
         Relationships: [];
       };
@@ -325,7 +345,7 @@ export type Database = {
       };
       tellingregels: {
         Row: TellingregelRow;
-        Insert: MetDefaults<TellingregelRow, "id" | "verwacht_aantal" | "geteld_aantal">;
+        Insert: MetDefaults<TellingregelRow, "id" | "verwacht_aantal" | "geteld_aantal" | "reden" | "reden_toelichting">;
         Update: Partial<TellingregelRow>;
         Relationships: [];
       };
@@ -388,8 +408,14 @@ export type Database = {
       };
       emballage: {
         Row: EmballageRow;
-        Insert: MetDefaults<EmballageRow, "id" | "leverancier" | "actief" | "aangemaakt_op">;
+        Insert: MetDefaults<EmballageRow, "id" | "leverancier" | "artikelnummer" | "actief" | "aangemaakt_op">;
         Update: Partial<EmballageRow>;
+        Relationships: [];
+      };
+      leverancier_artikelen: {
+        Row: LeverancierArtikelRow;
+        Insert: MetDefaults<LeverancierArtikelRow, "omschrijving" | "stuks_per_eenheid" | "aangemaakt_op">;
+        Update: Partial<LeverancierArtikelRow>;
         Relationships: [];
       };
       emballage_retouren: {
@@ -455,6 +481,16 @@ export type Database = {
           p_client_id?: string | null;
         };
         Returns: string;
+      };
+      koppel_artikel: {
+        Args: {
+          p_leverancier: string;
+          p_artikelnummer: string;
+          p_omschrijving: string | null;
+          p_product_id: string;
+          p_stuks_per_eenheid: number;
+        };
+        Returns: undefined;
       };
       handel_verschil_af: {
         Args: { p_regel_id: string; p_notitie: string | null };

@@ -25,7 +25,7 @@ export function EvenementenOverzicht() {
   const [modalOpen, setModalOpen] = useState(false);
   const [exporteert, setExporteert] = useState(false);
 
-  const magEvenementenBeheren = mag("beheerder", "evenementmanager");
+  const magEvenementenBeheren = mag("beheerder", "medewerker");
 
   const evenementen = useMemo(() => {
     return state.evenementen

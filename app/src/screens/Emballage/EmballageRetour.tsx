@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { Badge, Button, Card, Input } from "../../design-system";
+import { MagazijnTabs } from "../../components/layout/MagazijnTabs";
 import { PageHeader } from "../../components/layout/PageHeader";
 import { AantalStepper } from "../../components/ui/AantalStepper";
 import { EmptyState } from "../../components/ui/EmptyState";
@@ -15,6 +16,13 @@ import { foutBericht } from "../../utils/fouten";
 import { formatCurrency, formatDateTimeKort, formatNumber } from "../../utils/format";
 
 /**
+ * Emballage — de tweede kop onder Magazijn.
+ *
+ * Hier staat alles over lege emballage: de retourbon invullen, wat er per
+ * soort al terug is gegaan, en de bonnen van eerder. De retourbon wordt met
+ * de hand overgenomen van het papier van de leverancier; de soorten staan in
+ * dezelfde volgorde als op de bon van Swinkels, met hun artikelnummer.
+ *
  * Lege emballage mee terug naar de leverancier.
  *
  * Kratten, fusten en PET-flessen gaan leeg terug, en op elk ervan zit borg.
@@ -27,7 +35,7 @@ import { formatCurrency, formatDateTimeKort, formatNumber } from "../../utils/fo
 export function EmballageRetour() {
   const { state, laden, fout, herlaad, boekEmballageRetour } = useAppState();
   const { mag, zietBedragen } = useAuth();
-  const magBoeken = mag("beheerder", "magazijnmedewerker", "evenementmanager");
+  const magBoeken = mag("beheerder", "medewerker");
 
   const actieveSoorten = state.emballage.filter((e) => e.actief);
   const leveranciers = Array.from(
@@ -44,8 +52,13 @@ export function EmballageRetour() {
   const [bezig, setBezig] = useState(false);
   const [melding, setMelding] = useState<{ soort: "fout" | "gelukt"; tekst: string } | null>(null);
 
-  const gekozen = leverancier || leveranciers[0] || "";
-  const soortenVanLeverancier = actieveSoorten.filter((e) => e.leverancier === gekozen);
+  /* Swinkels haalt verreweg het meeste op; die staat dus vooraan. */
+  const gekozen = leverancier || (leveranciers.includes("Swinkels") ? "Swinkels" : leveranciers[0]) || "";
+  /* In de volgorde van de papieren retourbon: op artikelnummer, de soorten
+     zonder nummer erachter. */
+  const soortenVanLeverancier = actieveSoorten
+    .filter((e) => e.leverancier === gekozen)
+    .sort((a, b) => (a.artikelnummer ?? "999999").localeCompare(b.artikelnummer ?? "999999"));
 
   const soortById = useMemo(() => new Map(state.emballage.map((e) => [e.id, e])), [state.emballage]);
   const gebruikerNaam = useMemo(
@@ -92,6 +105,22 @@ export function EmballageRetour() {
     }
   }
 
+  /** Wat er per soort in totaal en dit jaar terug is gegaan. */
+  const ditJaar = String(new Date().getFullYear());
+  const retourDatum = new Map(state.emballageRetouren.map((r) => [r.id, r.aangemaaktOp]));
+  const perSoort = state.emballage
+    .map((soort) => {
+      const regels = state.emballageRetourregels.filter((r) => r.emballageId === soort.id);
+      const totaal = regels.reduce((som, r) => som + r.aantal, 0);
+      const jaar = regels
+        .filter((r) => retourDatum.get(r.retourId)?.startsWith(ditJaar))
+        .reduce((som, r) => som + r.aantal, 0);
+      return { soort, totaal, jaar };
+    })
+    .filter((r) => r.soort.actief || r.totaal > 0)
+    .sort((a, b) => (a.soort.leverancier ?? "").localeCompare(b.soort.leverancier ?? "") ||
+      (a.soort.artikelnummer ?? "999999").localeCompare(b.soort.artikelnummer ?? "999999"));
+
   function regelsVan(retour: Retour) {
     return state.emballageRetourregels.filter((r) => r.retourId === retour.id);
   }
@@ -105,10 +134,11 @@ export function EmballageRetour() {
   return (
     <>
       <PageHeader
-        eyebrow="binnenkomst"
-        title="Emballage retour"
-        toelichting="Lege kratten, fusten en flessen die mee teruggaan naar de leverancier. Per ophaling één bon, zodat je de creditnota kunt controleren. De drankvoorraad verandert hier niet door."
+        eyebrow="magazijn"
+        title="Emballage"
+        toelichting="Lege kratten, fusten, rolcontainers en koolzuur die mee teruggaan naar de leverancier. Neem per ophaling de retourbon over, zodat je de creditnota kunt controleren. De drankvoorraad verandert hier niet door."
       />
+      <MagazijnTabs />
 
       {fout ? <FoutMelding melding={fout} onOpnieuw={() => void herlaad()} /> : null}
 
@@ -120,7 +150,7 @@ export function EmballageRetour() {
           />
         ) : (
           <Card>
-            <KaartKop titel="Nieuwe retour" sub="wat er nu mee teruggaat" />
+            <KaartKop titel="Retourbon invullen" sub="neem de aantallen over van de papieren bon" />
             <div className="product-form">
               <div className="field-row">
                 <div className="field-group">
@@ -146,6 +176,7 @@ export function EmballageRetour() {
               {soortenVanLeverancier.map((soort) => (
                 <div className="field-group" key={soort.id}>
                   <label className="field-group__label" htmlFor={`emballage-${soort.id}`}>
+                    {soort.artikelnummer ? <span className="field-group__hint">{soort.artikelnummer} </span> : null}
                     {soort.naam}{" "}
                     {zietBedragen ? (
                       <span className="field-group__hint">{formatCurrency(soort.borg)} borg per stuk</span>
@@ -187,6 +218,32 @@ export function EmballageRetour() {
             </div>
           </Card>
         )
+      ) : null}
+
+      {perSoort.length > 0 ? (
+        <Card className="card--tabel">
+          <KaartKop titel="Per soort" sub="hoeveel er terug is gegaan" />
+          <Table<(typeof perSoort)[number]>
+            rowKey={(r) => r.soort.id}
+            rows={perSoort}
+            columns={[
+              { header: "Soort", primair: true, render: (r) => r.soort.naam },
+              { header: "Art.nr.", verbergOpMobiel: true, render: (r) => r.soort.artikelnummer ?? "—" },
+              { header: "Leverancier", verbergOpMobiel: true, render: (r) => r.soort.leverancier ?? "—" },
+              { header: `In ${ditJaar}`, align: "right" as const, render: (r) => formatNumber(r.jaar) },
+              { header: "Totaal", align: "right" as const, render: (r) => formatNumber(r.totaal) },
+              ...(zietBedragen
+                ? [
+                    {
+                      header: "Borg per stuk",
+                      align: "right" as const,
+                      render: (r: (typeof perSoort)[number]) => formatCurrency(r.soort.borg),
+                    },
+                  ]
+                : []),
+            ]}
+          />
+        </Card>
       ) : null}
 
       {state.emballageRetouren.length === 0 ? (

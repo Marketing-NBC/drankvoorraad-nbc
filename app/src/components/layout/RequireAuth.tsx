@@ -22,6 +22,9 @@ export function RequireAuth({ children, rollen }: { children: ReactNode; rollen?
   }
 
   if (rollen && profiel && !rollen.includes(profiel.rol)) {
+    /* Housekeeping heeft één thuis: het personeelsverbruik. Daar heen in
+       plaats van een dichte deur, ook bij het openen van de app op "/". */
+    if (profiel.rol === "housekeeping") return <Navigate to={ROUTES.personeel} replace />;
     return (
       <EmptyState
         title="Geen toegang"

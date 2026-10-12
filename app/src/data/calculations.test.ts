@@ -30,6 +30,7 @@ function product(velden: Partial<Product> & Pick<Product, "id" | "naam">): Produ
     statiegeldPerStuk: 0,
     statiegeldPerVerpakking: 0,
     voorraadloos: false,
+    voorPersoneel: false,
     ...velden,
   };
 }
@@ -234,6 +235,20 @@ describe("voorraadverschillen", () => {
     const [regel] = voorraadverschillen([correctie({ aantal: 2, vanLocatieId: "l1" })], producten);
     expect(regel.verschil).toBe(-2);
     expect(regel.waarde).toBe(-2 * bier.inkoopprijs);
+  });
+
+  it("keeps a shortage with a reason from the count (migratie 027)", () => {
+    const [regel] = voorraadverschillen(
+      [correctie({ aantal: 4, vanLocatieId: "l1", notitie: "Voorraadtelling: meegegeven aan klant" })],
+      producten
+    );
+    expect(regel.verschil).toBe(-4);
+  });
+
+  it("leaves expired or broken stock from a count to derving", () => {
+    const derving = mutatie({ type: "beschadigd", notitie: "Voorraadtelling: kapot", vanLocatieId: "l1" });
+    expect(voorraadverschillen([derving], producten)).toEqual([]);
+    expect(dervingPerProduct([derving], producten)[0].aantal).toBe(1);
   });
 
   it("ignores manual corrections, which are not counting results", () => {

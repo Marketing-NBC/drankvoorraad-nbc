@@ -22,7 +22,7 @@ export function Productbeheer() {
   const [actieFout, setActieFout] = useState<string | null>(null);
   const [filters, setFilters] = useState<ProductFiltersValue>({ zoek: "", categorie: "", leverancier: "" });
 
-  const magBeheren = mag("beheerder", "magazijnmedewerker");
+  const magBeheren = mag("beheerder");
   const magVerwijderen = mag("beheerder");
 
   const voorraadPerProduct = useMemo(() => {

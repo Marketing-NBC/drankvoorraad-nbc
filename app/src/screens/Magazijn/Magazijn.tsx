@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Badge, Button, Card } from "../../design-system";
+import { MagazijnTabs } from "../../components/layout/MagazijnTabs";
 import { PageHeader } from "../../components/layout/PageHeader";
 import { ActieMenu } from "../../components/ui/ActieMenu";
 import { EmptyState } from "../../components/ui/EmptyState";
@@ -28,10 +29,10 @@ export function Magazijn() {
   const [actieFout, setActieFout] = useState<string | null>(null);
   const [nieuweBarcode, setNieuweBarcode] = useState<string | null>(null);
 
-  /* Boeken (inkoop, verplaatsen, aanvullen) mag ook de evenementmanager.
-     Inrichten — minimum zetten, producten aanmaken — blijft magazijn. */
-  const magBeheren = mag("beheerder", "magazijnmedewerker");
-  const magBoeken = mag("beheerder", "magazijnmedewerker", "evenementmanager");
+  /* Boeken (inkoop, verplaatsen, aanvullen) mag ook de medewerker.
+     Inrichten — minimum zetten, producten aanmaken — is voor de beheerder. */
+  const magBeheren = mag("beheerder");
+  const magBoeken = mag("beheerder", "medewerker");
   const magLocatiesBeheren = mag("beheerder");
 
   useEffect(() => {
@@ -173,6 +174,8 @@ export function Magazijn() {
           ) : null
         }
       />
+
+      <MagazijnTabs />
 
       {fout ? <FoutMelding melding={fout} onOpnieuw={() => void herlaad()} /> : null}
       {actieFout ? <FoutMelding melding={actieFout} /> : null}

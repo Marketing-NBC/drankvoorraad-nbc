@@ -9,9 +9,18 @@ import { FoutMelding } from "../../components/ui/FoutMelding";
 import { KaartKop } from "../../components/ui/KaartKop";
 import { useAppState } from "../../context/AppStateContext";
 import { useAuth } from "../../context/AuthContext";
-import type { Product, Tellingregel } from "../../data/types";
+import type { Product, TellingReden, Tellingregel } from "../../data/types";
 import { formatCurrency, formatNumber } from "../../utils/format";
-import { heeftVerpakking, invoer, losOpLocatie, omschrijfAantal, verpakkingLabel } from "../../data/verpakking";
+import {
+  eenheidVan,
+  heeftVerpakking,
+  invoer,
+  losOpLocatie,
+  omschrijfAantal,
+  verpakkingLabel,
+} from "../../data/verpakking";
+import { foutBericht } from "../../utils/fouten";
+import { TekortKaart, type Tekort } from "./TekortKaart";
 import { ROUTES } from "../../routes/routes";
 
 interface Regel extends Tellingregel {
@@ -23,7 +32,8 @@ interface Regel extends Tellingregel {
 export function TellingDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { state, laden, haalTellingregels, zetGeteldAantal, rondTellingAf, annuleerTelling } = useAppState();
+  const { state, laden, haalTellingregels, zetGeteldAantal, zetTelReden, rondTellingAf, annuleerTelling } =
+    useAppState();
   const { zietBedragen } = useAuth();
 
   const [regels, setRegels] = useState<Regel[]>([]);
@@ -100,6 +110,49 @@ export function TellingDetail() {
     return { geteld, totaal: regels.length, afwijkend, waarde, nietGeteld: regels.length - geteld };
   }, [regels, referentie]);
 
+  /**
+   * Een aantal in de eenheid waarin geteld wordt. Telt het magazijn kratten,
+   * dan is een tekort ook "1 krat", niet "24" — dat was precies de fout:
+   * kratten intypen en het verschil in flessen terugzien.
+   */
+  const omschrijf = useCallback(
+    (product: Product, stuks: number) =>
+      !perStuk && product.alleenPerVerpakking && heeftVerpakking(product)
+        ? omschrijfAantal(product, stuks)
+        : `${formatNumber(stuks)} ${eenheidVan(product, stuks)}`,
+    [perStuk]
+  );
+
+  /* In de kantine en de kroeg ís een tekort het verbruik; daar hoeft niemand
+     uit te zoeken wat er gebeurd is. In het magazijn wel. */
+  const tekorten: Tekort[] = locatie?.voorPersoneel
+    ? []
+    : regels
+        .filter((r) => r.geteldAantal !== null && r.geteldAantal < referentie(r))
+        .map((r) => ({
+          regelId: r.id,
+          product: r.product,
+          omschrijving: omschrijf(r.product, referentie(r) - (r.geteldAantal ?? 0)),
+          reden: r.reden,
+          toelichting: r.redenToelichting,
+        }));
+  const tekortenZonderReden = tekorten.filter(
+    (t) => !t.reden || (t.reden === "anders" && !t.toelichting?.trim())
+  );
+
+  async function bewaarReden(regelId: string, reden: TellingReden, toelichting: string | null) {
+    setRegels((huidig) =>
+      huidig.map((r) =>
+        r.id === regelId ? { ...r, reden, redenToelichting: toelichting ?? undefined } : r
+      )
+    );
+    try {
+      await zetTelReden(regelId, reden, toelichting);
+    } catch {
+      setFout("De reden kon niet opgeslagen worden. Controleer je verbinding.");
+    }
+  }
+
   const percentage = voortgang.totaal === 0 ? 0 : Math.round((voortgang.geteld / voortgang.totaal) * 100);
 
   /**
@@ -146,6 +199,15 @@ export function TellingDetail() {
   }
 
   async function afronden() {
+    if (tekortenZonderReden.length > 0) {
+      setFout(
+        `Geef eerst bij elk tekort aan wat er gebeurd is: ${tekortenZonderReden
+          .map((t) => t.product.naam)
+          .join(", ")}.`
+      );
+      document.getElementById("tekorten")?.scrollIntoView({ block: "start", behavior: "smooth" });
+      return;
+    }
     const wat = locatie?.voorPersoneel ? "boeking(en)" : "correctie(s)";
     const bevestiging =
       voortgang.nietGeteld > 0
@@ -163,8 +225,8 @@ export function TellingDetail() {
             : `Telling afgerond met ${aantal} correctie(s).`,
         },
       });
-    } catch {
-      setFout("De telling kon niet afgerond worden. Probeer het opnieuw.");
+    } catch (err) {
+      setFout(foutBericht(err) || "De telling kon niet afgerond worden. Probeer het opnieuw.");
       setBezig(false);
     }
   }
@@ -196,8 +258,8 @@ export function TellingDetail() {
               ? "Deze telling is afgerond. Wat er minder stond dan verwacht is geboekt als personeelsverbruik en staat bij Personeel."
               : "Tel door te scannen of in te typen. Wat er minder staat dan verwacht wordt bij afronden geboekt als personeelsverbruik — dit is de meting."
             : afgerond
-              ? "Deze telling is afgerond. De verschillen zijn als correctie geboekt en staan in Mutaties."
-              : "Tel door te scannen of in te typen. Bij afronden worden de verschillen automatisch als correctie geboekt."
+              ? "Deze telling is afgerond. Tekorten die over datum of kapot waren staan als derving in Mutaties, de rest als correctie."
+              : "Tel door te scannen of in te typen. Staat er minder dan verwacht, dan vraagt de app wat er gebeurd is: over datum of kapot wordt derving, een andere reden blijft een telverschil."
         }
         actions={
           afgerond ? null : (
@@ -244,7 +306,7 @@ export function TellingDetail() {
           </div>
 
           {!afgerond ? (
-            <div className="telling-voortgang__acties">
+            <div className="telling-voortgang__acties alleen-touch">
               <Button
                 icon={null}
                 onClick={() => {
@@ -258,6 +320,12 @@ export function TellingDetail() {
           ) : null}
         </div>
       </Card>
+
+      <TekortKaart
+        tekorten={tekorten}
+        afgerond={afgerond}
+        onReden={(regelId, reden, toelichting) => void bewaarReden(regelId, reden, toelichting)}
+      />
 
       <div className="telling-grid">
         <Card>
@@ -297,8 +365,8 @@ export function TellingDetail() {
                                 .filter(Boolean).join(" ")}
                             >
                               {verschil > 0
-                                ? `${formatNumber(verschil)} meer dan verwacht`
-                                : `${formatNumber(Math.abs(verschil))} minder dan verwacht`}
+                                ? `${omschrijf(regel.product, verschil)} meer dan verwacht`
+                                : `${omschrijf(regel.product, Math.abs(verschil))} minder dan verwacht`}
                             </span>
                           </>
                         ) : null}
@@ -339,7 +407,7 @@ export function TellingDetail() {
 
         <div className="detail-grid__kolom">
           {!afgerond ? (
-            <Card className="scan-kaart--leeg">
+            <Card className="scan-kaart--leeg alleen-touch">
               <div className="scanpaneel">
                 <button
                   type="button"

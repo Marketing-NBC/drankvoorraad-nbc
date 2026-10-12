@@ -20,7 +20,9 @@ import {
 import { formatCurrency, formatDate, formatDateTime, formatNumber } from "../../utils/format";
 import { exporteerNaarExcel } from "../../utils/excel";
 import { ROUTES } from "../../routes/routes";
+import { berekenConsumpties, consumptiesPerStuk } from "../../data/consumpties";
 import { BookingModal, type BoekingRichting } from "./BookingModal";
+import { ConsumptieKaart } from "./ConsumptieKaart";
 import { BookingTable } from "./BookingTable";
 import { MargeSummary } from "./MargeSummary";
 import { OmzetInput } from "./OmzetInput";
@@ -43,10 +45,15 @@ export function EvenementDetail() {
 
   const mutaties = mutatiesPerEvenement.get(evenement.id) ?? [];
   const pakbonnen = state.pakbonnen.filter((p) => p.evenementId === evenement.id);
-  const magPakbon = mag("beheerder", "magazijnmedewerker", "evenementmanager");
-  /* Uitgeven en retour boeken hoort bij het werk van de evenementmanager.
-     Een pakbon maken mag hij sinds 024 ook: hij werkt ook in het magazijn. */
-  const magBoeken = mag("beheerder", "magazijnmedewerker", "evenementmanager");
+  /* Robin: de medewerker ziet bij een evenement alleen de geboekte
+     producten, de historie, boeken, retour en de zalen. Cijfers, pakbonnen,
+     export en de rest zijn voor de beheerder. */
+  const isBeheerder = mag("beheerder");
+  const afgerond = evenement.status === "Afgerond";
+  /* Na afronden heeft Robin alles gecheckt; daarna boekt alleen de
+     beheerder nog. De database dwingt dat ook af (migratie 027). */
+  const magBoeken = isBeheerder || (mag("medewerker") && !afgerond);
+  const magPakbon = isBeheerder;
   const productenById = new Map(state.producten.map((p) => [p.id, p]));
 
   /* Koffie en water komen niet uit het magazijn maar wel op de rekening: de
@@ -56,6 +63,7 @@ export function EvenementDetail() {
   const machineKosten = machineVerbruik.reduce((som, r) => som + r.waarde, 0);
 
   const marge = berekenMarge(evenement.omzet, mutaties, state.producten, machineKosten);
+  const consumpties = berekenConsumpties(mutaties, state.producten, evenement.aantalPersonen, machineVerbruik);
 
   /* De drie cijfers boven het scherm: wat er heen ging, wat er terugkwam en
      wat er dus werkelijk doorheen is. */
@@ -122,7 +130,9 @@ export function EvenementDetail() {
       await exporteerNaarExcel<ProductVerbruik>({
         bestandsnaam: `verbruik-${ev.id}`,
         titel: ev.naam,
-        ondertitel: `${ev.id} · ${formatDate(ev.datum)} · ${ev.merk}${ev.opdrachtgever ? ` · ${ev.opdrachtgever}` : ""}`,
+        ondertitel: `${ev.id} · ${formatDate(ev.datum)} · ${ev.merk}${ev.opdrachtgever ? ` · ${ev.opdrachtgever}` : ""}${
+          ev.aantalPersonen ? ` · ${ev.aantalPersonen} personen` : ""
+        }`,
         rijen: regels,
         kolommen: [
           { header: "Product", value: (r) => productenById.get(r.productId)?.naam ?? r.productId },
@@ -130,6 +140,14 @@ export function EvenementDetail() {
           { header: "Uitgegeven", opmaak: "getal", value: (r) => r.aantalUitgegeven },
           { header: "Retour", opmaak: "getal", value: (r) => r.aantalRetour },
           { header: "Werkelijk verbruik", opmaak: "getal", value: (r) => r.werkelijkVerbruik },
+          {
+            header: "Consumpties",
+            opmaak: "getal",
+            value: (r) => {
+              const product = productenById.get(r.productId);
+              return product ? Math.round(Math.max(0, r.werkelijkVerbruik) * consumptiesPerStuk(product)) : 0;
+            },
+          },
           ...(zietBedragen
             ? [
                 {
@@ -177,20 +195,27 @@ export function EvenementDetail() {
               Pakbon maken
             </Button>
           ) : null}
-          <Button variant="zacht" icon={null} onClick={() => void handleExportExcel()} disabled={exporteert}>
-            {exporteert ? "Bezig…" : "Excel"}
-          </Button>
-          <Button variant="zacht" icon={null} onClick={() => window.print()}>PDF</Button>
-          {mag("beheerder") ? (
-            <ActieMenu
-              label="Beheren"
-              items={[{ label: "Evenement verwijderen", onClick: () => void handleVerwijder() }]}
-            />
+          {isBeheerder ? (
+            <>
+              <Button variant="zacht" icon={null} onClick={() => void handleExportExcel()} disabled={exporteert}>
+                {exporteert ? "Bezig…" : "Excel"}
+              </Button>
+              <Button variant="zacht" icon={null} onClick={() => window.print()}>PDF</Button>
+              <ActieMenu
+                label="Beheren"
+                items={[{ label: "Evenement verwijderen", onClick: () => void handleVerwijder() }]}
+              />
+            </>
           ) : null}
         </div>
       </div>
 
       {verwijderFout ? <FoutMelding melding={verwijderFout} /> : null}
+      {afgerond && !isBeheerder ? (
+        <p className="melding-waarschuwing">
+          Dit evenement is afgerond. Boeken of iets wijzigen kan alleen de beheerder nog.
+        </p>
+      ) : null}
 
       <div className="detail-kop">
         <div>
@@ -204,20 +229,22 @@ export function EvenementDetail() {
           </div>
         </div>
 
-        <div className="detail-cijfers">
-          <div className="detail-cijfer">
-            <span className="detail-cijfer__label">Uitgegeven</span>
-            <div className="detail-cijfer__waarde">{formatNumber(verbruik.uit)}</div>
+        {isBeheerder ? (
+          <div className="detail-cijfers">
+            <div className="detail-cijfer">
+              <span className="detail-cijfer__label">Uitgegeven</span>
+              <div className="detail-cijfer__waarde">{formatNumber(verbruik.uit)}</div>
+            </div>
+            <div className="detail-cijfer">
+              <span className="detail-cijfer__label">Retour</span>
+              <div className="detail-cijfer__waarde">{formatNumber(verbruik.retour)}</div>
+            </div>
+            <div className="detail-cijfer detail-cijfer--petrol">
+              <span className="detail-cijfer__label">Verbruik</span>
+              <div className="detail-cijfer__waarde">{formatNumber(verbruik.verbruik)}</div>
+            </div>
           </div>
-          <div className="detail-cijfer">
-            <span className="detail-cijfer__label">Retour</span>
-            <div className="detail-cijfer__waarde">{formatNumber(verbruik.retour)}</div>
-          </div>
-          <div className="detail-cijfer detail-cijfer--petrol">
-            <span className="detail-cijfer__label">Verbruik</span>
-            <div className="detail-cijfer__waarde">{formatNumber(verbruik.verbruik)}</div>
-          </div>
-        </div>
+        ) : null}
       </div>
 
       <div className="detail-grid">
@@ -236,47 +263,49 @@ export function EvenementDetail() {
             />
           </Card>
 
-          <Card>
-            <KaartKop
-              titel="Pakbonnen"
-              rechts={
-                magPakbon ? (
-                  <Button
-                    variant="ghost-dark"
-                    size="sm"
-                    icon={null}
-                    className="no-print"
-                    onClick={() => navigate(ROUTES.pakbonNieuw(evenement.id))}
-                  >
-                    Pakbon maken
-                  </Button>
-                ) : null
-              }
-            />
-            {pakbonnen.length === 0 ? (
-              <p className="data-table__empty">
-                Nog geen pakbonnen. Maak er een bij de overdracht naar het evenement, zodat de
-                ontvangst getekend vastligt.
-              </p>
-            ) : (
-              <ul className="pakbon-lijst">
-                {pakbonnen.map((pakbon) => (
-                  <li key={pakbon.id}>
-                    <RouterLink className="pakbon-lijst__link" to={ROUTES.pakbon(pakbon.id)}>
-                      <span className="pakbon-lijst__nummer">{pakbon.id.slice(0, 8).toUpperCase()}</span>
-                      <span className="pakbon-lijst__meta">
-                        <span>{formatDateTime(pakbon.aangemaaktOp)}</span>
-                        <span>ontvangen door {pakbon.ontvangerNaam}</span>
-                      </span>
-                      <span className="pakbon-lijst__status">
-                        <Badge variant="success">vastgelegd</Badge>
-                      </span>
-                    </RouterLink>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </Card>
+          {isBeheerder ? (
+            <Card>
+              <KaartKop
+                titel="Pakbonnen"
+                rechts={
+                  magPakbon ? (
+                    <Button
+                      variant="ghost-dark"
+                      size="sm"
+                      icon={null}
+                      className="no-print"
+                      onClick={() => navigate(ROUTES.pakbonNieuw(evenement.id))}
+                    >
+                      Pakbon maken
+                    </Button>
+                  ) : null
+                }
+              />
+              {pakbonnen.length === 0 ? (
+                <p className="data-table__empty">
+                  Nog geen pakbonnen. Maak er een bij de overdracht naar het evenement, zodat de
+                  ontvangst getekend vastligt.
+                </p>
+              ) : (
+                <ul className="pakbon-lijst">
+                  {pakbonnen.map((pakbon) => (
+                    <li key={pakbon.id}>
+                      <RouterLink className="pakbon-lijst__link" to={ROUTES.pakbon(pakbon.id)}>
+                        <span className="pakbon-lijst__nummer">{pakbon.id.slice(0, 8).toUpperCase()}</span>
+                        <span className="pakbon-lijst__meta">
+                          <span>{formatDateTime(pakbon.aangemaaktOp)}</span>
+                          <span>ontvangen door {pakbon.ontvangerNaam}</span>
+                        </span>
+                        <span className="pakbon-lijst__status">
+                          <Badge variant="success">vastgelegd</Badge>
+                        </span>
+                      </RouterLink>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </Card>
+          ) : null}
 
           <Card className="card--tabel">
             <KaartKop titel="Historie" sub="elke boeking op dit evenement" />
@@ -313,12 +342,23 @@ export function EvenementDetail() {
             </>
           ) : null}
 
+          {isBeheerder ? (
+            <Card>
+              <KaartKop titel="Consumpties" sub="per persoon, uit het werkelijke verbruik" />
+              <ConsumptieKaart
+                aantalPersonen={evenement.aantalPersonen}
+                consumpties={consumpties}
+                onSave={(aantalPersonen) => void wijzigEvenement(evenement.id, { aantalPersonen })}
+              />
+            </Card>
+          ) : null}
+
           <Card>
             <KaartKop titel="Zalen" sub="waar dit evenement zit" />
             <ZaalKiezer evenementId={evenement.id} />
           </Card>
 
-          {machineVerbruik.length > 0 ? (
+          {isBeheerder && machineVerbruik.length > 0 ? (
             <Card className="card--tabel">
               <KaartKop
                 titel="Koffie en water"
@@ -340,7 +380,7 @@ export function EvenementDetail() {
 
           {/* Wat er nog buiten staat is geld dat je kwijtraakt als niemand
               het terugboekt — vandaar het gele vlak en één directe actie. */}
-          {verbruik.verbruik > 0 && evenement.status !== "Afgerond" ? (
+          {isBeheerder && verbruik.verbruik > 0 && !afgerond ? (
             <Card className="card--goud">
               <KaartKop titel="Nog niet retour" />
               <div className="stat-kaart__waarde" style={{ color: "inherit", margin: "0 0 6px" }}>

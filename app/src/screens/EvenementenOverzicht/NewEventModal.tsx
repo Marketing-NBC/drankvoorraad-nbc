@@ -3,6 +3,7 @@ import { Button, Input } from "../../design-system";
 import { Modal } from "../../components/ui/Modal";
 import { Select } from "../../components/ui/Select";
 import { useAppState } from "../../context/AppStateContext";
+import { useAuth } from "../../context/AuthContext";
 import type { Evenement, EvenementStatus, Merk } from "../../data/types";
 
 export function NewEventModal({
@@ -15,17 +16,19 @@ export function NewEventModal({
   onCreated: (id: string) => void;
 }) {
   const { state, voegEvenementToe } = useAppState();
+  const { mag } = useAuth();
   const [id, setId] = useState("");
   const [naam, setNaam] = useState("");
   const [datum, setDatum] = useState("");
   const [merk, setMerk] = useState<Merk>("NBC");
   const [opdrachtgever, setOpdrachtgever] = useState("");
+  const [aantalPersonen, setAantalPersonen] = useState("");
   const [status, setStatus] = useState<EvenementStatus>("Gepland");
   const [fout, setFout] = useState<string | null>(null);
   const [bezig, setBezig] = useState(false);
 
   function reset() {
-    setId(""); setNaam(""); setDatum(""); setMerk("NBC"); setOpdrachtgever(""); setStatus("Gepland"); setFout(null);
+    setId(""); setNaam(""); setDatum(""); setMerk("NBC"); setOpdrachtgever(""); setAantalPersonen(""); setStatus("Gepland"); setFout(null);
   }
 
   function handleClose() {
@@ -37,6 +40,11 @@ export function NewEventModal({
     e.preventDefault();
     if (!id.trim() || !naam.trim() || !datum) {
       setFout("Vul minimaal ID, naam en datum in.");
+      return;
+    }
+    const personen = aantalPersonen.trim() === "" ? undefined : Number(aantalPersonen);
+    if (personen !== undefined && (!Number.isInteger(personen) || personen <= 0)) {
+      setFout("Het aantal personen is een heel getal groter dan 0.");
       return;
     }
     if (state.evenementen.some((ev) => ev.id === id.trim())) {
@@ -51,6 +59,7 @@ export function NewEventModal({
       merk,
       opdrachtgever: opdrachtgever.trim() || undefined,
       status,
+      aantalPersonen: personen,
       omzet: 0,
     };
 
@@ -100,6 +109,20 @@ export function NewEventModal({
           <Input id="event-opdrachtgever" value={opdrachtgever} onChange={(e) => setOpdrachtgever(e.target.value)} />
         </div>
         <div className="field-group">
+          <label className="field-group__label" htmlFor="event-personen">
+            Aantal personen <span className="field-group__hint">voor de consumpties per persoon</span>
+          </label>
+          <Input
+            id="event-personen"
+            type="number"
+            min={1}
+            step={1}
+            inputMode="numeric"
+            value={aantalPersonen}
+            onChange={(e) => setAantalPersonen(e.target.value)}
+          />
+        </div>
+        <div className="field-group">
           <span className="field-group__label">Status</span>
           <Select
             aria-label="Status"
@@ -108,7 +131,8 @@ export function NewEventModal({
             options={[
               { value: "Gepland", label: "Gepland" },
               { value: "Actief", label: "Actief" },
-              { value: "Afgerond", label: "Afgerond" },
+              /* Afronden doet alleen de beheerder, na de controle achteraf. */
+              ...(mag("beheerder") ? [{ value: "Afgerond", label: "Afgerond" }] : []),
             ]}
           />
         </div>

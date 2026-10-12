@@ -74,7 +74,9 @@ export function VoorraadMutatieModal({
   const kiesbareLocaties =
     actie === "personeelsverbruik"
       ? state.locaties.filter((l) => l.voorPersoneel)
-      : state.locaties;
+      : actie === "aanvullen"
+        ? state.locaties.filter((l) => !l.voorPersoneel && (l.type === "magazijn" || l.type === "koelcel"))
+        : state.locaties;
   /* Aanvullen gaat altijd naar een kantine of kroeg. */
   const naarOpties = actie === "aanvullen" ? state.locaties.filter((l) => l.voorPersoneel) : state.locaties;
   const verplaatst = actie === "verplaatsen" || actie === "aanvullen";
@@ -87,6 +89,29 @@ export function VoorraadMutatieModal({
     verplaatst ? state.locaties.find((l) => l.id === naarLocatieId) : undefined
   );
   const invoerVorm = product ? invoer(product, { los: perStuk }) : { label: "Aantal", eenheid: "", factor: 1 };
+
+  /* In de kantine en de kroeg komen alleen de producten voor personeel: de
+     grote flessen fris, radler, alcoholvrij bier en wijn (Robin, 027). Wat
+     er nog van vroeger staat, kun je wel afboeken tot het op is. De
+     database weigert de rest ook. */
+  const naarPersoneel = verplaatst && Boolean(state.locaties.find((l) => l.id === naarLocatieId)?.voorPersoneel);
+  const vanPersoneel = actie === "personeelsverbruik";
+  const kiesbareProducten =
+    naarPersoneel || vanPersoneel
+      ? boekbareProducten.filter(
+          (p) =>
+            p.voorPersoneel ||
+            (vanPersoneel &&
+              (state.voorraad.find((v) => v.productId === p.id && v.locatieId === vanLocatieId)?.aantal ?? 0) > 0)
+        )
+      : boekbareProducten;
+
+  useEffect(() => {
+    if (!open || kiesbareProducten.length === 0) return;
+    if (!kiesbareProducten.some((p) => p.id === productId)) setProductId(kiesbareProducten[0].id);
+    // Ook op productId: het formulier zet bij openen een standaardproduct dat hier niet mag.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, naarPersoneel, vanPersoneel, vanLocatieId, productId]);
 
   useEffect(() => {
     if (!open) return;
@@ -192,7 +217,7 @@ export function VoorraadMutatieModal({
         <p className="modal-toelichting">{toelichting[actie]}</p>
 
         <ProductKiezer
-          producten={boekbareProducten}
+          producten={kiesbareProducten}
           productId={productId}
           onProductIdChange={setProductId}
           onOnbekendeBarcode={onNieuwProduct}

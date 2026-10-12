@@ -6,7 +6,7 @@ function product(velden: Partial<Product>): Product {
   return {
     id: "p", naam: "Coca Cola 0,2 L", categorie: "fris", inkoopprijs: 0, eenheid: "fles",
     stuksPerVerpakking: 24, alleenPerVerpakking: true, statiegeldPerStuk: 0,
-    statiegeldPerVerpakking: 0, voorraadloos: false, ...velden,
+    statiegeldPerVerpakking: 0, voorraadloos: false, voorPersoneel: false, ...velden,
   };
 }
 

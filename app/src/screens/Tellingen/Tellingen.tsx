@@ -24,13 +24,18 @@ export function Tellingen() {
   const [startFout, setStartFout] = useState<string | null>(null);
   const [bezig, setBezig] = useState(false);
 
-  const magTellen = mag("beheerder", "magazijnmedewerker", "evenementmanager");
-  const lopend = state.tellingen.filter((t) => t.status === "open").length;
+  const magTellen = mag("beheerder", "medewerker", "housekeeping");
+  /* Housekeeping telt alleen de kantine en de kroeg (026). */
+  const telbareLocaties = mag("housekeeping") ? state.locaties.filter((l) => l.voorPersoneel) : state.locaties;
+  const zichtbareTellingen = mag("housekeeping")
+    ? state.tellingen.filter((t) => telbareLocaties.some((l) => l.id === t.locatieId))
+    : state.tellingen;
+  const lopend = zichtbareTellingen.filter((t) => t.status === "open").length;
   const locatieNaam = new Map(state.locaties.map((l) => [l.id, l.naam]));
   const gebruikerNaam = new Map(state.profielen.map((p) => [p.id, p.naam]));
 
   async function start() {
-    const gekozen = locatieId || state.locaties[0]?.id;
+    const gekozen = locatieId || telbareLocaties[0]?.id;
     if (!gekozen) return;
     setBezig(true);
     setStartFout(null);
@@ -62,7 +67,7 @@ export function Tellingen() {
               icon="plus"
               iconPosition="leading"
               onClick={() => {
-                setLocatieId(state.locaties[0]?.id ?? "");
+                setLocatieId(telbareLocaties[0]?.id ?? "");
                 setStartFout(null);
                 setStartOpen(true);
               }}
@@ -76,7 +81,7 @@ export function Tellingen() {
       {fout ? <FoutMelding melding={fout} onOpnieuw={() => void herlaad()} /> : null}
       {routeState?.melding ? <p className="melding-goed">{routeState.melding}</p> : null}
 
-      {state.tellingen.length === 0 ? (
+      {zichtbareTellingen.length === 0 ? (
         <EmptyState
           title="Nog geen tellingen"
           body="Start een telling om de voorraad van een locatie te controleren."
@@ -84,14 +89,14 @@ export function Tellingen() {
       ) : (
         <Card>
           <KaartKop
-            titel={`${state.tellingen.length} ${state.tellingen.length === 1 ? "telling" : "tellingen"}`}
+            titel={`${zichtbareTellingen.length} ${zichtbareTellingen.length === 1 ? "telling" : "tellingen"}`}
             sub="nieuwste eerst"
             rechts={
               lopend > 0 ? <Badge>{lopend} {lopend === 1 ? "loopt" : "lopen"} nog</Badge> : null
             }
           />
           <div className="lijst">
-            {state.tellingen.map((telling) => (
+            {zichtbareTellingen.map((telling) => (
               <RouterLink key={telling.id} className="event-rij" to={ROUTES.tellingDetail(telling.id)}>
                 <span className="event-rij__main">
                   <span className="event-rij__titel">
@@ -118,7 +123,7 @@ export function Tellingen() {
             Kies de locatie die je gaat tellen. De app maakt een lijst met alle producten en de
             verwachte aantallen.
           </p>
-          {state.locaties.find((l) => l.id === (locatieId || state.locaties[0]?.id))?.voorPersoneel ? (
+          {telbareLocaties.find((l) => l.id === (locatieId || telbareLocaties[0]?.id))?.voorPersoneel ? (
             <p className="melding-waarschuwing">
               Dit is een locatie voor personeel. Wat er minder staat dan verwacht wordt geboekt als
               personeelsverbruik, niet als telverschil.
@@ -130,7 +135,7 @@ export function Tellingen() {
               aria-label="Locatie"
               value={locatieId}
               onChange={(e) => setLocatieId(e.target.value)}
-              options={state.locaties.map((l) => ({
+              options={telbareLocaties.map((l) => ({
                 value: l.id,
                 label: l.voorPersoneel ? `${l.naam} (personeel)` : l.naam,
               }))}

@@ -27,6 +27,7 @@ function product(velden: Partial<Product> & Pick<Product, "id" | "naam">): Produ
     statiegeldPerStuk: 0,
     statiegeldPerVerpakking: 0,
     voorraadloos: false,
+    voorPersoneel: false,
     ...velden,
   };
 }
