@@ -47,11 +47,3 @@ recht.
       Radler 0%, Swinckels 0%, witte wijn, rosé, rode wijn, Prosecco en
       Prosecco 0%. Horen de twee Prosecco's erbij? Het vinkje "Voor personeel"
       staat bij Producten.
-
-## Rollen
-
-- [ ] Iedereen die magazijnmedewerker of evenementmanager was, is nu
-      **medewerker**. Wie wordt **housekeeping**? Dat zet je bij Gebruikers.
-- [ ] Pakbonnen maken kan alleen de beheerder nog: de medewerker ziet bij een
-      evenement alleen de geboekte producten, de historie, de zalen en de
-      knoppen om te boeken. Is dat goed?
