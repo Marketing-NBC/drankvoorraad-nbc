@@ -5,6 +5,7 @@ import { AppIcon } from "../../components/ui/AppIcon";
 import { FoutMelding } from "../../components/ui/FoutMelding";
 import { useAppState } from "../../context/AppStateContext";
 import type { Pakbon } from "../../data/types";
+import { heeftVerpakking, omschrijfAantal, verpakkingLabel } from "../../data/verpakking";
 import { formatDate, formatDateTime, formatNumber } from "../../utils/format";
 import { ROUTES } from "../../routes/routes";
 
@@ -116,8 +117,16 @@ export function PakbonWeergave() {
               return (
                 <tr key={regel.id}>
                   <td>{product?.naam ?? "Onbekend product"}</td>
-                  <td className="tekst-zwak">{product?.eenheid ?? ""}</td>
-                  <td className="pakbon__tabel-getal">{formatNumber(regel.aantal)}</td>
+                  {/* Per krat waar het magazijn per krat werkt: "20 kratten" en
+                      "krat van 24 × 0,2 L", zoals het op de kar staat. */}
+                  <td className="tekst-zwak">
+                    {product?.alleenPerVerpakking && heeftVerpakking(product)
+                      ? verpakkingLabel(product)
+                      : product?.eenheid ?? ""}
+                  </td>
+                  <td className="pakbon__tabel-getal">
+                    {product ? omschrijfAantal(product, regel.aantal) : formatNumber(regel.aantal)}
+                  </td>
                 </tr>
               );
             })}

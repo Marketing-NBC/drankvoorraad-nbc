@@ -8,7 +8,8 @@ import { Handtekening, type HandtekeningHandle } from "../../components/ui/Handt
 import { ProductKiezer } from "../../components/ui/ProductKiezer";
 import { useAppState, useEvenement } from "../../context/AppStateContext";
 import { useAuth } from "../../context/AuthContext";
-import type { PakbonRegel } from "../../data/types";
+import type { PakbonRegel, Product } from "../../data/types";
+import { heeftVerpakking, invoer, invoerNaarStuks, omschrijfAantal } from "../../data/verpakking";
 import { formatDate, formatNumber } from "../../utils/format";
 import { foutBericht } from "../../utils/fouten";
 import { ROUTES } from "../../routes/routes";
@@ -40,9 +41,21 @@ export function PakbonNieuw() {
     return state.voorraad.find((v) => v.productId === pid && v.locatieId === gekozenLocatie)?.aantal ?? 0;
   }
 
+  /* Een product dat alleen per krat gaat, vul je in kratten in; de pakbon
+     rekent in stuks, net als de voorraad. Zie data/verpakking.ts. */
+  const gekozen = productenById.get(productId || state.producten[0]?.id || "");
+  const vorm = gekozen ? invoer(gekozen) : { label: "Aantal", eenheid: "", factor: 1 };
+
+  /** "20 kratten" bij een product per krat, anders "14 fust". */
+  function toon(product: Product | undefined, stuks: number): string {
+    if (!product) return formatNumber(stuks);
+    return heeftVerpakking(product) ? omschrijfAantal(product, stuks) : `${formatNumber(stuks)} ${product.eenheid}`;
+  }
+
   function voegRegelToe() {
     const gekozenProduct = productId || state.producten[0]?.id;
-    const aantalGetal = Number(aantal);
+    const ingevoerd = Number(aantal);
+    const aantalGetal = gekozen ? invoerNaarStuks(gekozen, ingevoerd) : ingevoerd;
     if (!gekozenProduct) {
       setFout("Kies eerst een product.");
       return;
@@ -121,6 +134,7 @@ export function PakbonNieuw() {
 
       <Card>
         <KaartKop titel="Wat gaat er mee" sub="scan of kies een product en zet het aantal erbij" />
+        <div className="product-form">
         <p className="veld-toelichting">Uitgifte vanuit {uitgiftelocatie?.naam ?? "Koelcel NBC"}.</p>
 
         <ProductKiezer
@@ -134,7 +148,9 @@ export function PakbonNieuw() {
 
         <div className="field-row">
           <div className="field-group">
-            <label className="field-group__label" htmlFor="pakbon-aantal">Aantal</label>
+            <label className="field-group__label" htmlFor="pakbon-aantal">
+              {vorm.label} <span className="field-group__hint">{vorm.eenheid}</span>
+            </label>
             <Input
               id="pakbon-aantal"
               type="number"
@@ -156,6 +172,7 @@ export function PakbonNieuw() {
             <Button icon="plus" iconPosition="leading" onClick={voegRegelToe}>Op de pakbon</Button>
           </div>
         </div>
+        </div>
       </Card>
 
       <Card>
@@ -175,9 +192,9 @@ export function PakbonNieuw() {
                   <div className="pakbon-regel__tekst">
                     <span className="pakbon-regel__naam">{product?.naam ?? "Onbekend product"}</span>
                     <span className="pakbon-regel__meta">
-                      {formatNumber(regel.aantal)} {product?.eenheid ?? ""}
+                      {toon(product, regel.aantal)}
                       {regel.aantal > beschikbaar ? (
-                        <Badge variant="gold">voorraad: {formatNumber(beschikbaar)}</Badge>
+                        <Badge variant="gold">voorraad: {toon(product, beschikbaar)}</Badge>
                       ) : null}
                     </span>
                   </div>

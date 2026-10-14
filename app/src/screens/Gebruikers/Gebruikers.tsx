@@ -106,6 +106,7 @@ export function Gebruikers() {
         <Table<Gebruiker>
           rowKey={(g) => g.id}
           rows={gebruikers}
+          compact
           emptyMessage="Nog geen gebruikers."
           columns={[
             {
@@ -113,7 +114,7 @@ export function Gebruikers() {
               primair: true,
               render: (g) => (
                 <span className="gebruiker-naam">
-                  {g.naam}
+                  <span className="gebruiker-naam__naam">{g.naam}</span>
                   {g.id === profiel?.id ? <Badge variant="neutral">jij</Badge> : null}
                   {!g.actief ? <Badge variant="gold">geen toegang</Badge> : null}
                 </span>
@@ -153,6 +154,7 @@ export function Gebruikers() {
             {
               header: "",
               align: "right",
+              mobiel: "kop",
               render: (g) => (
                 <span style={{ display: "inline-flex", gap: 14 }}>
                   <Link icon={null} onClick={() => setForm({ open: true, gebruiker: g })}>

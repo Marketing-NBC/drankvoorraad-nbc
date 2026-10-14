@@ -239,34 +239,25 @@ export function Personeelsverbruik() {
                     : "Nog nooit geteld — tot die tijd staat het verbruik op nul"
                 }
                 rechts={
-                  <span className="kaart-kop__cijfers">
-                    {zietBedragen ? (
-                      <Badge variant="neutral">{formatCurrency(samenvatting.waardeVerbruik)} verbruikt</Badge>
-                    ) : null}
-                    {magBoeken ? (
-                      <>
-                        <Button
-                          variant="ghost-dark"
-                          icon={null}
-                          onClick={() => setAanvullen(samenvatting.locatie.id)}
-                        >
-                          Aanvullen
-                        </Button>
-                        <Button
-                          variant="ghost-dark"
-                          icon={null}
-                          onClick={() => void tellen(samenvatting.locatie.id)}
-                        >
-                          Tellen
-                        </Button>
-                      </>
-                    ) : null}
-                  </span>
+                  zietBedragen ? (
+                    <Badge variant="neutral">{formatCurrency(samenvatting.waardeVerbruik)} verbruikt</Badge>
+                  ) : null
                 }
               />
+              {magBoeken ? (
+                <div className="kaart-knoppen">
+                  <Button variant="ghost-dark" icon={null} onClick={() => setAanvullen(samenvatting.locatie.id)}>
+                    Aanvullen
+                  </Button>
+                  <Button variant="ghost-dark" icon={null} onClick={() => void tellen(samenvatting.locatie.id)}>
+                    Tellen
+                  </Button>
+                </div>
+              ) : null}
               <Table<Regel>
                 rowKey={(r) => r.productId}
                 rows={regels}
+                compact
                 emptyMessage="Niets geboekt in deze periode."
                 columns={[
                   { header: "Product", primair: true, render: (r) => r.naam },
@@ -299,6 +290,7 @@ export function Personeelsverbruik() {
                     ? [
                         {
                           header: "Waarde verbruik",
+                          labelMobiel: "Waarde",
                           align: "right" as const,
                           render: (r: Regel) => formatCurrency(r.waardeVerbruikt),
                         },

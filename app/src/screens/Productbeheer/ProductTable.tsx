@@ -33,6 +33,7 @@ export function ProductTable({
     <Table<Product>
       rowKey={(p) => p.id}
       rows={producten}
+      compact
       emptyMessage="Geen producten gevonden."
       columns={[
         {
@@ -118,6 +119,7 @@ export function ProductTable({
               {
                 header: "",
                 align: "right" as const,
+                mobiel: "kop" as const,
                 render: (p: Product) => (
                   <span style={{ display: "inline-flex", gap: 14 }}>
                     <Link icon={null} onClick={() => onEdit(p)}>Wijzig</Link>

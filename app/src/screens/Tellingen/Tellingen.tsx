@@ -105,10 +105,14 @@ export function Tellingen() {
                   <span className="event-rij__meta">
                     {formatDateTime(telling.aangemaaktOp)}
                     <span>door {gebruikerNaam.get(telling.gebruikerId) ?? "onbekend"}</span>
-                    <Badge variant={telling.status === "open" ? "tint" : "success"}>
-                      {telling.status === "open" ? "Bezig" : "Afgerond"}
-                    </Badge>
                   </span>
+                </span>
+                {/* Rechts, net als de marge bij een evenement: dan staat de
+                    status in elke rij op dezelfde plek. */}
+                <span className="event-rij__marge">
+                  <Badge variant={telling.status === "open" ? "tint" : "success"}>
+                    {telling.status === "open" ? "Bezig" : "Afgerond"}
+                  </Badge>
                 </span>
                 <span className="event-rij__openen" aria-hidden="true">Openen</span>
               </RouterLink>

@@ -2,6 +2,7 @@ import { Badge } from "../../design-system";
 import { Table } from "./Table";
 import { mutatieLabels, mutatieVariant } from "../../data/labels";
 import type { Locatie, Mutatie, Product, Profiel } from "../../data/types";
+import { losOpLocatie, omschrijfAantal } from "../../data/verpakking";
 import { formatDateTimeKort, formatNumber } from "../../utils/format";
 
 /**
@@ -36,7 +37,22 @@ export function MutatieTabel({
   compact?: boolean;
 }) {
   const productNaam = new Map(producten.map((p) => [p.id, p.naam]));
+  const productById = new Map(producten.map((p) => [p.id, p]));
+  const locatieById = new Map(locaties.map((l) => [l.id, l]));
   const locatieNaam = new Map(locaties.map((l) => [l.id, l.naam]));
+
+  /* In kratten waar het magazijn in kratten werkt ("2 kratten"), in losse
+     flesjes zodra de kantine of de kroeg erbij betrokken is. De omrekening
+     zelf zit in data/verpakking.ts. */
+  function aantal(m: Mutatie): string {
+    const product = productById.get(m.productId);
+    if (!product) return formatNumber(m.aantal);
+    const los = losOpLocatie(
+      m.vanLocatieId ? locatieById.get(m.vanLocatieId) : undefined,
+      m.naarLocatieId ? locatieById.get(m.naarLocatieId) : undefined
+    );
+    return omschrijfAantal(product, m.aantal, { los });
+  }
   const gebruikerNaam = new Map(profielen.map((p) => [p.id, p.naam]));
 
   function locatie(id: string | undefined) {
@@ -75,7 +91,7 @@ export function MutatieTabel({
           primair: true,
           render: (m) => productNaam.get(m.productId) ?? m.productId,
         },
-        { header: "Aantal", align: "right", mobiel: "kop", render: (m) => <strong>{formatNumber(m.aantal)}</strong> },
+        { header: "Aantal", align: "right", mobiel: "kop", render: (m) => <strong>{aantal(m)}</strong> },
         ...(compact
           ? [
               {

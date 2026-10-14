@@ -653,18 +653,25 @@ body { background: var(--canvas); }
   align-self: flex-start; margin-top: 10px; padding: 0; text-align: left; font-size: 15px;
 }
 .data-table--compact tfoot td.num { display: flex; }
-.data-table--compact tfoot td.num:empty { display: none; }
+/* Een leeg totaalvak houdt zijn plaats, zodat elk totaal onder zijn eigen
+   kolom staat. Kolommen die op mobiel niet in de rij meedoen, vallen weg. */
+.data-table--compact tfoot td.num:empty { visibility: hidden; }
+.data-table--compact tfoot td.num.verberg-mobiel,
+.data-table--compact tfoot td.num.cel-kop,
+.data-table--compact tfoot td.num.cel-meta { display: none; }
 .data-table--compact tfoot td.num::before {
   content: attr(data-label); font: var(--t-ui-xs); color: var(--nbc-stone-500);
 }
 .data-table--compact tbody td.cel-primair,
 .data-table--compact tfoot td.cel-primair {
-  order: 1; flex: 1 1 0; min-width: 0; margin: 0; padding: 0;
+  /* Minstens 40% voor de titel; past de kop er dan niet meer naast, dan
+     schuift die naar een eigen regel in plaats van de naam te pletten. */
+  order: 1; flex: 1 1 40%; min-width: 0; margin: 0; padding: 0;
   align-self: center; font: var(--t-naam-lg);
 }
 .data-table--compact tbody td.cel-kop {
   order: 2; flex: none; flex-direction: row; align-items: center; gap: 8px;
-  align-self: center; margin: 0; font-weight: 800;
+  align-self: center; margin: 0 0 0 auto; font-weight: 800;
 }
 .data-table--compact tbody td.cel-kop::before { content: none; }
 .data-table--compact tbody td.cel-meta {
@@ -674,6 +681,7 @@ body { background: var(--canvas); }
 /* Punt als scheiding: de 12px kolomafstand plus 6px gat ervoor wordt te veel. */
 .data-table--compact tbody td.cel-meta ~ td.cel-meta { margin-left: -6px; }
 .data-table--compact tbody td.cel-meta::before { content: none; }
+.data-table--compact tbody td.cel-meta { flex-wrap: wrap; max-width: 100%; }
 .data-table--compact tbody td.cel-meta ~ td.cel-meta::before { content: "·"; }
 .data-table--compact tfoot tr { padding: 12px 14px 0; }
 /* Het minimumveld moet in een halve kaartbreedte passen. */
@@ -696,7 +704,10 @@ body { background: var(--canvas); }
   .data-table--compact tbody td:last-child,
   .data-table--compact tfoot td:last-child { padding-right: 0; }
   .data-table--compact tfoot td.num,
-  .data-table--compact tfoot td.num:empty { display: table-cell; }
+  .data-table--compact tfoot td.num.verberg-mobiel,
+  .data-table--compact tfoot td.num.cel-kop,
+  .data-table--compact tfoot td.num.cel-meta { display: table-cell; }
+  .data-table--compact tfoot td.num:empty { visibility: visible; }
   .data-table--compact tbody td.num, .data-table--compact tfoot td.num { text-align: right; }
   .data-table--compact tbody td.cel-primair,
   .data-table--compact tfoot td.cel-primair { font: var(--t-naam); }
@@ -736,7 +747,7 @@ body { background: var(--canvas); }
 .ui-select__control:focus { border-color: var(--nbc-stone-800); box-shadow: none; }
 .ui-select__chevron { position: absolute; right: 14px; top: 50%; transform: translateY(-50%); color: var(--nbc-stone-500); pointer-events: none; }
 /* In een tabelcel is een keuzelijst een chip, geen veld over de volle kolom. */
-@media (min-width: 640px) { .data-table .ui-select { width: auto; } }
+@media (min-width: 640px) { .data-table .ui-select { width: auto; min-width: 156px; } }
 
 /* iOS zoomt automatisch in op velden met een tekstgrootte onder 16px. */
 .input, .ui-select__control, .min-voorraad-invoer, .telling-regel__veld, .zoekbalk__veld {
@@ -905,6 +916,8 @@ body { background: var(--canvas); }
 }
 .actiebalk__acties .btn { justify-content: center; padding: 0 12px; }
 .actiebalk__acties .actie-menu__knop { width: 100%; }
+/* Eén knop alleen (de pakbon) vult de hele rij in plaats van een half vak. */
+.actiebalk__acties > :only-child { grid-column: 1 / -1; }
 @media (min-width: 640px) {
   .actiebalk__acties { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 }
@@ -1168,7 +1181,9 @@ body { background: var(--canvas); }
 /* ══════════════════════════════════════════════════════════════════
    Gebruikers
    ══════════════════════════════════════════════════════════════════ */
-.gebruiker-naam { display: inline-flex; align-items: center; gap: 10px; font: var(--t-naam); }
+.gebruiker-naam { display: inline-flex; align-items: center; gap: 4px 10px; flex-wrap: wrap; font: var(--t-naam); }
+.gebruiker-naam__naam { white-space: nowrap; }
+.data-table--compact .gebruiker-naam { font: inherit; }
 
 /* ══════════════════════════════════════════════════════════════════
    Tellingen
@@ -1382,10 +1397,14 @@ body { background: var(--canvas); }
    Statuskiezer op het evenement
    ══════════════════════════════════════════════════════════════════ */
 .status-kiezer { position: relative; display: inline-flex; align-items: center; gap: 8px; }
-.status-kiezer__select {
-  width: auto; min-height: 40px; padding: 0 34px 0 14px;
-  font: 800 12.5px/1 var(--font-body); border-radius: var(--r-pill); border-color: var(--rand-zacht);
+/* De klasse zit op de omhulling van Select; de stijl hoort op het veld
+   erin, anders staat het pijltje naast het veld in plaats van erin. */
+.status-kiezer__select { width: auto; }
+.status-kiezer__select .ui-select__control {
+  min-height: 40px; padding: 0 36px 0 16px;
+  font-weight: 800; border-radius: var(--r-pill); border-color: var(--rand-zacht);
 }
+@media (min-width: 640px) { .status-kiezer__select .ui-select__control { font-size: 12.5px; } }
 .status-kiezer__fout { font: var(--t-ui-xs); color: var(--nbc-error); }
 
 /* ══════════════════════════════════════════════════════════════════
@@ -1523,10 +1542,21 @@ body { background: var(--canvas); }
 .product-naam__hint { font: var(--t-ui-xs); color: var(--fg-muted); }
 
 .veld-toelichting { font: var(--t-ui-xs); color: var(--fg-muted); margin: 6px 0 0; }
+/* Fotoknop over de volle breedte, de uitleg eronder in plaats van ernaast. */
+.bon-lezen { display: flex; flex-direction: column; gap: 8px; }
+.bon-lezen > .btn { width: 100%; justify-content: center; }
+.bon-lezen .veld-toelichting { display: block; margin: 0; }
+@media (min-width: 640px) { .bon-lezen > .btn { width: auto; align-self: flex-start; } }
 
 .kaart-tekst { font: var(--t-ui); color: var(--nbc-stone-600); margin: 0 0 4px; }
 .kaart-actie { padding: 4px 0 2px; }
 .kaart-kop__cijfers { display: inline-flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+/* Knoppen die bij een kaart horen, onder de kop: op een telefoon even breed
+   naast elkaar, vanaf tablet op hun eigen breedte. */
+.kaart-knoppen { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: 10px; margin-bottom: 14px; }
+.kaart-knoppen .btn { justify-content: center; }
+@media (min-width: 640px) { .kaart-knoppen { display: flex; } }
+.card--tabel .kaart-tekst { margin: 14px 0 6px; }
 
 /* Zaalkeuze bij een evenement: chips die je aan- en uitzet. Meerdere zalen
    tegelijk komt vaak voor, dus geen keuzelijst maar een rij knoppen. */
@@ -1548,7 +1578,10 @@ body { background: var(--canvas); }
 
 /* Periode plus de twee kerncijfers. Op een telefoon onder elkaar, vanaf
    tablet op één regel zodat het filter en het antwoord samen in beeld staan. */
-.periode-kiezer { display: flex; flex-direction: column; gap: 14px; }
+/* Twee datums naast elkaar, de cijfers eronder over de volle breedte. */
+.periode-kiezer { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px 10px; }
+.periode-kiezer .periode-cijfers { grid-column: 1 / -1; }
+.periode-kiezer .input { padding: 10px 12px; }
 .periode-cijfers { display: flex; gap: 28px; flex-wrap: wrap; }
 .periode-cijfer { display: flex; flex-direction: column; gap: 2px; }
 .periode-cijfer__label {
@@ -1556,7 +1589,8 @@ body { background: var(--canvas); }
 }
 .periode-cijfer__waarde { font: 800 22px/1.15 var(--font-body); color: var(--nbc-stone-900); }
 @media (min-width: 640px) {
-  .periode-kiezer { flex-direction: row; align-items: flex-end; gap: 20px; flex-wrap: wrap; }
+  .periode-kiezer { display: flex; flex-direction: row; align-items: flex-end; gap: 20px; flex-wrap: wrap; }
+  .periode-kiezer .input { padding: 10px 16px; }
   .periode-kiezer .field-group { max-width: 190px; }
 }
 
@@ -1611,18 +1645,25 @@ body { background: var(--canvas); }
     cursor: pointer; padding: 0;
   }
 }
-.stapbalk { display: flex; gap: 8px; list-style: none; margin: 0; padding: 0; flex-wrap: wrap; }
+/* Drie even brede stappen op één regel: zo zie je in één oogopslag waar je
+   bent, ook op een smalle telefoon. */
+.stapbalk { display: flex; gap: 6px; list-style: none; margin: 0; padding: 0; }
+.stapbalk__stap { flex: 1 1 auto; }
+@media (min-width: 640px) { .stapbalk { gap: 8px; } .stapbalk__stap { flex: none; } }
 .stapbalk__stap {
-  display: inline-flex; align-items: center; gap: 8px;
+  display: inline-flex; align-items: center; gap: 6px;
   font: var(--t-ui); color: var(--nbc-stone-500);
   background: var(--vlak); border: 1px solid var(--lijn);
-  border-radius: var(--r-pill); padding: 6px 14px 6px 6px;
+  border-radius: var(--r-pill); padding: 5px 10px 5px 5px; min-width: 0;
+  font-size: 12.5px;
 }
 .stapbalk__nr {
   display: inline-flex; align-items: center; justify-content: center;
-  width: 24px; height: 24px; border-radius: 50%;
+  flex: none; width: 24px; height: 24px; border-radius: 50%;
   background: var(--lijn); color: var(--nbc-stone-700); font: 700 12px/1 var(--font-body);
 }
+.stapbalk__label { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+@media (min-width: 640px) { .stapbalk__stap { font: var(--t-ui); padding: 6px 14px 6px 6px; gap: 8px; } }
 .stapbalk__stap--actief { color: var(--nbc-stone-900); border-color: var(--nbc-blue); }
 .stapbalk__stap--actief .stapbalk__nr { background: var(--nbc-blue); color: #fff; }
 .stapbalk__stap--klaar .stapbalk__nr { background: var(--tekst-groen); color: #fff; }

@@ -208,7 +208,7 @@ export function LeveringNieuw() {
               ].filter(Boolean).join(" ")}
             >
               <span className="stapbalk__nr">{i + 1}</span>
-              {s.label}
+              <span className="stapbalk__label">{s.label}</span>
             </li>
           ))}
         </ol>

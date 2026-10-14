@@ -163,11 +163,13 @@ export function Koppelingen() {
               <Table<Machine>
                 rowKey={(m) => m.id}
                 rows={machines}
+                compact
                 emptyMessage="Nog geen machines."
                 columns={[
                   { header: "Machine", primair: true, render: (m) => m.naam },
                   {
                     header: "Zaal",
+                    mobiel: "meta",
                     render: (m) =>
                       m.zaalId ? zaalNaam.get(m.zaalId) ?? "—" : <span className="tekst-leeg">geen vaste zaal</span>,
                   },
@@ -181,6 +183,7 @@ export function Koppelingen() {
                   {
                     header: "",
                     align: "right",
+                    mobiel: "kop",
                     render: (m) =>
                       magBeheren ? (
                         <span style={{ display: "inline-flex", gap: 14 }}>
@@ -212,6 +215,7 @@ export function Koppelingen() {
         <Table<(typeof verbruik)[number]>
           rowKey={(r) => r.productId}
           rows={verbruik}
+          compact
           emptyMessage="Nog geen verbruik ingevoerd."
           columns={[
             { header: "Product", primair: true, render: (r) => productNaam.get(r.productId) ?? "—" },
@@ -235,13 +239,15 @@ export function Koppelingen() {
         <Table<Meting>
           rowKey={(m) => m.id}
           rows={recenteMetingen}
+          compact
           emptyMessage="Nog niets ingevoerd."
           columns={[
             { header: "Datum", primair: true, render: (m) => formatDateKort(m.datum) },
-            { header: "Machine", render: (m) => machineNaam.get(m.machineId) ?? "—" },
-            { header: "Aantal", align: "right", render: (m) => formatNumber(m.aantal) },
+            { header: "Machine", mobiel: "meta", render: (m) => machineNaam.get(m.machineId) ?? "—" },
+            { header: "Aantal", align: "right", mobiel: "kop", render: (m) => formatNumber(m.aantal) },
             {
               header: "Evenement",
+              mobiel: "meta",
               render: (m) =>
                 m.evenementId ? (
                   evenementNaam.get(m.evenementId) ?? m.evenementId
