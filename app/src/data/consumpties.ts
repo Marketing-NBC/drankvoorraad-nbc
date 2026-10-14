@@ -5,17 +5,19 @@ import type { Mutatie, Product, ProductCategorie } from "./types";
 /**
  * Consumpties per persoon bij een evenement.
  *
- * Een consumptie is wat een gast in zijn hand krijgt. Een flesje of blikje
+ * Een consumptie is wat een gast in de hand krijgt. Een flesje of blikje
  * is er één. Wat groter is dan één portie — een fust, een fles wijn — wordt
- * omgerekend naar glazen van 25 cl: een fust van 20 L is 80 glazen. Koffie
+ * omgerekend naar glazen: bier van 25 cl (een fust van 20 L is 80 glazen),
+ * wijn van 125 ml (een fles van 0,7 L is 5,6 glazen). Koffie
  * en water uit de machines tellen per kop of glas.
  *
  * Er wordt gerekend met het werkelijke verbruik (uitgegeven min retour), net
  * als bij de marge.
  */
 
-/** Robin: een glas is 25 cl. */
+/** Robin: een glas bier is 25 cl, een glas wijn 125 ml. De rest telt als bier. */
 export const GLAS_LITER = 0.25;
+const GLAS_LITER_PER_CATEGORIE: Partial<Record<ProductCategorie, number>> = { wijn: 0.125 };
 
 /** Tot en met deze inhoud is één stuk één consumptie (flesje 0,2 of 0,3 L, blikje 0,33 L). */
 const PORTIE_TOT_LITER = 0.5;
@@ -36,7 +38,7 @@ export function inhoudInLiters(inhoud: string | undefined): number | undefined {
 export function consumptiesPerStuk(product: Product): number {
   const liters = inhoudInLiters(product.inhoud);
   if (liters === undefined || liters <= PORTIE_TOT_LITER) return 1;
-  return liters / GLAS_LITER;
+  return liters / (GLAS_LITER_PER_CATEGORIE[product.categorie] ?? GLAS_LITER);
 }
 
 export interface ConsumptieGroep {

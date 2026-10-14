@@ -58,8 +58,8 @@ describe("consumptiesPerStuk", () => {
   it("een fust van 20 L is 80 glazen van 25 cl", () => {
     expect(consumptiesPerStuk(fust)).toBe(80);
   });
-  it("een fles wijn van 0,7 L wordt ook in glazen geteld", () => {
-    expect(consumptiesPerStuk(wijn)).toBeCloseTo(2.8);
+  it("een fles wijn van 0,7 L is 5,6 glazen van 125 ml", () => {
+    expect(consumptiesPerStuk(wijn)).toBeCloseTo(5.6);
   });
   it("zonder inhoud één per stuk", () => {
     expect(consumptiesPerStuk(koffie)).toBe(1);

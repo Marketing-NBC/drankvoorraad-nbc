@@ -49,7 +49,7 @@ function p(velden: Partial<Product> & Pick<Product, "id" | "naam">): Product {
 const producten: Product[] = [
   p({ id: "p1", naam: "Fust Swinckels 20 L", categorie: "bier", inhoud: "20 L", eenheid: "fust", inkoopprijs: 40.7, statiegeldPerStuk: 30, barcode: "8712000012345", leverancier: "Swinkels" }),
   p({ id: "p2", naam: "Swinckels 0,3 L", categorie: "bier", inhoud: "0,3 L", inkoopprijs: 0.53, verpakking: "krat", stuksPerVerpakking: 24, alleenPerVerpakking: true, statiegeldPerVerpakking: 3.9, barcode: "8712000098765", leverancier: "Swinkels" }),
-  p({ id: "p3", naam: "Spa blauw 1 L", inhoud: "1 L", inkoopprijs: 0.95, verpakking: "krat", stuksPerVerpakking: 12, statiegeldPerVerpakking: 5, barcode: "8712000055512", leverancier: "Bidfood" }),
+  p({ id: "p3", naam: "Spa blauw 1 L", inhoud: "1 L", inkoopprijs: 0.95, verpakking: "krat", stuksPerVerpakking: 12, statiegeldPerVerpakking: 5, barcode: "8712000055512", leverancier: "Swinkels" }),
   p({ id: "p4", naam: "Coca Cola 0,2 L", inhoud: "0,2 L", inkoopprijs: 0.46, verpakking: "krat", stuksPerVerpakking: 24, alleenPerVerpakking: true, statiegeldPerVerpakking: 5, barcode: "8712000044421", leverancier: "Swinkels" }),
   p({ id: "p5", naam: "Coca Cola 1,25 L", inhoud: "1,25 L", inkoopprijs: 2.05, statiegeldPerStuk: 0.25, leverancier: "Swinkels", voorPersoneel: true }),
   p({ id: "p6", naam: "Witte wijn 0,7 L", categorie: "wijn", inhoud: "0,7 L", inkoopprijs: 4.15, voorPersoneel: true, barcode: "8712000033310" }),
@@ -211,10 +211,10 @@ const tellingregels: Record<string, Tellingregel[]> = {
 const emballage = [
   { id: "e1", naam: "Krat fris handel 8 t/m 28 vaks", artikelnummer: "800163", leverancier: "Swinkels", actief: true, borg: 5 },
   { id: "e2", naam: "PET-fles Coca-Cola", leverancier: "Swinkels", actief: true, borg: 0.25 },
-  { id: "e3", naam: "Krat Spa 12 × 1 L", leverancier: "Bidfood", actief: true, borg: 5 },
+  { id: "e3", naam: "Krat Spa 12 × 1 L", leverancier: "Bidfood", actief: false, borg: 5 },
   { id: "e4", naam: "Bierkrat Swinkels 24 × 0,3 L", artikelnummer: "800022", leverancier: "Swinkels", actief: true, borg: 3.9 },
   { id: "e5", naam: "Fust Swinkels 20 L", artikelnummer: "800004", leverancier: "Swinkels", actief: true, borg: 30 },
-  { id: "e6", naam: "Blikje", leverancier: "Bidfood", actief: true, borg: 0.1 },
+  { id: "e6", naam: "Blikje", leverancier: "Swinkels", actief: true, borg: 0.1 },
   { id: "e7", naam: "Rolcontainer", artikelnummer: "800307", leverancier: "Swinkels", actief: true, borg: 150 },
   { id: "e8", naam: "Koolzuurcilinder", artikelnummer: "800158", leverancier: "Swinkels", actief: true, borg: 120 },
   { id: "e9", naam: "Big bag PET (2,5 m)", artikelnummer: "800136", leverancier: "Swinkels", actief: true, borg: 0 },
