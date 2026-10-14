@@ -503,23 +503,42 @@ body { background: var(--canvas); }
    ══════════════════════════════════════════════════════════════════ */
 .actie-menu { position: relative; display: flex; flex: 1 1 auto; }
 .actie-menu__knop { width: 100%; justify-content: center; }
-.actie-menu__overlay { position: fixed; inset: 0; z-index: 40; background: transparent; border: 0; padding: 0; }
+/* Mobiel: bodemblad over een donkere achtergrond, boven de onderbalk. */
+.actie-menu__overlay {
+  position: fixed; inset: 0; z-index: 90;
+  background: rgba(5, 6, 6, .45); border: 0; padding: 0;
+}
 .actie-menu__lijst {
-  position: absolute; top: calc(100% + 8px); right: 0; z-index: 41;
-  display: flex; flex-direction: column;
-  min-width: 220px; padding: 8px;
-  background: var(--vlak); border-radius: var(--r-kaart-mob);
-  box-shadow: 0 18px 40px -18px rgba(47, 58, 62, .35);
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 91;
+  display: flex; flex-direction: column; gap: 2px;
+  padding: 12px 12px calc(16px + env(safe-area-inset-bottom, 0px));
+  background: var(--vlak); border-radius: var(--r-kaart) var(--r-kaart) 0 0;
+  box-shadow: 0 -18px 50px -20px rgba(47, 58, 62, .4);
+}
+/* Grijpstreepje: herkenbaar als blad dat van onderen komt. */
+.actie-menu__lijst::before {
+  content: ""; align-self: center; width: 40px; height: 4px; margin: 0 0 8px;
+  border-radius: var(--r-pill); background: var(--nbc-stone-200);
 }
 .actie-menu__item {
-  display: flex; align-items: center; min-height: var(--touch);
-  padding: 0 12px; border: 0; border-radius: var(--r-nav);
-  background: none; font: 600 13px/1 var(--font-body); color: var(--nbc-stone-800); text-align: left;
+  display: flex; align-items: center; min-height: 52px;
+  padding: 0 16px; border: 0; border-radius: var(--r-nav);
+  background: none; font: 600 15px/1 var(--font-body); color: var(--nbc-stone-800); text-align: left;
 }
-.actie-menu__item:hover { background: var(--vlak-rij); }
+.actie-menu__item:hover, .actie-menu__item:active { background: var(--vlak-rij); }
 @media (min-width: 640px) {
   .actie-menu { flex: 0 0 auto; }
   .actie-menu__knop { width: auto; }
+  .actie-menu__overlay { z-index: 40; background: transparent; }
+  .actie-menu__lijst {
+    position: absolute; top: calc(100% + 8px); left: auto; right: 0; bottom: auto; z-index: 41;
+    gap: 0; min-width: 220px; padding: 8px;
+    border-radius: var(--r-kaart-mob);
+    box-shadow: 0 18px 40px -18px rgba(47, 58, 62, .35);
+  }
+  .actie-menu__lijst--rechts { left: 0; right: auto; }
+  .actie-menu__lijst::before { content: none; }
+  .actie-menu__item { min-height: var(--touch); padding: 0 12px; font: 600 13px/1 var(--font-body); }
 }
 
 /* ══════════════════════════════════════════════════════════════════
@@ -612,6 +631,81 @@ body { background: var(--canvas); }
   .data-table tbody td.cel-primair { order: 0; }
   .data-table tfoot td:last-child { padding-right: 0; }
   .data-table tfoot td.num { text-align: right; }
+}
+
+/* ─── Compact kaartje (Table compact) ────────────────────────────────
+   Bovenaan de titel met rechts de kop-cellen (snelknoppen, badge, aantal);
+   daaronder de cijfers naast elkaar, elk met een klein label erboven. Een
+   rij is zo twee regels hoog in plaats van vijf. Het ::after-element is de
+   regelafbreking tussen die twee. */
+.data-table--compact tbody tr,
+.data-table--compact tfoot tr {
+  flex-direction: row; flex-wrap: wrap; align-items: center;
+  column-gap: 12px; row-gap: 0;
+}
+.data-table--compact tbody tr { padding: 12px 14px; margin-bottom: 8px; }
+.data-table--compact tbody tr::after,
+.data-table--compact tfoot tr::after { content: ""; order: 2; flex-basis: 100%; }
+.data-table--compact tbody td,
+.data-table--compact tfoot td.num {
+  order: 3; flex: 1 1 0; min-width: 0;
+  flex-direction: column; align-items: flex-start; justify-content: flex-start; gap: 2px;
+  align-self: flex-start; margin-top: 10px; padding: 0; text-align: left; font-size: 15px;
+}
+.data-table--compact tfoot td.num { display: flex; }
+.data-table--compact tfoot td.num:empty { display: none; }
+.data-table--compact tfoot td.num::before {
+  content: attr(data-label); font: var(--t-ui-xs); color: var(--nbc-stone-500);
+}
+.data-table--compact tbody td.cel-primair,
+.data-table--compact tfoot td.cel-primair {
+  order: 1; flex: 1 1 0; min-width: 0; margin: 0; padding: 0;
+  align-self: center; font: var(--t-naam-lg);
+}
+.data-table--compact tbody td.cel-kop {
+  order: 2; flex: none; flex-direction: row; align-items: center; gap: 8px;
+  align-self: center; margin: 0; font-weight: 800;
+}
+.data-table--compact tbody td.cel-kop::before { content: none; }
+.data-table--compact tbody td.cel-meta {
+  order: 4; flex: none; flex-direction: row; align-items: center; gap: 6px;
+  margin-top: 4px; font: var(--t-ui-sm); color: var(--nbc-stone-500);
+}
+/* Punt als scheiding: de 12px kolomafstand plus 6px gat ervoor wordt te veel. */
+.data-table--compact tbody td.cel-meta ~ td.cel-meta { margin-left: -6px; }
+.data-table--compact tbody td.cel-meta::before { content: none; }
+.data-table--compact tbody td.cel-meta ~ td.cel-meta::before { content: "·"; }
+.data-table--compact tfoot tr { padding: 12px 14px 0; }
+/* Het minimumveld moet in een halve kaartbreedte passen. */
+.data-table--compact .min-voorraad { justify-content: flex-start; }
+.data-table--compact .min-voorraad-invoer { width: 64px; min-width: 0; }
+.data-table--compact .min-voorraad__eenheid { min-width: 0; white-space: normal; }
+
+/* Vanaf tablet weer een gewone tabelrij. De compacte regels hierboven zijn
+   even specifiek als die van de tabel en staan later, dus alles wat ze
+   veranderen wordt hier teruggezet. */
+@media (min-width: 640px) {
+  .data-table--compact tbody tr::after,
+  .data-table--compact tfoot tr::after,
+  .data-table--compact tfoot td.num::before,
+  .data-table--compact tbody td.cel-meta ~ td.cel-meta::before { content: none; }
+  .data-table--compact tbody td,
+  .data-table--compact tfoot td.num,
+  .data-table--compact tbody td.cel-primair,
+  .data-table--compact tfoot td.cel-primair { padding: 14px 14px 14px 0; font-size: inherit; }
+  .data-table--compact tbody td:last-child,
+  .data-table--compact tfoot td:last-child { padding-right: 0; }
+  .data-table--compact tfoot td.num,
+  .data-table--compact tfoot td.num:empty { display: table-cell; }
+  .data-table--compact tbody td.num, .data-table--compact tfoot td.num { text-align: right; }
+  .data-table--compact tbody td.cel-primair,
+  .data-table--compact tfoot td.cel-primair { font: var(--t-naam); }
+  .data-table--compact tfoot td.cel-primair { font-weight: 800; }
+  .data-table--compact tbody td.cel-kop { font-weight: inherit; }
+  .data-table--compact tbody td.cel-meta { font: inherit; color: inherit; }
+  .data-table--compact .min-voorraad { justify-content: flex-end; }
+  .data-table--compact .min-voorraad-invoer { width: 84px; min-width: 72px; }
+  .data-table--compact .min-voorraad__eenheid { min-width: 140px; white-space: nowrap; }
 }
 
 /* Snelknoppen in een tabelrij: twee raakdoelen van 44px naast elkaar. */
@@ -802,10 +896,24 @@ body { background: var(--canvas); }
   font: 800 13px/1 var(--font-body); color: var(--fg-secondary); text-decoration: none;
 }
 .actiebalk__terug:hover { color: var(--nbc-stone-800); }
-.actiebalk__acties { display: flex; gap: 10px; flex-wrap: wrap; flex: 1 1 100%; }
-.actiebalk__acties .btn { flex: 1 1 140px; justify-content: center; }
+/* Op telefoon en tablet staat de pijl terug al in de mobiele kop. */
+.actiebalk__terug { display: none; }
+/* Een raster met even brede vakken: zo staan de knoppen recht onder elkaar,
+   hoe lang het label ook is. */
+.actiebalk__acties {
+  display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; flex: 1 1 100%;
+}
+.actiebalk__acties .btn { justify-content: center; padding: 0 12px; }
+.actiebalk__acties .actie-menu__knop { width: 100%; }
+@media (min-width: 640px) {
+  .actiebalk__acties { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
 @media (min-width: 1100px) {
   .actiebalk { padding: 14px 20px; gap: 14px; }
+  .actiebalk__terug { display: inline-flex; }
+  .actiebalk__acties { display: flex; flex-wrap: wrap; }
+  .actiebalk__acties .btn { padding: 0 20px; }
+  .actiebalk__acties .actie-menu__knop { width: auto; }
   /* Zes knoppen passen op 1440 op één regel en breken daaronder netjes af;
      nowrap zou ze het scherm uit duwen. */
   .actiebalk__acties { margin-left: auto; flex: 0 1 auto; justify-content: flex-end; }
@@ -933,8 +1041,37 @@ body { background: var(--canvas); }
 .rapport-tab:hover { color: var(--nbc-stone-800); }
 .rapport-tab--actief { background: var(--nbc-ink); color: var(--nbc-paper); }
 .rapport-tab--actief:hover { color: var(--nbc-paper); }
+/* Gesegmenteerd: alle tabs even breed in één balk, uitgelijnd met de kaart. */
+.rapport-kiezer--gelijk {
+  display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: 4px;
+  padding: 4px; background: var(--vlak-chip); border-radius: var(--r-pill);
+}
+.rapport-kiezer--gelijk .rapport-tab { padding: 0 8px; background: transparent; }
+.rapport-kiezer--gelijk .rapport-tab--actief { background: var(--nbc-ink); }
+@media (min-width: 640px) {
+  .rapport-kiezer--gelijk { display: inline-grid; grid-auto-columns: 1fr; }
+  .rapport-kiezer--gelijk .rapport-tab { padding: 0 18px; }
+}
+.rapport-export { margin-top: 16px; }
 
-.ui-barchart { width: 100%; overflow-x: auto; }
+/* Liggende staven: naam en waarde op één regel, de staaf eronder. */
+.ui-barchart { list-style: none; margin: 4px 0 0; padding: 0; display: flex; flex-direction: column; gap: 14px; }
+.ui-barchart__rij {
+  display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: baseline;
+  gap: 6px 12px;
+}
+.ui-barchart__label {
+  font: var(--t-naam); color: var(--nbc-stone-800);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.ui-barchart__waarde { font: 800 14px/1.2 var(--font-body); color: var(--nbc-stone-800); font-variant-numeric: tabular-nums; }
+.ui-barchart__waarde--negatief { color: var(--tint-rood-fg); }
+.ui-barchart__baan {
+  grid-column: 1 / -1; display: block; height: 10px;
+  background: var(--lijn); border-radius: 3px; overflow: hidden;
+}
+.ui-barchart__staaf { display: block; height: 100%; background: var(--nbc-blue); border-radius: 3px; }
+.ui-barchart__staaf--negatief { background: var(--tint-rood-fg); }
 
 /* ══════════════════════════════════════════════════════════════════
    Magazijn

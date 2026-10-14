@@ -5,58 +5,40 @@ export interface BarChartDatum {
 
 export interface BarChartProps {
   data: BarChartDatum[];
-  height?: number;
   formatValue?: (value: number) => string;
+  /** Wat de staven laten zien, voor schermlezers. */
+  label?: string;
 }
 
 /**
- * Hand-rolled, dependency-free SVG bar chart. Bars in brand teal, gridline
- * in stone-200 — matches the DS token palette exactly instead of pulling in
- * a charting library for what the spec calls a "simple" chart.
+ * Liggende staven, één regel per item: naam en waarde erboven, de staaf
+ * eronder over de volle breedte. Op een telefoon past een evenementnaam zo
+ * altijd, en tien evenementen worden een lijst in plaats van tien smalle
+ * zuilen. Zonder grafiekbibliotheek: het is gewoon HTML en CSS.
+ *
+ * Een negatieve waarde krijgt een rode staaf; de lengte is steeds de
+ * grootte ten opzichte van de grootste waarde.
  */
-export function BarChart({ data, height = 220, formatValue = (v) => `${Math.round(v)}%` }: BarChartProps) {
+export function BarChart({ data, formatValue = (v) => `${Math.round(v)}%`, label = "Staafdiagram" }: BarChartProps) {
   if (data.length === 0) return null;
   const max = Math.max(1, ...data.map((d) => Math.abs(d.value)));
-  const barWidth = 56;
-  const gap = 32;
-  const width = data.length * barWidth + (data.length - 1) * gap;
-  const labelSpace = 28;
 
   return (
-    <div className="ui-barchart">
-      <svg
-        viewBox={`0 0 ${width} ${height + labelSpace + 40}`}
-        width="100%"
-        height={height + labelSpace + 40}
-        role="img"
-        aria-label="Brutomarge per evenement"
-      >
-        <line x1={0} y1={height + labelSpace} x2={width} y2={height + labelSpace} stroke="var(--lijn)" strokeWidth={1} />
-        {data.map((d, i) => {
-          const barHeight = Math.max(2, (Math.abs(d.value) / max) * (height - 8));
-          const x = i * (barWidth + gap);
-          const y = labelSpace + (height - barHeight);
-          return (
-            <g key={d.label}>
-              <rect x={x} y={y} width={barWidth} height={barHeight} rx={999} fill="var(--nbc-blue)"  />
-              <text x={x + barWidth / 2} y={y - 8} textAnchor="middle" fontSize={12} fontWeight={800} fill="var(--nbc-stone-800)" fontFamily="var(--font-body)">
-                {formatValue(d.value)}
-              </text>
-              <text
-                x={x + barWidth / 2}
-                y={height + labelSpace + 20}
-                textAnchor="middle"
-                fontSize={12}
-                fontWeight={600}
-                fill="var(--nbc-stone-500)"
-                fontFamily="var(--font-body)"
-              >
-                {d.label.length > 12 ? `${d.label.slice(0, 11)}…` : d.label}
-              </text>
-            </g>
-          );
-        })}
-      </svg>
-    </div>
+    <ul className="ui-barchart" aria-label={label}>
+      {data.map((d, i) => (
+        <li key={`${d.label}-${i}`} className="ui-barchart__rij">
+          <span className="ui-barchart__label" title={d.label}>{d.label}</span>
+          <span className={["ui-barchart__waarde", d.value < 0 && "ui-barchart__waarde--negatief"].filter(Boolean).join(" ")}>
+            {formatValue(d.value)}
+          </span>
+          <span className="ui-barchart__baan" aria-hidden="true">
+            <span
+              className={["ui-barchart__staaf", d.value < 0 && "ui-barchart__staaf--negatief"].filter(Boolean).join(" ")}
+              style={{ width: `${Math.max(1.5, (Math.abs(d.value) / max) * 100)}%` }}
+            />
+          </span>
+        </li>
+      ))}
+    </ul>
   );
 }

@@ -11,6 +11,9 @@ import { formatDateTimeKort, formatNumber } from "../../utils/format";
  *
  * Van en naar staan in eigen kolommen: zo lezen ze als een route die je van
  * boven naar beneden kunt scannen, in plaats van als één tekstregel per rij.
+ *
+ * Op een telefoon is elke mutatie twee regels: product, soort en aantal
+ * bovenaan, wanneer en door wie eronder.
  */
 export function MutatieTabel({
   mutaties,
@@ -55,13 +58,16 @@ export function MutatieTabel({
       rowKey={(m) => m.id}
       rows={mutaties}
       emptyMessage={legeMelding}
+      compact
       columns={[
         {
           header: "Datum en tijd",
+          mobiel: "meta",
           render: (m) => <span className="tekst-zwak">{formatDateTimeKort(m.datumTijd)}</span>,
         },
         {
           header: "Soort",
+          mobiel: "kop",
           render: (m) => <Badge variant={mutatieVariant[m.type]}>{mutatieLabels[m.type]}</Badge>,
         },
         {
@@ -69,7 +75,7 @@ export function MutatieTabel({
           primair: true,
           render: (m) => productNaam.get(m.productId) ?? m.productId,
         },
-        { header: "Aantal", align: "right", render: (m) => <strong>{formatNumber(m.aantal)}</strong> },
+        { header: "Aantal", align: "right", mobiel: "kop", render: (m) => <strong>{formatNumber(m.aantal)}</strong> },
         ...(compact
           ? [
               {
@@ -100,6 +106,7 @@ export function MutatieTabel({
           : []),
         {
           header: "Door",
+          mobiel: "meta",
           render: (m) => (
             <span className="tekst-zwak">{gebruikerNaam.get(m.gebruikerId) ?? "onbekend"}</span>
           ),

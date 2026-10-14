@@ -33,7 +33,7 @@ const navItems: NavItem[] = [
   { to: ROUTES.dashboard, label: "Dashboard", tabLabel: "Cijfers", icon: "grafiek", rollen: ["beheerder"] },
   { to: ROUTES.overzicht, label: "Evenementen", tabLabel: "Events", icon: "calendar", rollen: WERK },
   { to: ROUTES.magazijn, label: "Magazijn", icon: "building", rollen: WERK },
-  { to: ROUTES.leveringen, label: "Leveringen", tabLabel: "Binnen", icon: "doos", rollen: WERK },
+  { to: ROUTES.leveringen, label: "Leveringen", icon: "vrachtwagen", rollen: WERK },
   { to: ROUTES.tellingen, label: "Tellingen", tabLabel: "Tellen", icon: "scan" },
   { to: ROUTES.producten, label: "Producten", icon: "doos", rollen: WERK },
   { to: ROUTES.historie, label: "Mutaties", icon: "clock", rollen: WERK },

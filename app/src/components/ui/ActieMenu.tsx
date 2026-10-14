@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { Icon } from "../../design-system";
 
 export interface ActieMenuItem {
@@ -10,10 +10,25 @@ export interface ActieMenuItem {
  * Knop met een uitklapmenu voor secundaire acties. Houdt de paginakop
  * compact: één duidelijke hoofdactie ernaast, de rest hierin. Sluit met
  * Escape of door ernaast te klikken.
+ *
+ * Op een telefoon schuift het menu als bodemblad van onderen in beeld, net
+ * als een modal: dan valt het nooit buiten het scherm, waar de knop ook
+ * staat. Vanaf tablet is het een uitklapper die opent naar de kant waar
+ * ruimte is.
  */
 export function ActieMenu({ label = "Meer", items }: { label?: string; items: ActieMenuItem[] }) {
   const [open, setOpen] = useState(false);
+  const [naarRechts, setNaarRechts] = useState(false);
   const knopRef = useRef<HTMLButtonElement>(null);
+  const lijstRef = useRef<HTMLDivElement>(null);
+
+  /* Standaard lijnt het menu rechts uit met de knop. Staat de knop links op
+     de pagina, dan past dat niet en opent het naar rechts. */
+  useLayoutEffect(() => {
+    if (!open || !knopRef.current || !lijstRef.current) return;
+    const knop = knopRef.current.getBoundingClientRect();
+    setNaarRechts(knop.right - lijstRef.current.offsetWidth < 8);
+  }, [open]);
 
   useEffect(() => {
     if (!open) return;
@@ -51,7 +66,11 @@ export function ActieMenu({ label = "Meer", items }: { label?: string; items: Ac
             aria-label="Menu sluiten"
             onClick={() => setOpen(false)}
           />
-          <div className="actie-menu__lijst" role="menu">
+          <div
+            ref={lijstRef}
+            className={["actie-menu__lijst", naarRechts && "actie-menu__lijst--rechts"].filter(Boolean).join(" ")}
+            role="menu"
+          >
             {items.map((item) => (
               <button
                 key={item.label}

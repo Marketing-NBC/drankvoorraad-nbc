@@ -7,11 +7,12 @@ export function TopProducts({ producten }: { producten: TopProduct[] }) {
     <Table<TopProduct>
       rowKey={(r) => r.product.id}
       rows={producten}
+      compact
       emptyMessage="Nog geen verbruik geregistreerd."
       columns={[
         { header: "Product", primair: true, render: (r) => r.product.naam },
         { header: "Categorie", verbergOpMobiel: true, render: (r) => r.product.categorie },
-        { header: "Verbruik", align: "right", render: (r) => <strong>{formatNumber(r.totaalVerbruik)}</strong> },
+        { header: "Verbruik", align: "right", mobiel: "kop", render: (r) => <strong>{formatNumber(r.totaalVerbruik)}</strong> },
       ]}
     />
   );
