@@ -94,6 +94,7 @@ export function Leveringen() {
           <Table<Leveringregel>
             rowKey={(r) => r.id}
             rows={open}
+            compact
             columns={[
               {
                 header: "Product",
@@ -113,6 +114,7 @@ export function Leveringen() {
               },
               {
                 header: "Op de bon",
+                labelMobiel: "Bon",
                 align: "right",
                 render: (r) => {
                   const p = productNaam.get(r.productId);
@@ -130,16 +132,22 @@ export function Leveringen() {
               {
                 header: "Verschil",
                 align: "right",
-                render: (r) => (
-                  <strong className={r.verschil < 0 ? "verschil-tekort" : undefined}>
-                    {r.verschil > 0 ? "+" : ""}
-                    {r.verschil}
-                  </strong>
-                ),
+                /* In dezelfde eenheid als de bon: "−2 kratten", niet "−48". */
+                render: (r) => {
+                  const p = productNaam.get(r.productId);
+                  const grootte = p ? omschrijfAantal(p, Math.abs(r.verschil)) : Math.abs(r.verschil);
+                  return (
+                    <strong className={r.verschil < 0 ? "verschil-tekort" : undefined}>
+                      {r.verschil > 0 ? "+" : r.verschil < 0 ? "−" : ""}
+                      {grootte}
+                    </strong>
+                  );
+                },
               },
               {
                 header: "",
                 align: "right",
+                mobiel: "kop",
                 render: (r) =>
                   magAannemen ? (
                     <Link icon={null} onClick={() => void afhandelen(r)}>Afhandelen</Link>
@@ -168,6 +176,7 @@ export function Leveringen() {
           <Table<(typeof state.leveringen)[number]>
             rowKey={(l) => l.id}
             rows={state.leveringen.slice(0, 30)}
+            compact
             columns={[
               {
                 header: "Wanneer",
@@ -176,10 +185,11 @@ export function Leveringen() {
               },
               { header: "Leverancier", render: (l) => l.leverancier ?? <span className="tekst-leeg">onbekend</span> },
               { header: "Bon", verbergOpMobiel: true, render: (l) => l.bonnummer ?? "—" },
-              { header: "Aangenomen door", render: (l) => l.aangenomenDoor },
+              { header: "Aangenomen door", labelMobiel: "Door", render: (l) => l.aangenomenDoor },
               {
                 header: "Regels",
                 align: "right",
+                mobiel: "kop",
                 render: (l) => {
                   const regels = state.leveringregels.filter((r) => r.leveringId === l.id);
                   const afwijkend = regels.filter((r) => r.verschil !== 0).length;

@@ -22,5 +22,5 @@ export function MargePerEvenementChart({
     return <p className="data-table__empty">Nog geen evenementen met een berekenbare brutomarge.</p>;
   }
 
-  return <BarChart data={data} />;
+  return <BarChart data={data} label="Brutomarge per evenement" />;
 }

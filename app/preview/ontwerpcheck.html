@@ -1,0 +1,507 @@
+<title>Ontwerpcheck Drankvoorraad</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
+<!--
+  Ontwerpcheck — de echte schermen van de app met verzonnen gegevens, in een
+  telefoon-, tablet- of desktopframe, voor elke rol. Wordt gebouwd door
+  scripts/bouw-ontwerpcheck.mjs; de app zelf staat in app/ ernaast.
+-->
+<style>
+  /* Werkbank: kopbalk met de twee keuzes die je het vaakst wisselt (weergave
+     en rol), links de schermenlijst, in het midden de frames op schaal. */
+  :root {
+    --canvas: #e8e6e1;     /* zelfde creme als de app */
+    --paneel: #fafaf9;
+    --paneel-2: #f1f0ec;
+    --lijn: #dcd9d2;
+    --tekst: #1d2426;
+    --tekst-zwak: #5f6a6c;
+    --accent: #1b7f79;     /* petrol van NBC */
+    --op-accent: #ffffff;
+    --ink: #111515;
+    --op-ink: #fafaf9;
+    --slot: #a0522d;
+    --frame: #1d2426;
+    --font-ui: "Instrument Sans", "Helvetica Neue", Arial, sans-serif;
+    --font-mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, monospace;
+    --r: 14px;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --canvas: #121516; --paneel: #1b1f20; --paneel-2: #252a2b; --lijn: #313839;
+      --tekst: #eef1f0; --tekst-zwak: #9aa6a7; --accent: #4fc1b9; --op-accent: #0d1a19;
+      --ink: #eef1f0; --op-ink: #121516; --slot: #e3a07a; --frame: #3a4243;
+      color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --canvas: #121516; --paneel: #1b1f20; --paneel-2: #252a2b; --lijn: #313839;
+    --tekst: #eef1f0; --tekst-zwak: #9aa6a7; --accent: #4fc1b9; --op-accent: #0d1a19;
+    --ink: #eef1f0; --op-ink: #121516; --slot: #e3a07a; --frame: #3a4243;
+    color-scheme: dark;
+  }
+
+  html, body { height: 100%; }
+  body {
+    background: var(--canvas); color: var(--tekst);
+    font: 400 14px/1.45 var(--font-ui);
+    display: flex; flex-direction: column; overflow: hidden;
+  }
+  button, select { font: inherit; color: inherit; }
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  /* ─── Kop ─────────────────────────────────────────────────────── */
+  .kop {
+    flex: none; display: flex; flex-wrap: wrap; align-items: center; gap: 10px 18px;
+    padding-block: 12px;
+    padding-left: max(16px, env(safe-area-inset-left, 0px));
+    padding-right: max(16px, env(safe-area-inset-right, 0px));
+    background: var(--paneel); border-bottom: 1px solid var(--lijn);
+  }
+  .kop__naam { display: flex; flex-direction: column; gap: 2px; margin-right: auto; min-width: 0; }
+  .kop__titel { margin: 0; font-size: 16px; font-weight: 700; letter-spacing: -.01em; }
+  .versie {
+    font: 400 11.5px/1.3 var(--font-mono); color: var(--tekst-zwak);
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 62ch;
+  }
+  .keuzes { display: flex; flex-wrap: wrap; gap: 10px 14px; align-items: center; }
+  .keuze { display: flex; align-items: center; gap: 8px; }
+  .keuze__label {
+    font-size: 11px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase;
+    color: var(--tekst-zwak);
+  }
+
+  /* Segmenten: één balk, het actieve vak gevuld. */
+  .segment {
+    display: inline-flex; gap: 2px; padding: 3px;
+    background: var(--paneel-2); border: 1px solid var(--lijn); border-radius: 999px;
+  }
+  .segment button {
+    display: inline-flex; align-items: center; gap: 6px;
+    min-height: 36px; padding: 0 14px; border: 0; border-radius: 999px;
+    background: transparent; color: var(--tekst-zwak); font-weight: 600; font-size: 13px;
+    cursor: pointer; white-space: nowrap;
+  }
+  .segment button:hover { color: var(--tekst); }
+  .segment button[aria-pressed="true"] { background: var(--ink); color: var(--op-ink); }
+  .segment--weergave button[aria-pressed="true"] { background: var(--accent); color: var(--op-accent); }
+  .segment svg { width: 16px; height: 16px; flex: none; }
+  .toets {
+    font: 500 10px/1 var(--font-mono); padding: 2px 4px; border-radius: 4px;
+    border: 1px solid currentColor; opacity: .55;
+  }
+
+  /* ─── Werkvlak ────────────────────────────────────────────────── */
+  .werk { flex: 1; min-height: 0; display: flex; }
+  .lijst {
+    flex: none; width: 236px; overflow-y: auto; display: none;
+    padding: 14px 10px; background: var(--paneel); border-right: 1px solid var(--lijn);
+  }
+  .lijst__groep { margin: 0 0 14px; padding: 0; list-style: none; }
+  .lijst__kop {
+    margin: 0 0 4px 10px; font-size: 11px; font-weight: 600; letter-spacing: .08em;
+    text-transform: uppercase; color: var(--tekst-zwak);
+  }
+  .lijst button {
+    width: 100%; display: flex; align-items: center; gap: 8px;
+    min-height: 36px; padding: 0 10px; border: 0; border-radius: 10px;
+    background: transparent; text-align: left; cursor: pointer; font-size: 13.5px;
+  }
+  .lijst button:hover { background: var(--paneel-2); }
+  .lijst button[aria-current="true"] { background: var(--ink); color: var(--op-ink); font-weight: 600; }
+  .slot {
+    margin-left: auto; font-size: 10.5px; font-weight: 600; color: var(--slot);
+    white-space: nowrap;
+  }
+  .lijst button[aria-current="true"] .slot { color: inherit; opacity: .75; }
+
+  .podium { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+  .podiumbalk {
+    flex: none; display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+    padding-block: 10px;
+    padding-left: max(16px, env(safe-area-inset-left, 0px));
+    padding-right: max(16px, env(safe-area-inset-right, 0px));
+  }
+  .scherm-kiezer {
+    flex: 1 1 200px; min-width: 0; min-height: 40px; padding: 0 12px;
+    background: var(--paneel); border: 1px solid var(--lijn); border-radius: 10px;
+  }
+  .knop {
+    min-height: 40px; min-width: 40px; padding: 0 12px;
+    display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+    background: var(--paneel); border: 1px solid var(--lijn); border-radius: 10px;
+    cursor: pointer; font-weight: 600; font-size: 13px;
+  }
+  .knop:hover { border-color: var(--tekst-zwak); }
+  .knop svg { width: 16px; height: 16px; }
+  .melding {
+    flex: 1 1 100%; margin: 0; font-size: 12.5px; color: var(--slot);
+  }
+
+  .frames {
+    flex: 1; min-height: 0; overflow: auto;
+    display: flex; align-items: flex-start; justify-content: center; gap: 28px;
+    padding-block: 4px 24px;
+    padding-left: max(16px, env(safe-area-inset-left, 0px));
+    padding-right: max(16px, env(safe-area-inset-right, 0px));
+  }
+  .frames--gestapeld { flex-direction: column; align-items: center; }
+  .frame { flex: none; display: flex; flex-direction: column; gap: 8px; }
+  .frame__label {
+    display: flex; justify-content: space-between; gap: 12px;
+    font-size: 12px; font-weight: 600; color: var(--tekst-zwak);
+  }
+  .frame__maat { font: 400 11px/1.4 var(--font-mono); }
+  .frame__venster {
+    position: relative; overflow: hidden; background: #e8e6e1; box-sizing: content-box;
+    border: 6px solid var(--frame); border-radius: 26px;
+    box-shadow: 0 24px 50px -28px rgba(10, 20, 20, .45);
+  }
+  .frame--desktop .frame__venster, .frame--tablet .frame__venster { border-radius: 14px; }
+  .frame iframe {
+    position: absolute; top: 0; left: 0; border: 0; background: #e8e6e1;
+    transform-origin: 0 0;
+  }
+
+  @media (min-width: 900px) {
+    .lijst { display: block; }
+    .scherm-kiezer { display: none; }
+  }
+  @media (max-width: 899px) {
+    .toets { display: none; }
+  }
+  @media (max-width: 560px) {
+    .keuze__label { display: none; }
+    .keuzes { width: 100%; }
+    .keuze { flex: 1 1 100%; }
+    .segment { flex: 1; }
+    .segment button { flex: 1; justify-content: center; padding: 0 8px; }
+    .segment--weergave .tekst-lang { display: none; }
+    .versie { max-width: 100%; }
+    .kop { gap: 8px; padding-block: 10px; }
+    .podiumbalk { padding-block: 8px; flex-wrap: nowrap; }
+    .scherm-kiezer { flex: 1 1 auto; }
+    .knop__tekst { display: none; }
+  }
+  @media (prefers-reduced-motion: no-preference) {
+    .segment button, .lijst button { transition: background .12s ease, color .12s ease; }
+  }
+</style>
+
+<header class="kop">
+  <div class="kop__naam">
+    <h1 class="kop__titel">Ontwerpcheck Drankvoorraad</h1>
+    <span class="versie" id="versie">Previewbuild met verzonnen gegevens</span>
+  </div>
+  <div class="keuzes">
+    <div class="keuze">
+      <span class="keuze__label" id="label-weergave">Weergave</span>
+      <div class="segment segment--weergave" role="group" aria-labelledby="label-weergave" id="weergave"></div>
+    </div>
+    <div class="keuze">
+      <span class="keuze__label" id="label-rol">Bekijk als</span>
+      <div class="segment" role="group" aria-labelledby="label-rol" id="rol"></div>
+    </div>
+  </div>
+</header>
+
+<div class="werk">
+  <nav class="lijst" id="lijst" aria-label="Schermen"></nav>
+  <main class="podium">
+    <div class="podiumbalk">
+      <select class="scherm-kiezer" id="scherm-kiezer" aria-label="Scherm"></select>
+      <button class="knop" id="vorige" type="button" aria-label="Vorig scherm" title="Vorig scherm (←)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"/></svg>
+      </button>
+      <button class="knop" id="volgende" type="button" aria-label="Volgend scherm" title="Volgend scherm (→)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>
+      </button>
+      <button class="knop" id="herlaad" type="button" title="Terug naar het gekozen scherm (R)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 11a8 8 0 1 0-2.3 5.7M20 4v7h-7"/></svg>
+        <span class="knop__tekst">Herlaad</span>
+      </button>
+      <p class="melding" id="melding" hidden></p>
+    </div>
+    <div class="frames" id="frames"></div>
+  </main>
+</div>
+
+<script>
+  /* Ingevuld door scripts/bouw-ontwerpcheck.mjs. */
+  const VERSIE = /*__VERSIE__*/null;
+
+  const W = ["beheerder", "medewerker"];
+  const ALLE = ["beheerder", "medewerker", "housekeeping"];
+  const B = ["beheerder"];
+
+  /* Pad in de app en welke rollen erbij mogen — gelijk aan de guards in
+     src/App.tsx. */
+  const SCHERMEN = [
+    { groep: "Evenementen", items: [
+      { naam: "Overzicht", pad: "/", rollen: W },
+      { naam: "Evenement, lopend", pad: "/evenementen/NBC-2026-014", rollen: W },
+      { naam: "Evenement, afgerond", pad: "/evenementen/NBC-2026-011", rollen: W },
+      { naam: "Pakbon maken", pad: "/evenementen/NBC-2026-014/pakbon", rollen: W },
+      { naam: "Pakbon", pad: "/pakbonnen/a7f31c29-0000-0000-0000-000000000000", rollen: W },
+    ]},
+    { groep: "Magazijn", items: [
+      { naam: "Voorraad", pad: "/magazijn", rollen: W },
+      { naam: "Emballage", pad: "/magazijn/emballage", rollen: W },
+    ]},
+    { groep: "Leveringen", items: [
+      { naam: "Leveringen", pad: "/leveringen", rollen: W },
+      { naam: "Levering aannemen", pad: "/leveringen/nieuw", rollen: W },
+    ]},
+    { groep: "Tellen", items: [
+      { naam: "Tellingen", pad: "/tellingen", rollen: ALLE },
+      { naam: "Telling, open", pad: "/tellingen/t1", rollen: ALLE },
+      { naam: "Telling, afgerond", pad: "/tellingen/t2", rollen: ALLE },
+      { naam: "Personeelsverbruik", pad: "/personeel", rollen: ALLE },
+    ]},
+    { groep: "Beheer", items: [
+      { naam: "Producten", pad: "/producten", rollen: W },
+      { naam: "Mutaties", pad: "/historie", rollen: W },
+      { naam: "Koffie en water", pad: "/koppelingen", rollen: B },
+      { naam: "Gebruikers", pad: "/gebruikers", rollen: B },
+    ]},
+    { groep: "Cijfers", items: [
+      { naam: "Dashboard", pad: "/dashboard", rollen: B },
+    ]},
+  ];
+  const ALLE_SCHERMEN = SCHERMEN.flatMap((g) => g.items);
+
+  const ROLLEN = [
+    { id: "beheerder", naam: "Beheerder" },
+    { id: "medewerker", naam: "Medewerker" },
+    { id: "housekeeping", naam: "Housekeeping" },
+  ];
+
+  const ICOON = {
+    telefoon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><rect x="6.5" y="2.5" width="11" height="19" rx="2.5"/><path d="M10.5 18.5h3"/></svg>',
+    tablet: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><rect x="4" y="2.5" width="16" height="19" rx="2.5"/><path d="M11 18.5h2"/></svg>',
+    desktop: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="3.5" width="19" height="13" rx="2"/><path d="M8.5 20.5h7M12 16.5v4"/></svg>',
+    naast: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="6" height="14" rx="1.5"/><rect x="10" y="5" width="12" height="10" rx="1.5"/></svg>',
+  };
+
+  /* Afmetingen in CSS-pixels: iPhone 15, iPad Air staand, laptop. */
+  const APPARATEN = {
+    telefoon: { naam: "Telefoon", b: 393, h: 852 },
+    tablet: { naam: "Tablet", b: 820, h: 1180 },
+    desktop: { naam: "Desktop", b: 1440, h: 900 },
+  };
+  const WEERGAVEN = [
+    { id: "telefoon", naam: "Telefoon", toets: "1", frames: ["telefoon"] },
+    { id: "tablet", naam: "Tablet", toets: "2", frames: ["tablet"] },
+    { id: "desktop", naam: "Desktop", toets: "3", frames: ["desktop"] },
+    { id: "naast", naam: "Naast elkaar", kort: "Beide", toets: "4", frames: ["telefoon", "desktop"] },
+  ];
+
+  /* ─── Toestand, onthouden per browser ─────────────────────────── */
+  function lees(sleutel, standaard) {
+    try { return localStorage.getItem("ontwerpcheck:" + sleutel) ?? standaard; } catch { return standaard; }
+  }
+  function bewaar(sleutel, waarde) {
+    try { localStorage.setItem("ontwerpcheck:" + sleutel, waarde); } catch { /* geen opslag: prima */ }
+  }
+  const staat = {
+    weergave: lees("weergave", null),
+    rol: lees("rol", "beheerder"),
+    pad: lees("pad", "/evenementen/NBC-2026-014"),
+  };
+  /* Zonder eerdere keuze: op een telefoon de telefoon, anders naast elkaar. */
+  if (!WEERGAVEN.some((w) => w.id === staat.weergave)) {
+    staat.weergave = window.matchMedia("(max-width: 700px)").matches ? "telefoon" : "naast";
+  }
+  if (!ROLLEN.some((r) => r.id === staat.rol)) staat.rol = "beheerder";
+  if (!ALLE_SCHERMEN.some((s) => s.pad === staat.pad)) staat.pad = ALLE_SCHERMEN[0].pad;
+
+  const $ = (id) => document.getElementById(id);
+
+  /* ─── Versie ──────────────────────────────────────────────────── */
+  if (VERSIE) {
+    const datum = new Date(VERSIE.gebouwd).toLocaleString("nl-NL", {
+      day: "numeric", month: "short", hour: "2-digit", minute: "2-digit",
+    });
+    $("versie").textContent =
+      `${VERSIE.branch} @ ${VERSIE.commit}${VERSIE.nietGecommit ? " + niet-gecommitte wijzigingen" : ""} · gebouwd ${datum}`;
+    $("versie").title = VERSIE.bericht;
+  }
+
+  /* ─── Knoppen opbouwen ────────────────────────────────────────── */
+  $("weergave").innerHTML = WEERGAVEN.map((w) =>
+    `<button type="button" data-weergave="${w.id}" title="${w.naam} (${w.toets})">${ICOON[w.id]}` +
+    `<span class="${w.kort ? "tekst-lang" : ""}">${w.naam}</span>` +
+    (w.kort ? `<span class="tekst-kort" hidden>${w.kort}</span>` : "") +
+    `<span class="toets">${w.toets}</span></button>`
+  ).join("");
+  $("rol").innerHTML = ROLLEN.map((r) =>
+    `<button type="button" data-rol="${r.id}">${r.naam}</button>`
+  ).join("");
+
+  function tekenLijst() {
+    $("lijst").innerHTML = SCHERMEN.map((g) =>
+      `<p class="lijst__kop">${g.groep}</p><ul class="lijst__groep">` +
+      g.items.map((s) =>
+        `<li><button type="button" data-pad="${s.pad}"${s.pad === staat.pad ? ' aria-current="true"' : ""}>` +
+        `${s.naam}${s.rollen.includes(staat.rol) ? "" : '<span class="slot">geen toegang</span>'}</button></li>`
+      ).join("") + "</ul>"
+    ).join("");
+    $("scherm-kiezer").innerHTML = SCHERMEN.map((g) =>
+      `<optgroup label="${g.groep}">` +
+      g.items.map((s) =>
+        `<option value="${s.pad}"${s.pad === staat.pad ? " selected" : ""}>` +
+        `${s.naam}${s.rollen.includes(staat.rol) ? "" : " (geen toegang)"}</option>`
+      ).join("") + "</optgroup>"
+    ).join("");
+  }
+
+  function tekenKnoppen() {
+    for (const b of $("weergave").querySelectorAll("button")) {
+      b.setAttribute("aria-pressed", String(b.dataset.weergave === staat.weergave));
+    }
+    for (const b of $("rol").querySelectorAll("button")) {
+      b.setAttribute("aria-pressed", String(b.dataset.rol === staat.rol));
+    }
+    /* Op een smal scherm past "Naast elkaar" niet; dan staat er "Beide". */
+    const smal = window.matchMedia("(max-width: 560px)").matches;
+    for (const s of $("weergave").querySelectorAll(".tekst-kort")) s.hidden = !smal;
+  }
+
+  function tekenMelding() {
+    const scherm = ALLE_SCHERMEN.find((s) => s.pad === staat.pad);
+    const melding = $("melding");
+    if (scherm && !scherm.rollen.includes(staat.rol)) {
+      const rol = ROLLEN.find((r) => r.id === staat.rol).naam;
+      melding.textContent = staat.rol === "housekeeping"
+        ? `${rol} mag niet op "${scherm.naam}"; de app stuurt door naar het personeelsverbruik.`
+        : `${rol} mag niet op "${scherm.naam}"; de app laat de melding "Geen toegang" zien.`;
+      melding.hidden = false;
+    } else {
+      melding.hidden = true;
+    }
+  }
+
+  /* ─── Frames ──────────────────────────────────────────────────── */
+  function bron() {
+    return `app/index.html?pad=${encodeURIComponent(staat.pad)}&rol=${staat.rol}`;
+  }
+
+  function tekenFrames() {
+    const weergave = WEERGAVEN.find((w) => w.id === staat.weergave);
+    $("frames").innerHTML = weergave.frames.map((id) => {
+      const a = APPARATEN[id];
+      return `<figure class="frame frame--${id}" data-apparaat="${id}" style="margin:0">` +
+        `<figcaption class="frame__label"><span>${a.naam}</span><span class="frame__maat">${a.b} × ${a.h}</span></figcaption>` +
+        `<div class="frame__venster"><iframe title="${a.naam}: ${staat.pad}" src="${bron()}" ` +
+        `width="${a.b}" height="${a.h}" loading="eager"></iframe></div></figure>`;
+    }).join("");
+    schaal();
+  }
+
+  /* Frames passen in het podium: naast elkaar even hoog, en als dat te smal
+     wordt onder elkaar op volle breedte. Nooit groter dan ware grootte. */
+  function schaal() {
+    const vlak = $("frames");
+    const frames = [...vlak.querySelectorAll(".frame")];
+    if (frames.length === 0) return;
+    const stijl = getComputedStyle(vlak);
+    const breed = vlak.clientWidth - parseFloat(stijl.paddingLeft) - parseFloat(stijl.paddingRight);
+    const hoog = vlak.clientHeight - parseFloat(stijl.paddingTop) - parseFloat(stijl.paddingBottom) - 26;
+    const rand = 12; /* frame-rand links + rechts */
+    const gat = 28;
+    const maten = frames.map((f) => APPARATEN[f.dataset.apparaat]);
+    /* Op een smal scherm (je telefoon) passen frames op de breedte en scrol
+       je in de hoogte; anders wordt alles postzegelformaat. */
+    const smal = breed < 600;
+
+    let schalen;
+    let gestapeld = false;
+    if (maten.length === 1) {
+      const a = maten[0];
+      /* Telefoon: liefst helemaal in beeld. Desktop en tablet: passend in de
+         breedte; scrollen in de hoogte mag. */
+      const opHoogte = a.b < 500 && !smal ? (hoog - rand) / a.h : Infinity;
+      schalen = [Math.min(1, (breed - rand) / a.b, opHoogte)];
+    } else {
+      /* Eerst op gelijke hoogte, dan samen terug in de breedte. Randen en
+         tussenruimte schalen niet mee. */
+      schalen = maten.map((a) => Math.min(1, (hoog - rand) / a.h));
+      const vast = rand * maten.length + gat * (maten.length - 1);
+      const inhoud = maten.reduce((som, a, i) => som + a.b * schalen[i], 0);
+      if (inhoud + vast > breed) schalen = schalen.map((s) => s * (breed - vast) / inhoud);
+      /* Een telefoon smaller dan 200px leest niet meer: dan onder elkaar. */
+      if (smal || maten[0].b * schalen[0] < 200) {
+        gestapeld = true;
+        schalen = maten.map((a) => Math.min(1, (breed - rand) / a.b));
+      }
+    }
+    vlak.classList.toggle("frames--gestapeld", gestapeld);
+
+    frames.forEach((f, i) => {
+      const a = maten[i];
+      const s = Math.max(0.1, schalen[i]);
+      const venster = f.querySelector(".frame__venster");
+      venster.style.width = `${Math.floor(a.b * s)}px`;
+      venster.style.height = `${Math.floor(a.h * s)}px`;
+      f.querySelector("iframe").style.transform = `scale(${s})`;
+      f.querySelector(".frame__maat").textContent =
+        `${a.b} × ${a.h}${s < 0.995 ? ` · ${Math.round(s * 100)}%` : ""}`;
+    });
+  }
+
+  /* ─── Wisselen ────────────────────────────────────────────────── */
+  function zet(wijziging) {
+    Object.assign(staat, wijziging);
+    for (const [k, v] of Object.entries(wijziging)) bewaar(k, v);
+    tekenKnoppen();
+    tekenLijst();
+    tekenMelding();
+    tekenFrames();
+  }
+
+  function stap(richting) {
+    const i = ALLE_SCHERMEN.findIndex((s) => s.pad === staat.pad);
+    const volgende = ALLE_SCHERMEN[(i + richting + ALLE_SCHERMEN.length) % ALLE_SCHERMEN.length];
+    zet({ pad: volgende.pad });
+    document.querySelector(`.lijst [aria-current="true"]`)?.scrollIntoView({ block: "nearest" });
+  }
+
+  $("weergave").addEventListener("click", (e) => {
+    const b = e.target.closest("button[data-weergave]");
+    if (b) zet({ weergave: b.dataset.weergave });
+  });
+  $("rol").addEventListener("click", (e) => {
+    const b = e.target.closest("button[data-rol]");
+    if (b) zet({ rol: b.dataset.rol });
+  });
+  $("lijst").addEventListener("click", (e) => {
+    const b = e.target.closest("button[data-pad]");
+    if (b) zet({ pad: b.dataset.pad });
+  });
+  $("scherm-kiezer").addEventListener("change", (e) => zet({ pad: e.target.value }));
+  $("vorige").addEventListener("click", () => stap(-1));
+  $("volgende").addEventListener("click", () => stap(1));
+  $("herlaad").addEventListener("click", () => tekenFrames());
+
+  /* Sneltoetsen: 1–4 weergave, ← → scherm, R herlaad. Niet als je in een
+     veld zit (ook niet in de app zelf: die vangt zijn eigen toetsen). */
+  window.addEventListener("keydown", (e) => {
+    if (e.metaKey || e.ctrlKey || e.altKey) return;
+    if (e.target.closest && e.target.closest("input, select, textarea")) return;
+    const weergave = WEERGAVEN.find((w) => w.toets === e.key);
+    if (weergave) zet({ weergave: weergave.id });
+    else if (e.key === "ArrowRight") stap(1);
+    else if (e.key === "ArrowLeft") stap(-1);
+    else if (e.key === "r" || e.key === "R") tekenFrames();
+  });
+
+  let wacht;
+  new ResizeObserver(() => {
+    cancelAnimationFrame(wacht);
+    wacht = requestAnimationFrame(() => { tekenKnoppen(); schaal(); });
+  }).observe($("frames"));
+
+  zet({});
+</script>

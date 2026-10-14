@@ -136,6 +136,7 @@ export function VoorraadTabel({
     <Table<VoorraadRegel>
       rowKey={(r) => r.product.id}
       rows={regels}
+      compact
       emptyMessage="Nog geen producten."
       totaal={["Totaal", null, formatNumber(totaal), null, ...(snelBoeken ? [null] : [])]}
       columns={[
@@ -177,6 +178,7 @@ export function VoorraadTabel({
               {
                 header: "Snel boeken",
                 align: "right" as const,
+                mobiel: "kop" as const,
                 render: (r: VoorraadRegel) => (
                   <span className="snelknoppen">
                     <button

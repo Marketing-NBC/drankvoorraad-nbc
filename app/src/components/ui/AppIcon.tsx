@@ -7,7 +7,7 @@ import { Icon, type IconName } from "../../design-system";
  * Icon, zodat ze naast elkaar niet uit de toon vallen. Bewust hier en niet in
  * design-system/, zodat die map een schone kopie blijft.
  */
-export type AppIconName = IconName | "doos" | "grafiek" | "gebruikers" | "scan" | "uitloggen";
+export type AppIconName = IconName | "doos" | "grafiek" | "gebruikers" | "scan" | "uitloggen" | "vrachtwagen";
 
 const eigenPaden: Record<string, JSX.Element> = {
   doos: (
@@ -34,6 +34,14 @@ const eigenPaden: Record<string, JSX.Element> = {
     <g fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round">
       <path d="M3 8V5.5A2.5 2.5 0 0 1 5.5 3H8M16 3h2.5A2.5 2.5 0 0 1 21 5.5V8M21 16v2.5a2.5 2.5 0 0 1-2.5 2.5H16M8 21H5.5A2.5 2.5 0 0 1 3 18.5V16" />
       <path d="M7 12h10" />
+    </g>
+  ),
+  vrachtwagen: (
+    <g fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M2.5 6.5A1.5 1.5 0 0 1 4 5h9a1.5 1.5 0 0 1 1.5 1.5V17h-5" />
+      <path d="M14.5 9h3.6a1.5 1.5 0 0 1 1.3.8l1.9 3.6V16a1 1 0 0 1-1 1h-1.3M2.5 6.5V16a1 1 0 0 0 1 1h1" />
+      <circle cx="7" cy="17.5" r="2" />
+      <circle cx="17" cy="17.5" r="2" />
     </g>
   ),
   uitloggen: (

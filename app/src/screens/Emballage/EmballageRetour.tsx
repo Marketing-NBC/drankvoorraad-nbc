@@ -226,6 +226,7 @@ export function EmballageRetour() {
           <Table<(typeof perSoort)[number]>
             rowKey={(r) => r.soort.id}
             rows={perSoort}
+            compact
             columns={[
               { header: "Soort", primair: true, render: (r) => r.soort.naam },
               { header: "Art.nr.", verbergOpMobiel: true, render: (r) => r.soort.artikelnummer ?? "—" },
@@ -236,6 +237,7 @@ export function EmballageRetour() {
                 ? [
                     {
                       header: "Borg per stuk",
+                      labelMobiel: "Borg",
                       align: "right" as const,
                       render: (r: (typeof perSoort)[number]) => formatCurrency(r.soort.borg),
                     },
@@ -257,12 +259,14 @@ export function EmballageRetour() {
           <Table<Retour>
             rowKey={(r) => r.id}
             rows={state.emballageRetouren.slice(0, 50)}
+            compact
             columns={[
               { header: "Wanneer", primair: true, render: (r) => formatDateTimeKort(r.aangemaaktOp) },
-              { header: "Leverancier", render: (r) => r.leverancier },
+              { header: "Leverancier", mobiel: "meta", render: (r) => r.leverancier },
               { header: "Bon", verbergOpMobiel: true, render: (r) => r.bonnummer ?? "—" },
               {
                 header: "Wat",
+                mobiel: "meta",
                 render: (r) => (
                   <span className="kaart-kop__cijfers">
                     {regelsVan(r).map((regel) => (
@@ -283,6 +287,7 @@ export function EmballageRetour() {
                     {
                       header: "Borg",
                       align: "right" as const,
+                      mobiel: "kop" as const,
                       render: (r: Retour) => formatCurrency(borgVan(r)),
                     },
                   ]

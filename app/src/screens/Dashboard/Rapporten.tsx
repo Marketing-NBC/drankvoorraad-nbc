@@ -19,7 +19,7 @@ type RapportId = "uitstaand" | "verschillen" | "derving";
 const rapporten: { id: RapportId; label: string; titel: string; toelichting: string }[] = [
   {
     id: "uitstaand",
-    label: "Per evenement",
+    label: "Uitstaand",
     titel: "Voorraad per evenement",
     toelichting:
       "Wat er per evenement is uitgegeven en nog niet retour is. Bij een lopend evenement staat dat er nog fysiek; bij een afgerond evenement is het het werkelijke verbruik — of een vergeten retour.",
@@ -136,27 +136,12 @@ export function Rapporten() {
 
   return (
     <>
-      <Card className="card--tabel">
-        <KaartKop
-          titel="Rapportages"
-          sub="één rapport tegelijk — exporteerbaar naar Excel"
-          rechts={
-            <Button
-              variant="ghost-dark"
-              size="sm"
-              icon={null}
-              className="no-print"
-              onClick={() => void exporteer()}
-              disabled={exporteert}
-            >
-              {exporteert ? "Bezig…" : "Exporteren (Excel)"}
-            </Button>
-          }
-        />
+      <Card>
+        <KaartKop titel="Rapportages" sub="één rapport tegelijk — exporteerbaar naar Excel" />
 
         {/* Eén rapport tegelijk: drie tabellen onder elkaar is op een telefoon
             eindeloos scrollen, en je kijkt toch naar één vraag per keer. */}
-        <div className="rapport-kiezer no-print" role="tablist" aria-label="Rapportage kiezen">
+        <div className="rapport-kiezer rapport-kiezer--gelijk no-print" role="tablist" aria-label="Rapportage kiezen">
           {rapporten.map((rapport) => (
             <button
               key={rapport.id}
@@ -178,6 +163,7 @@ export function Rapporten() {
             <Table<EvenementUitstaand>
               rows={uitstaand}
               rowKey={(r) => r.evenement.id}
+              compact
               emptyMessage="Er is nog niets naar een evenement uitgegeven."
               columns={[
                 { header: "Evenement", primair: true, render: (r) => r.evenement.naam },
@@ -195,6 +181,7 @@ export function Rapporten() {
             <Table<Voorraadverschil>
               rows={verschillen}
               rowKey={(r) => r.mutatieId}
+              compact
               emptyMessage="Nog geen tellingen afgerond, of alle tellingen kwamen precies uit."
               columns={[
                 { header: "Product", primair: true, render: (r) => productNaam.get(r.productId) ?? r.productId },
@@ -219,6 +206,7 @@ export function Rapporten() {
             <Table<DervingRegel>
               rows={derving}
               rowKey={(r) => r.product.id}
+              compact
               emptyMessage="Er is nog niets als beschadigd afgeboekt."
               columns={[
                 { header: "Product", primair: true, render: (r) => r.product.naam },
@@ -228,6 +216,15 @@ export function Rapporten() {
               ]}
             />
           ) : null}
+
+        {/* Onder het rapport, over de volle breedte: eerst kijk je, dan
+            exporteer je. Bovenin naast de titel wrapte hij op een telefoon
+            los boven de tabs. */}
+        <div className="button-row rapport-export no-print">
+          <Button variant="ghost-dark" icon={null} onClick={() => void exporteer()} disabled={exporteert}>
+            {exporteert ? "Bezig…" : "Exporteren naar Excel"}
+          </Button>
+        </div>
       </Card>
     </>
   );

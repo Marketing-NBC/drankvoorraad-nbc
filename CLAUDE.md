@@ -184,6 +184,15 @@ Voeg een pad toe met `?pad=`, bijvoorbeeld
 bedragen). De map `app/preview/` hoort niet in de
 publicatiebuild: die gebruikt `vite.config.ts`.
 
+Dezelfde preview bestaat als **ontwerpcheck** op claude.ai: een pagina waarin
+je per scherm wisselt tussen telefoon, tablet, desktop of telefoon en desktop
+naast elkaar, en tussen de drie rollen. `npm run build:ontwerpcheck` bouwt hem
+in `app/dist-preview/` (niet in git); de pagina met de knoppen staat in
+`app/preview/ontwerpcheck.html`. Komt er een scherm of route bij, zet hem dan
+ook in de lijst `SCHERMEN` daar, met dezelfde rollen als in `src/App.tsx`.
+Na een wijziging opnieuw bouwen en publiceren naar dezelfde artifact-URL:
+https://claude.ai/artifact/XP766mboQzgmXHog1doW3f
+
 ## Publiceren
 
 Een push naar `main` draait de tests, de typecontrole en de build, en zet het

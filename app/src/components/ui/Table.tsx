@@ -7,6 +7,14 @@ export interface TableColumn<T> {
   primair?: boolean;
   /** Verberg deze kolom op mobiel — voor secundaire info die op een klein scherm ruis is. */
   verbergOpMobiel?: boolean;
+  /** Kortere kolomkop als label in het mobiele kaartje ("Uit" i.p.v. "Uitgegeven"). */
+  labelMobiel?: string;
+  /**
+   * Plek in een compact kaartje (zie `compact`): "kop" staat rechts naast de
+   * titel (knoppen, een badge, het aantal), "meta" als grijze regel eronder
+   * zonder label. Zonder waarde wordt het een cijfer in de rij eronder.
+   */
+  mobiel?: "kop" | "meta";
   render: (row: T) => ReactNode;
 }
 
@@ -21,6 +29,12 @@ export interface TableProps<T> {
   totaal?: (ReactNode | null)[];
   className?: string;
   emptyMessage?: string;
+  /**
+   * Compact kaartje op mobiel: titel met de kop-cellen ernaast, daaronder de
+   * cijfers náást elkaar in plaats van elk op een eigen regel. Scheelt per
+   * rij de helft van de hoogte; gebruik het als de waarden kort zijn.
+   */
+  compact?: boolean;
 }
 
 /**
@@ -36,6 +50,7 @@ export function Table<T>({
   totaal,
   className = "",
   emptyMessage = "Geen gegevens.",
+  compact = false,
 }: TableProps<T>) {
   if (rows.length === 0) {
     return <p className="data-table__empty">{emptyMessage}</p>;
@@ -43,7 +58,12 @@ export function Table<T>({
 
   function celKlassen(col: TableColumn<T>): string | undefined {
     return (
-      [col.align === "right" && "num", col.primair && "cel-primair", col.verbergOpMobiel && "verberg-mobiel"]
+      [
+        col.align === "right" && "num",
+        col.primair && "cel-primair",
+        col.verbergOpMobiel && "verberg-mobiel",
+        col.mobiel && `cel-${col.mobiel}`,
+      ]
         .filter(Boolean)
         .join(" ") || undefined
     );
@@ -51,7 +71,7 @@ export function Table<T>({
 
   return (
     <div className="data-table-wrap">
-      <table className={["data-table", className].filter(Boolean).join(" ")}>
+      <table className={["data-table", compact && "data-table--compact", className].filter(Boolean).join(" ")}>
         <thead>
           <tr>
             {columns.map((col) => (
@@ -69,7 +89,7 @@ export function Table<T>({
           {rows.map((row) => (
             <tr key={rowKey(row)}>
               {columns.map((col) => (
-                <td key={col.header} data-label={col.header} className={celKlassen(col)}>
+                <td key={col.header} data-label={col.labelMobiel ?? col.header} className={celKlassen(col)}>
                   {col.render(row)}
                 </td>
               ))}
@@ -80,7 +100,7 @@ export function Table<T>({
           <tfoot>
             <tr>
               {columns.map((col, i) => (
-                <td key={col.header} data-label={col.header} className={celKlassen(col)}>
+                <td key={col.header} data-label={col.labelMobiel ?? col.header} className={celKlassen(col)}>
                   {totaal[i] ?? null}
                 </td>
               ))}

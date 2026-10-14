@@ -332,6 +332,8 @@ export function TellingDetail() {
           <KaartKop titel="Telregels" sub="alfabetisch · geteld schuift niet van plek" />
           {regelsLaden ? (
             <p className="app-laden">Telregels laden…</p>
+          ) : regels.length === 0 ? (
+            <p className="data-table__empty">Er staan geen producten in deze telling.</p>
           ) : (
             <div className="telling-lijst">
               {regels.map((regel) => {

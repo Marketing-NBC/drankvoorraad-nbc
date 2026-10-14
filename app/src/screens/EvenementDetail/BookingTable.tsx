@@ -39,6 +39,7 @@ export function BookingTable({
     <Table<ProductVerbruik>
       rowKey={(r) => r.productId}
       rows={regels}
+      compact
       emptyMessage="Nog geen boekingen voor dit evenement."
       totaal={[
         "Totaal",
@@ -69,12 +70,14 @@ export function BookingTable({
         },
         {
           header: "Uitgegeven",
+          labelMobiel: "Uit",
           align: "right",
           render: (r) => toon(r.productId, r.aantalUitgegeven),
         },
         { header: "Retour", align: "right", render: (r) => toon(r.productId, r.aantalRetour) },
         {
           header: "Werkelijk verbruik",
+          labelMobiel: "Verbruik",
           align: "right",
           render: (r) => <strong>{toon(r.productId, r.werkelijkVerbruik)}</strong>,
         },
@@ -83,6 +86,7 @@ export function BookingTable({
               {
                 header: "Snel boeken",
                 align: "right" as const,
+                mobiel: "kop" as const,
                 render: (r: ProductVerbruik) => {
                   const product = productenById.get(r.productId);
                   if (!product) return null;
