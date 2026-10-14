@@ -8,6 +8,7 @@
     "build": "node scripts/controleer-omgeving.mjs && tsc --noEmit && vite build",
     "preview": "vite preview",
     "preview:ui": "vite --config vite.preview.config.ts",
+    "build:ontwerpcheck": "node scripts/bouw-ontwerpcheck.mjs",
     "test": "vitest run",
     "lint": "eslint ."
   },
