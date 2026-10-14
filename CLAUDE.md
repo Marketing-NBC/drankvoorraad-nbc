@@ -134,7 +134,8 @@ dan opnieuw.
 
 Consumpties per persoon (`app/src/data/consumpties.ts`) rekenen met het
 werkelijke verbruik en `aantal_personen` op het evenement. Een flesje is één
-consumptie; fust en wijn tellen in glazen van 25 cl.
+consumptie; bier van de tap telt in glazen van 25 cl, wijn in glazen van
+125 ml.
 
 `importeer_metingen` is de enige RPC die de app zelf niet aanroept. Dat is de
 poort waar de koppeling met Franke en Aquablu straks op aansluit: een Edge

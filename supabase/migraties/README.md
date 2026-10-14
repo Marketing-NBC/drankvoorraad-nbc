@@ -52,6 +52,7 @@ trigger en de functie zijn weg. De migraties hieronder gaan daarvan uit.
 | `025_leveranciers_swinkels_bidfood.sql` | Alleen Swinkels en Bidfood als leverancier; Coca-Cola en Spadel gaan naar Bidfood. |
 | `026_rollen_medewerker_housekeeping.sql` | Magazijnmedewerker en evenementmanager worden samen `medewerker`; nieuwe rol `housekeeping` (alleen kantine en kroeg). **Daarna `gebruikers` opnieuw neerzetten.** |
 | `027_uitkomsten_robin.sql` | Aantal personen bij een evenement; afronden alleen door de beheerder; leveringen alleen naar magazijn of koelcel; artikelnummers van de leverancier; reden bij een tekort; producten voor personeel; emballage volgens de retourbon van Swinkels; Coca-Cola weer bij Swinkels. Draai na 026. |
+| `028_antwoorden_robin_checklist.sql` | Antwoorden van Robin: Swinkels levert alles (Spa en blikje erbij), Chaudfontaine is Spa blauw, de Spa-krat vervalt, geen Prosecco in de kantine en de kroeg. |
 
 ## Waarom `010` en niet `1`
 

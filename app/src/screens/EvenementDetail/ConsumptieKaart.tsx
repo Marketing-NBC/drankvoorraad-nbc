@@ -96,7 +96,7 @@ export function ConsumptieKaart({
       </div>
       <span className="kaart-kop__sub">
         {formatNumber(Math.round(consumpties.totaal))} consumpties in totaal. Een flesje is één consumptie;
-        fust en wijn tellen in glazen van 25 cl.
+        bier van de tap telt in glazen van 25 cl, wijn in glazen van 125 ml.
         {consumpties.perPersoon === undefined ? " Vul het aantal personen in voor het cijfer per persoon." : ""}
       </span>
     </>
