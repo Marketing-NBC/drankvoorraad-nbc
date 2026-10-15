@@ -9,6 +9,11 @@
     "preview": "vite preview",
     "preview:ui": "vite --config vite.preview.config.ts",
     "build:ontwerpcheck": "node scripts/bouw-ontwerpcheck.mjs",
+    "lokaal:start": "node scripts/testomgeving.mjs start",
+    "lokaal:kopie": "node scripts/testomgeving.mjs kopie",
+    "lokaal:herstel": "node scripts/testomgeving.mjs herstel",
+    "lokaal:app": "node scripts/testomgeving.mjs app",
+    "lokaal:stop": "node scripts/testomgeving.mjs stop",
     "test": "vitest run",
     "lint": "eslint ."
   },

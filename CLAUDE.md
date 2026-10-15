@@ -193,6 +193,27 @@ ook in de lijst `SCHERMEN` daar, met dezelfde rollen als in `src/App.tsx`.
 Na een wijziging opnieuw bouwen en publiceren naar dezelfde artifact-URL:
 https://claude.ai/artifact/XP766mboQzgmXHog1doW3f
 
+## Testomgeving met een kopie van productie
+
+`npm run lokaal:kopie` (vanuit `app/`) haalt het schema en de gegevens van
+productie op met `supabase db dump`, alleen lezend. Die gaan in een lokale
+Supabase in Docker (`supabase/config.toml`). `npm run lokaal:app` start de app
+daartegen; een gele balk (`TestomgevingBalk`) laat zien dat het niet
+productie is. De uitleg voor de gebruiker staat in `TESTOMGEVING.md`; het
+script in `app/scripts/testomgeving.mjs`.
+
+Twee dingen zitten bewust in dat script:
+- Tijdens het laden staan de triggers uit (`session_replication_role =
+  replica`). Anders telt de voorraadtrigger elke mutatie uit de kopie nog een
+  keer op, en weigert `controleer_mutatie_rol` alles omdat niemand ingelogd is.
+- De trigger `on_auth_user_created` op `auth.users` zit niet in de dump (het
+  schema `auth` is van Supabase zelf) en wordt na het laden opnieuw gezet.
+  Zonder die trigger krijgt een nieuw account geen profiel.
+
+Komt er een nieuwe trigger op een tabel in `auth` bij, zet die dan ook in
+`laadKopie()`. De kopie (`supabase/.kopie/`), `app/.env.lokaal` en
+`app/.env.productie-db` staan niet in git.
+
 ## Publiceren
 
 Een push naar `main` draait de tests, de typecontrole en de build, en zet het
@@ -232,8 +253,9 @@ kapot — het zijn keuzes die passen bij een PoC en knellen zodra het menens wor
   terugdraaipad.
 - **Zware schermen.** Ongeveer de helft van de code zit in `app/src/screens/`.
   Logica en weergave lopen door elkaar, wat testen en wijzigen duur maakt.
-- **Eén omgeving.** Er is geen test-Supabase naast productie, dus experimenteren
-  gebeurt op echte data.
+- **Eén gedeelde omgeving.** Er is geen test-Supabase in de cloud naast
+  productie. Wel een lokale testomgeving met een kopie van productie (zie
+  hieronder), maar die draait op één computer en is niet te delen.
 
 Verder is `npm run lint` stuk: er is geen `eslint.config.js` voor ESLint 9. Lint
 zit niet in het publicatiepad, dus het houdt niets tegen — maar het betekent ook

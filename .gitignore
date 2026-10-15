@@ -48,3 +48,7 @@ Thumbs.db
 # app/src/design-system; de zip hoort thuis in je bestandsopslag,
 # niet in de repository.
 NBC Design System-handoff.zip
+
+supabase/.kopie/
+supabase/.temp/
+supabase/.branches/
