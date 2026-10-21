@@ -247,16 +247,6 @@ export interface Tellingregel {
  */
 export type TellingReden = "over_datum" | "kapot" | "anders";
 
-/** Welk product er hoort bij een artikelnummer op de afleverbon. */
-export interface LeverancierArtikel {
-  leverancier: string;
-  artikelnummer: string;
-  omschrijving?: string;
-  productId: string;
-  /** Stuks in één eenheid op de bon: krat 24, tray 12, fust 1. */
-  stuksPerEenheid: number;
-}
-
 /** Personeelsverbruik: gaat van de kantine of de kroeg af en nergens heen. */
 export const PERSONEELSVERBRUIK: MutatieType = "personeelsverbruik";
 

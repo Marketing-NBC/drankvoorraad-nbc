@@ -1,32 +1,23 @@
 # Edge Functions
 
-Serverwerk dat niet in de browser kan. Twee functies:
+Serverwerk dat niet in de browser kan. Eén functie:
 
 - `gebruikers` — accounts aanmaken, wachtwoord zetten, toegang intrekken.
-- `lees-bon` — een foto van de afleverbon laten lezen door Claude (bonnummer,
-  leverancier en regels). Leest alleen; boekt en bewaart niets. **Nog niet in
-  gebruik:** de app leest de bon nu zelf met tekstherkenning op de telefoon
-  (`app/src/lib/bonHerkenning.ts`). Komt er later een API-sleutel, dan levert
-  deze functie dezelfde vorm (`GelezenBon` in `app/src/data/bon.ts`) en is
-  het een kleine wissel in `BonLezen.tsx`.
+
+De functie `lees-bon` (een foto van de afleverbon laten lezen) is weg: de bon
+wordt altijd met de hand overgenomen. Staat hij nog in Supabase, haal hem dan
+weg met `supabase functions delete lees-bon`, en het geheim
+`ANTHROPIC_API_KEY` mag dan ook weg.
 
 ## Neerzetten
 
 ```
 supabase link --project-ref <project-ref>
 supabase functions deploy gebruikers
-supabase secrets set ANTHROPIC_API_KEY=sk-ant-...
-supabase functions deploy lees-bon
 ```
 
 Na migratie 026 moet `gebruikers` opnieuw neergezet worden: de rollen zijn
 `beheerder`, `medewerker` en `housekeeping`.
-
-`lees-bon` gebruikt de API-sleutel van Anthropic. Die staat alleen als geheim in
-Supabase en komt nooit in de browser. Zonder sleutel geeft de functie netjes
-"Bon lezen staat nog niet aan" terug en vult het magazijn de bon met de hand
-in. Elke gelezen bon kost een paar cent. De functie controleert zelf of de
-aanvrager beheerder of medewerker is.
 
 `SUPABASE_URL` en `SUPABASE_SERVICE_ROLE_KEY` zet Supabase zelf klaar. Er hoeft
 dus geen sleutel ergens ingevuld te worden — en dat is precies de bedoeling:

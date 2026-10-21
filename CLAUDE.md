@@ -67,23 +67,17 @@ voorraadstand op rust:
   voorraadbewegingen gaan. Het verbruik telt wel mee in de marge.
 - **Een levering boekt wat er werkelijk stond**, nooit wat de bon beweert. Het
   verschil blijft staan als openstaand punt richting de leverancier tot iemand
-  het afhandelt. Zie `supabase/migraties/015_leveringen.sql`. Een gelezen
-  foto van de bon vult alleen "op de bon" in. Een levering gaat naar het
-  hoofdmagazijn of een koelcel, van Swinkels of Bidfood.
+  het afhandelt. Zie `supabase/migraties/015_leveringen.sql`. Een levering
+  gaat naar het hoofdmagazijn of een koelcel, van Swinkels of Bidfood.
+- **De afleverbon wordt altijd met de hand overgenomen.** Geen foto, geen
+  tekstherkenning: dat is bewust weggehaald. Het magazijn vult leverancier,
+  bonnummer en per product "op de bon" en "werkelijk" zelf in.
 - **De wachtrij verliest nooit een boeking en boekt er nooit één dubbel.** Bij
   een haperende verbinding wacht de boeking op de telefoon; bij een weigering
   van de database krijgt de gebruiker de melding meteen. Het onderscheid zit in
   `isNetwerkfout` (`app/src/lib/wachtrij.ts`), en dubbel boeken wordt
   tegengehouden door een unieke index op `client_id`. Tellingen gaan er bewust
   niet in: die rekenen af tegen de voorraad van dát moment.
-- **Een foto van de afleverbon verlaat de telefoon niet.** Tekstherkenning
-  (Tesseract) draait in de browser: `app/src/lib/bonHerkenning.ts` leest de
-  foto, `app/src/data/bonTekst.ts` maakt er bonnummer en regels van en zegt
-  waar hij twijfelt. De herkenning zelf komt de eerste keer van
-  cdn.jsdelivr.net. De Edge Function `supabase/functions/lees-bon` (Claude)
-  staat klaar voor later, maar de app gebruikt hem niet zolang er geen
-  API-sleutel is; die sleutel hoort dan alleen in Supabase, nooit in de
-  browser.
 - **De servicesleutel komt nooit in de browser.** Accounts aanmaken, een
   wachtwoord zetten en toegang intrekken gaat via de Edge Function
   `supabase/functions/gebruikers`, die zelf controleert of de aanvrager
@@ -112,7 +106,7 @@ Er is geen backend van onszelf: de browser praat rechtstreeks met Supabase,
 afgeschermd door RLS-policies. Serverlogica zit in Postgres, aangeroepen via
 RPC's: `start_telling`, `rond_telling_af`, `annuleer_telling`, `maak_pakbon`,
 `stel_min_voorraad`, `boek_meting`, `boek_levering`, `handel_verschil_af`,
-`gebruikers_overzicht`, `boek_emballage_retour`, `koppel_artikel`, en de
+`gebruikers_overzicht`, `boek_emballage_retour`, en de
 bedragfuncties uit migratie 019.
 
 Lege emballage die terug gaat naar de leverancier wordt vastgelegd op de
@@ -122,15 +116,9 @@ Dat raakt de drankvoorraad niet; het is de controle op de creditnota. In de
 app is het de tweede kop onder Magazijn. De retourbon wordt met de hand
 overgenomen van het papier.
 
-Welk product bij een artikelnummer op de afleverbon hoort, staat in
-`leverancier_artikelen` (met het aantal stuks per eenheid: krat 24, tray 12).
-Een onbekend artikel koppelt het magazijn bij het uitpakken; de app onthoudt
-het via `koppel_artikel`. De omzetting van een gelezen bon naar regels zit in
-`app/src/data/bon.ts`; een artikelnummer dat op één cijfer na gelijk is aan
-een bekend nummer telt als dat artikel, met de markering "nakijken". De test
-`bonTekst.test.ts` draait op de echte herkende tekst van een gekreukte bon
-van Swinkels; verander je de instellingen van de herkenning, maak die fixture
-dan opnieuw.
+De tabel `leverancier_artikelen` en de RPC `koppel_artikel` (migratie 027)
+staan nog in de database, maar de app gebruikt ze niet meer: ze hoorden bij
+het lezen van een foto van de afleverbon, en dat is eruit.
 
 Consumpties per persoon (`app/src/data/consumpties.ts`) rekenen met het
 werkelijke verbruik en `aantal_personen` op het evenement. Een flesje is één
@@ -153,8 +141,7 @@ geen magic link, geen OAuth en geen wachtwoordherstel — dus ook geen
 redirect-URL's die in Supabase geconfigureerd moeten staan.
 
 Serverwerk dat niet in Postgres kan staat in `supabase/functions/`: de
-functies `gebruikers` en `lees-bon` (die laatste nog niet in gebruik). Die
-moeten apart neergezet worden (`supabase functions deploy …`) — zie de README
+functie `gebruikers`. Die moet apart neergezet worden (`supabase functions deploy …`) — zie de README
 daar, inclusief wat er in het dashboard nog uit moet staan.
 
 ## Databasewijzigingen
@@ -223,7 +210,7 @@ afmaken ervan. Deze paragraaf mag weg zodra dat plan er ligt.
 Vier dingen die bij "van PoC naar af" waarschijnlijk terugkomen. Geen van deze is
 kapot — het zijn keuzes die passen bij een PoC en knellen zodra het menens wordt:
 
-- **Testdekking.** 121 tests over rekenlogica (`app/src/data/`), de wachtrij
+- **Testdekking.** 106 tests over rekenlogica (`app/src/data/`), de wachtrij
   (`app/src/lib/`) en de Excel-export (`app/src/utils/`). Geen enkel scherm of
   gebruikersstroom is getest, terwijl daar de meeste code zit.
 - **Databasemigraties.** Half opgelost: nieuwe wijzigingen staan genummerd in

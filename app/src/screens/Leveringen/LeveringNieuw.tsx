@@ -7,13 +7,10 @@ import { KaartKop } from "../../components/ui/KaartKop";
 import { ProductKiezer } from "../../components/ui/ProductKiezer";
 import { Select } from "../../components/ui/Select";
 import { useAppState } from "../../context/AppStateContext";
-import { bonNaarVoorstel, herkenLeverancier, type Bonvoorstel, type GelezenBon } from "../../data/bon";
 import { LEVERANCIERS, type NieuweLeveringregel, type Product } from "../../data/types";
 import { invoer, omschrijfAantal, verpakkingLabel } from "../../data/verpakking";
 import { foutBericht } from "../../utils/fouten";
 import { ROUTES } from "../../routes/routes";
-import { BonLezen } from "./BonLezen";
-import { OnbekendeArtikelen } from "./OnbekendeArtikelen";
 
 type Stap = "bon" | "regels" | "controleren";
 
@@ -27,7 +24,8 @@ const stappen: { id: Stap; label: string }[] = [
  * Levering aannemen — het scherm dat bij de kar hoort.
  *
  * Eén ding tegelijk, grote knoppen, scannen als eerste manier om een product
- * te kiezen. Per regel twee getallen: wat er op de bon staat en wat er
+ * te kiezen. De bon wordt met de hand overgenomen: geen foto, geen
+ * tekstherkenning. Per regel twee getallen: wat er op de bon staat en wat er
  * werkelijk is. Die twee mogen verschillen, en dat is precies het punt — de
  * voorraad gaat omhoog met wat er werkelijk stond, en het verschil blijft
  * staan als openstaand punt richting de leverancier.
@@ -37,7 +35,7 @@ const stappen: { id: Stap; label: string }[] = [
  * herkent het kenmerk van de telefoon.
  */
 export function LeveringNieuw() {
-  const { state, boekLevering, hoofdmagazijn, koppelArtikel } = useAppState();
+  const { state, boekLevering, hoofdmagazijn } = useAppState();
   const navigate = useNavigate();
 
   const [stap, setStap] = useState<Stap>("bon");
@@ -56,14 +54,6 @@ export function LeveringNieuw() {
   const [aantalWerkelijk, setAantalWerkelijk] = useState(0);
   const [nieuwProduct, setNieuwProduct] = useState(false);
 
-  /* Uit de foto van de bon: wat herkend is staat meteen in `regels`, wat nog
-     geen product heeft wacht hier op koppelen. */
-  const [teKoppelen, setTeKoppelen] = useState<Bonvoorstel[]>([]);
-  const [vanDeBon, setVanDeBon] = useState<Set<string>>(new Set());
-  /** Regels waar de tekstherkenning twijfelde: die moet iemand nakijken. */
-  const [nakijken, setNakijken] = useState<Set<string>>(new Set());
-  const [bonMelding, setBonMelding] = useState<string | null>(null);
-
   const boekbareProducten = useMemo(
     () => state.producten.filter((p) => !p.voorraadloos),
     [state.producten]
@@ -81,66 +71,6 @@ export function LeveringNieuw() {
   const magazijnen = state.locaties.filter(
     (l) => !l.voorPersoneel && (l.type === "magazijn" || l.type === "koelcel")
   );
-
-  /** Regels erbij, opgeteld per product: twee bonregels kunnen bij één product horen. */
-  function voegBonregelsToe(nieuw: NieuweLeveringregel[]) {
-    setRegels((huidig) => {
-      const per = new Map(huidig.map((r) => [r.productId, { ...r }]));
-      for (const r of nieuw) {
-        const bestaand = per.get(r.productId);
-        if (bestaand) {
-          bestaand.aantalBon += r.aantalBon;
-          bestaand.aantalWerkelijk += r.aantalWerkelijk;
-        } else {
-          per.set(r.productId, { ...r });
-        }
-      }
-      return Array.from(per.values());
-    });
-    setVanDeBon((huidig) => new Set([...huidig, ...nieuw.map((r) => r.productId)]));
-  }
-
-  function verwerkBon(bon: GelezenBon) {
-    const herkend = herkenLeverancier(bon.leverancier, LEVERANCIERS) ?? leverancier;
-    if (herkend) setLeverancier(herkend);
-    if (bon.bonnummer) setBonnummer(bon.bonnummer);
-
-    const voorstel = bonNaarVoorstel(bon, herkend || undefined, state.leverancierArtikelen);
-    const bekend = voorstel.filter((v) => v.productId && v.aantalBon > 0);
-    /* Werkelijk begint gelijk aan de bon, net als bij met de hand invullen:
-       meestal klopt hij. Wijkt iets af, dan pas je dat in de volgende stap aan. */
-    voegBonregelsToe(
-      bekend.map((v) => ({ productId: v.productId!, aantalBon: v.aantalBon, aantalWerkelijk: v.aantalBon }))
-    );
-    const onbekend = voorstel.filter((v) => !v.productId && v.eenheden > 0);
-    setTeKoppelen(onbekend);
-    const twijfel = bekend.filter((v) => v.onzeker);
-    setNakijken(new Set(twijfel.map((v) => v.productId!)));
-    setBonMelding(
-      `${bon.regels.length} ${bon.regels.length === 1 ? "regel" : "regels"} gelezen` +
-        (onbekend.length > 0 ? `, ${onbekend.length} nog te koppelen bij het uitpakken` : "") +
-        (twijfel.length > 0 ? `, ${twijfel.length} om na te kijken` : "") +
-        ". Mist er een regel, voeg hem dan met de hand toe." +
-        (bon.leverancier && !herkenLeverancier(bon.leverancier, LEVERANCIERS)
-          ? ` Leverancier "${bon.leverancier}" is geen Swinkels of Bidfood — kies hem zelf.`
-          : "")
-    );
-  }
-
-  async function koppel(regel: Bonvoorstel, productId: string, stuksPerEenheid: number, onthouden: boolean) {
-    if (onthouden && leverancier && regel.regel.artikelnummer) {
-      await koppelArtikel({
-        leverancier,
-        artikelnummer: regel.regel.artikelnummer,
-        omschrijving: regel.regel.omschrijving,
-        productId,
-        stuksPerEenheid,
-      });
-    }
-    const aantal = regel.eenheden * stuksPerEenheid;
-    voegBonregelsToe([{ productId, aantalBon: aantal, aantalWerkelijk: aantal }]);
-    setTeKoppelen((huidig) => huidig.filter((r) => r !== regel));
-  }
 
   function voegRegelToe() {
     if (!productId) return setFout("Kies eerst een product.");
@@ -218,8 +148,6 @@ export function LeveringNieuw() {
         <Card>
           <KaartKop titel="Wat komt er binnen?" sub="van de bon van de leverancier" />
           <div className="product-form">
-            <BonLezen onGelezen={verwerkBon} />
-            {bonMelding ? <p className="melding-goed">{bonMelding}</p> : null}
             <div className="field-group">
               <label className="field-group__label" htmlFor="levering-naam">
                 Wie neemt aan? <span className="field-group__hint">jouw naam, ook bij een gedeeld account</span>
@@ -267,13 +195,6 @@ export function LeveringNieuw() {
 
       {stap === "regels" ? (
         <>
-          <OnbekendeArtikelen
-            regels={teKoppelen}
-            producten={boekbareProducten}
-            kanOnthouden={Boolean(leverancier)}
-            onKoppel={koppel}
-            onOverslaan={(regel) => setTeKoppelen((huidig) => huidig.filter((r) => r !== regel))}
-          />
           <Card>
             <KaartKop
               titel="Pak uit en tel"
@@ -341,13 +262,6 @@ export function LeveringNieuw() {
             </div>
           </Card>
 
-          {vanDeBon.size > 0 ? (
-            <p className="melding-waarschuwing">
-              De regels van de bon staan er al, met werkelijk gelijk aan de bon. Kijk de regels met
-              "nakijken" na tegen het papier — daar twijfelde de herkenning. Tel na wat er staat en tik
-              een regel aan als het anders is: de voorraad gaat omhoog met wat er werkelijk is.
-            </p>
-          ) : null}
           {regels.length > 0 ? (
             <Card className="card--tabel">
               <KaartKop titel={`${regels.length} regel${regels.length === 1 ? "" : "s"}`} sub="tik om te wijzigen" />
@@ -366,21 +280,9 @@ export function LeveringNieuw() {
                           setAantalBon(r.aantalBon / factor);
                           setAantalWerkelijk(r.aantalWerkelijk / factor);
                           setRegels((huidig) => huidig.filter((x) => x.productId !== r.productId));
-                          setNakijken((huidig) => {
-                            const rest = new Set(huidig);
-                            rest.delete(r.productId);
-                            return rest;
-                          });
                         }}
                       >
-                        <span className="regel-lijst__naam">
-                          {p?.naam ?? r.productId}
-                          {nakijken.has(r.productId) ? (
-                            <Badge variant="gold">nakijken</Badge>
-                          ) : vanDeBon.has(r.productId) ? (
-                            <span className="field-group__hint"> van de bon</span>
-                          ) : null}
-                        </span>
+                        <span className="regel-lijst__naam">{p?.naam ?? r.productId}</span>
                         <span className="regel-lijst__cijfers">
                           {p ? omschrijfAantal(p, r.aantalWerkelijk) : r.aantalWerkelijk}
                           {afwijkend ? (

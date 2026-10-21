@@ -1542,11 +1542,6 @@ body { background: var(--canvas); }
 .product-naam__hint { font: var(--t-ui-xs); color: var(--fg-muted); }
 
 .veld-toelichting { font: var(--t-ui-xs); color: var(--fg-muted); margin: 6px 0 0; }
-/* Fotoknop over de volle breedte, de uitleg eronder in plaats van ernaast. */
-.bon-lezen { display: flex; flex-direction: column; gap: 8px; }
-.bon-lezen > .btn { width: 100%; justify-content: center; }
-.bon-lezen .veld-toelichting { display: block; margin: 0; }
-@media (min-width: 640px) { .bon-lezen > .btn { width: auto; align-self: flex-start; } }
 
 .kaart-tekst { font: var(--t-ui); color: var(--nbc-stone-600); margin: 0 0 4px; }
 .kaart-actie { padding: 4px 0 2px; }

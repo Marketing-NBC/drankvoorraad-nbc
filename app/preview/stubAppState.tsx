@@ -219,11 +219,6 @@ const emballage = [
   { id: "e8", naam: "Koolzuurcilinder", artikelnummer: "800158", leverancier: "Swinkels", actief: true, borg: 120 },
   { id: "e9", naam: "Big bag PET (2,5 m)", artikelnummer: "800136", leverancier: "Swinkels", actief: true, borg: 0 },
 ];
-const leverancierArtikelen = [
-  { leverancier: "Swinkels", artikelnummer: "117919", productId: "p2", stuksPerEenheid: 24 },
-  { leverancier: "Swinkels", artikelnummer: "200084", productId: "p4", stuksPerEenheid: 24 },
-  { leverancier: "Swinkels", artikelnummer: "108244", productId: "p1", stuksPerEenheid: 1 },
-];
 const emballageRetouren = [
   { id: "er1", leverancier: "Swinkels", bonnummer: "800758649", gebruikerId: "u2", aangemaaktOp: dagenGeleden(3) },
   { id: "er2", leverancier: "Swinkels", gebruikerId: "u4", aangemaaktOp: dagenGeleden(9) },
@@ -246,7 +241,7 @@ const state = {
   zalen, evenementZalen, vulplekken, standaardvulling, koppelingen, machines, metingen,
   leveringen, leveringregels,
   emballage: zietBedragen ? emballage : emballage.map((e) => ({ ...e, borg: 0 })),
-  emballageRetouren, emballageRetourregels, leverancierArtikelen,
+  emballageRetouren, emballageRetourregels,
 };
 
 /* Eén wachtende boeking, zodat de balk in de preview te beoordelen is. */
@@ -314,7 +309,6 @@ const waarde: Record<string, unknown> = {
   boekLevering: async () => ({ inWachtrij: false }),
   handelVerschilAf: niets,
   boekEmballageRetour: async () => "er1",
-  koppelArtikel: niets,
   wachtrij,
   verstuurWachtrij: niets,
   verwijderUitWachtrij: () => {},
