@@ -26,6 +26,18 @@ describe("barcodes", () => {
     expect(hoortBijProduct(cola, " 15449000000993\n")).toBe(true);
   });
 
+  it("ziet UPC-A en dezelfde EAN-13 met een 0 ervoor als één code", () => {
+    const upc = product({ id: "upc", barcode: "0012345678905" });
+    expect(zoekOpBarcode([cola, upc], "012345678905")?.id).toBe("upc");
+    const kort = product({ id: "kort", barcode: "012345678905" });
+    expect(zoekOpBarcode([cola, kort], "0012345678905")?.id).toBe("kort");
+  });
+
+  it("alleen een 0 vooraan maakt geen verschil", () => {
+    expect(hoortBijProduct(product({ barcode: "5449000000996" }), "05449000000996")).toBe(true);
+    expect(hoortBijProduct(product({ barcode: "5449000000996" }), "449000000996")).toBe(false);
+  });
+
   it("koppelt een lege code nooit aan een product zonder barcode", () => {
     expect(hoortBijProduct(product({}), "")).toBe(false);
     expect(zoekOpBarcode([product({})], "  ")).toBeUndefined();
