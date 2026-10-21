@@ -8,7 +8,18 @@ import type { Product } from "./types";
 export function hoortBijProduct(product: Product, code: string): boolean {
   const c = code.trim();
   if (!c) return false;
-  return product.barcode === c || product.barcodeVerpakking === c;
+  return zelfdeCode(product.barcode, c) || zelfdeCode(product.barcodeVerpakking, c);
+}
+
+/**
+ * Een UPC-A van 12 cijfers is dezelfde streep als de EAN-13 met een 0 ervoor.
+ * De ene lezer geeft de één, de andere de ander (iPhone en Android verschillen
+ * hierin), dus beide horen bij hetzelfde product.
+ */
+function zelfdeCode(opgeslagen: string | undefined, code: string): boolean {
+  if (!opgeslagen) return false;
+  const o = opgeslagen.trim();
+  return o === code || o === `0${code}` || `0${o}` === code;
 }
 
 export function zoekOpBarcode(producten: Product[], code: string): Product | undefined {

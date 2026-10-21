@@ -1,6 +1,8 @@
 import { useEffect, useLayoutEffect, useRef, useState, type FormEvent } from "react";
 import { createPortal } from "react-dom";
 import { Badge, Button } from "../../design-system";
+import { heeftNatieveLezer, startLezer, type Lezer } from "../../lib/barcodeLezer";
+import { heeftZaklamp, startAchtercamera, stopStream, zetZaklamp } from "../../lib/camera";
 import { meldScan, ontgrendelGeluid } from "../../lib/scanfeedback";
 
 /**
@@ -11,18 +13,16 @@ import { meldScan, ontgrendelGeluid } from "../../lib/scanfeedback";
 export type ScanUitkomst = void | string;
 
 /**
- * Camerascanner voor streepjescodes (EAN/UPC) en QR, als scherm over de hele
- * telefoon. Draait volledig in de browser via ZXing — geen native app nodig.
- * Werkt op Android Chrome en iOS Safari, mits de pagina via HTTPS geserveerd
- * wordt (of via localhost).
+ * Camerascanner voor streepjescodes (EAN/UPC, ITF op de krat) en QR, als
+ * scherm over de hele telefoon. Draait volledig in de browser — geen native
+ * app nodig. Werkt op Android Chrome en iOS Safari, mits de pagina via HTTPS
+ * geserveerd wordt (of via localhost).
+ *
+ * Welke camera en welke lezer: zie `lib/camera.ts` en `lib/barcodeLezer.ts`.
  *
  * Eén scan per keer: na een geslaagde scan gaat het scherm vanzelf dicht en
  * roept het `onSluit` aan. De aanroeper sluit het dus niet zelf vanuit
  * `onGevonden`.
- *
- * ZXing wordt pas ingeladen zodra er daadwerkelijk gescand wordt: de
- * decoder is bijna een halve megabyte, en de meeste paginabezoeken (zeker
- * op mobiel netwerk tijdens een evenement) scannen nooit.
  */
 export function BarcodeScanner({
   open,
@@ -63,7 +63,8 @@ function ScanScherm({
 }) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const sluitknopRef = useRef<HTMLButtonElement>(null);
-  const controlsRef = useRef<{ stop: () => void; switchTorch?: (aan: boolean) => Promise<void> }>();
+  const streamRef = useRef<MediaStream>();
+  const lezerRef = useRef<Lezer>();
   const onGevondenRef = useRef(onGevonden);
   const onSluitRef = useRef(onSluit);
   /** Leest de decoder-callback, die buiten de React-cyclus draait. */
@@ -145,27 +146,32 @@ function ScanScherm({
 
     (async () => {
       try {
-        const { BrowserMultiFormatReader } = await import("@zxing/browser");
-        if (gestopt) return;
-
-        const reader = new BrowserMultiFormatReader();
-        const c = await reader.decodeFromVideoDevice(
-          undefined,
-          videoRef.current ?? undefined,
-          (resultaat) => {
-            if (gestopt || !resultaat) return;
-            verwerk(resultaat.getText());
-          }
-        );
-
+        // De ingebouwde lezer kan een groter beeld snel aan; ZXing in
+        // JavaScript niet, en 720p is voor een streepjescode genoeg.
+        const natief = await heeftNatieveLezer();
+        const stream = await startAchtercamera(natief ? 1920 : 1280, natief ? 1080 : 720);
         if (gestopt) {
-          c.stop();
+          stopStream(stream);
           return;
         }
-        controlsRef.current = c;
+        streamRef.current = stream;
+
+        const video = videoRef.current;
+        if (!video) return;
+        video.srcObject = stream;
+        await video.play().catch(() => undefined);
+
+        const lezer = await startLezer(stream, video, (code) => {
+          if (!gestopt) verwerk(code);
+        });
+        if (gestopt) {
+          lezer.stop();
+          return;
+        }
+        lezerRef.current = lezer;
         setCamera("bezig");
-        // ZXing zet switchTorch alleen als de camera een zaklamp heeft.
-        if (c.switchTorch) setZaklamp(false);
+        const track = stream.getVideoTracks()[0];
+        if (track && heeftZaklamp(track)) setZaklamp(false);
       } catch (err: unknown) {
         if (gestopt) return;
         setCamera("fout");
@@ -183,18 +189,20 @@ function ScanScherm({
 
     return () => {
       gestopt = true;
-      controlsRef.current?.stop();
-      controlsRef.current = undefined;
+      lezerRef.current?.stop();
+      lezerRef.current = undefined;
+      if (streamRef.current) stopStream(streamRef.current);
+      streamRef.current = undefined;
     };
     // verwerk leest alles via refs; de camera start één keer per scherm.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   async function wisselZaklamp() {
-    const c = controlsRef.current;
-    if (!c?.switchTorch || zaklamp === null) return;
+    const track = streamRef.current?.getVideoTracks()[0];
+    if (!track || zaklamp === null) return;
     try {
-      await c.switchTorch(!zaklamp);
+      await zetZaklamp(track, !zaklamp);
       setZaklamp(!zaklamp);
     } catch {
       setZaklamp(null);
