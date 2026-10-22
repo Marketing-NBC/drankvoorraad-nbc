@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { Badge, Button, Card, Link } from "../../design-system";
+import { LeveringTabs } from "../../components/layout/LeveringTabs";
 import { PageHeader } from "../../components/layout/PageHeader";
 import { EmptyState } from "../../components/ui/EmptyState";
 import { FoutMelding } from "../../components/ui/FoutMelding";
@@ -74,6 +75,7 @@ export function Leveringen() {
           ) : null
         }
       />
+      <LeveringTabs />
 
       {fout ? <FoutMelding melding={fout} onOpnieuw={() => void herlaad()} /> : null}
       {actieFout ? <FoutMelding melding={actieFout} /> : null}

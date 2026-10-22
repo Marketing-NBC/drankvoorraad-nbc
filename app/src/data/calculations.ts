@@ -358,6 +358,32 @@ export function lageVoorraad(voorraad: Voorraad[]): LageVoorraadRegel[] {
     .sort((a, b) => b.tekort - a.tekort);
 }
 
+export interface VoorraadInHuis {
+  stuks: number;
+  /** Aantal verschillende producten waar ergens iets van ligt. */
+  producten: number;
+  /** Tegen inkoopprijs. Alleen zinvol voor de beheerder; voor anderen 0. */
+  waarde: number;
+}
+
+/**
+ * Alles wat er in huis ligt, over alle locaties bij elkaar: het
+ * hoofdmagazijn, de koelcellen, de kantine en de kroeg. Wat op een
+ * evenement staat is geen locatie en telt dus niet mee.
+ *
+ * Een negatieve stand (iets uitgegeven dat nooit is ingeboekt) trekt het
+ * totaal niet omlaag: die regel telt als 0, net als in de tabel.
+ */
+export function voorraadInHuis(voorraad: Voorraad[], producten: Product[]): VoorraadInHuis {
+  const prijsVan = new Map(producten.map((p) => [p.id, p.inkoopprijs]));
+  const metVoorraad = voorraad.filter((v) => v.aantal > 0);
+  return {
+    stuks: metVoorraad.reduce((som, v) => som + v.aantal, 0),
+    producten: new Set(metVoorraad.map((v) => v.productId)).size,
+    waarde: metVoorraad.reduce((som, v) => som + v.aantal * (prijsVan.get(v.productId) ?? 0), 0),
+  };
+}
+
 export interface EvenementUitstaand {
   evenement: Evenement;
   aantalUitgegeven: number;

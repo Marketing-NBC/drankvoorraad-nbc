@@ -39,6 +39,7 @@ import type {
   EmballageRetour,
   EmballageRetourregel,
   EmballageSoort,
+  EmballageStand,
   Evenement,
   GebruikerRol,
   Gebruiker,
@@ -74,7 +75,7 @@ import { useAuth } from "./AuthContext";
  */
 // Eén letterlijke string: supabase-js leidt het rijtype af uit de tekst zelf.
 const productKolommen =
-  "id, naam, sku, barcode, barcode_verpakking, categorie, leverancier, eenheid, inhoud, verpakking, stuks_per_verpakking, alleen_per_verpakking, voorraadloos, voor_personeel, aangemaakt_op";
+  "id, naam, sku, barcode, barcode_verpakking, categorie, leverancier, eenheid, inhoud, verpakking, stuks_per_verpakking, alleen_per_verpakking, voorraadloos, voor_personeel, emballage_id, emballage_per, aangemaakt_op";
 const evenementKolommen = "id, naam, datum, merk, opdrachtgever, status, aantal_personen, aangemaakt_op";
 
 interface Productbedragen {
@@ -104,6 +105,8 @@ function naarProduct(r: ProductBasisRow, bedragen: Productbedragen = geenBedrage
     barcodeVerpakking: r.barcode_verpakking ?? undefined,
     leverancier: r.leverancier ?? undefined,
     voorPersoneel: r.voor_personeel ?? false,
+    emballageId: r.emballage_id ?? undefined,
+    emballagePer: r.emballage_per ?? "verpakking",
   };
 }
 
@@ -324,6 +327,8 @@ export interface AppState {
   emballage: EmballageSoort[];
   emballageRetouren: EmballageRetour[];
   emballageRetourregels: EmballageRetourregel[];
+  /** Per soort hoeveel emballage er in huis staat. Zie migratie 029. */
+  emballageStand: EmballageStand[];
 }
 
 interface AppStateContextValue {
@@ -408,6 +413,11 @@ interface AppStateContextValue {
     /** Eén per ingevuld formulier, zodat opnieuw proberen niet dubbel boekt. */
     kenmerk: string;
   }) => Promise<string>;
+  /**
+   * Geteld aantal emballage per soort. De database boekt het verschil met de
+   * stand van dat moment; geeft het aantal soorten waar een verschil was.
+   */
+  telEmballage: (regels: { emballageId: string; geteld: number }[]) => Promise<number>;
   /** Boekingen die op verbinding wachten, van iedereen die dit apparaat gebruikte. */
   wachtrij: WachtrijItem[];
   verstuurWachtrij: () => Promise<void>;
@@ -431,6 +441,7 @@ const legeState: AppState = {
   profielen: [], tellingen: [], pakbonnen: [], zalen: [], evenementZalen: [],
   vulplekken: [], standaardvulling: [], koppelingen: [], machines: [], metingen: [],
   leveringen: [], leveringregels: [], emballage: [], emballageRetouren: [], emballageRetourregels: [],
+  emballageStand: [],
 };
 
 export function AppStateProvider({ children }: { children: ReactNode }) {
@@ -463,7 +474,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       const [
         producten, evenementen, mutaties, locaties, voorraad, profielen, tellingen, pakbonnen,
         zalen, evenementZalen, vulplekken, standaardvulling, koppelingen, machines, metingen,
-        leveringen, leveringregels, emballage, emballageRetouren, emballageRetourregels,
+        leveringen, leveringregels, emballage, emballageRetouren, emballageRetourregels, emballageStand,
       ] = await Promise.all([
         supabase.from("producten").select(productKolommen).order("naam"),
         supabase.from("evenementen").select(evenementKolommen).order("datum"),
@@ -492,6 +503,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
           .order("naam"),
         supabase.from("emballage_retouren").select("*").order("aangemaakt_op", { ascending: false }),
         supabase.from("emballage_mutaties").select("*").not("retour_id", "is", null),
+        supabase.rpc("emballage_stand"),
       ]);
       const eersteFout =
         producten.error ?? evenementen.error ?? mutaties.error ?? locaties.error ??
@@ -499,7 +511,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
         zalen.error ?? evenementZalen.error ?? vulplekken.error ?? standaardvulling.error ??
         koppelingen.error ?? machines.error ?? metingen.error ??
         leveringen.error ?? leveringregels.error ?? emballage.error ??
-        emballageRetouren.error ?? emballageRetourregels.error;
+        emballageRetouren.error ?? emballageRetourregels.error ?? emballageStand.error;
 
       /* Bedragen apart en alleen voor de beheerder: voor ieder ander weigert
          de database ze, en dan blijven ze op 0. */
@@ -515,7 +527,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       return {
         producten, evenementen, mutaties, locaties, voorraad, profielen, tellingen, pakbonnen,
         zalen, evenementZalen, vulplekken, standaardvulling, koppelingen, machines, metingen,
-        leveringen, leveringregels, emballage, emballageRetouren, emballageRetourregels,
+        leveringen, leveringregels, emballage, emballageRetouren, emballageRetourregels, emballageStand,
         productbedragen: bedragen?.[0].data ?? [],
         evenementomzet: bedragen?.[1].data ?? [],
         emballageborg: bedragen?.[2].data ?? [],
@@ -577,6 +589,13 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       emballage: (resultaat.emballage.data ?? []).map((r) => naarEmballage(r, borgPerSoort.get(r.id))),
       emballageRetouren: (resultaat.emballageRetouren.data ?? []).map(naarEmballageRetour),
       emballageRetourregels: (resultaat.emballageRetourregels.data ?? []).map(naarEmballageRetourregel),
+      emballageStand: (resultaat.emballageStand.data ?? []).map((r) => ({
+        emballageId: r.emballage_id,
+        binnen: r.binnen,
+        retour: r.retour,
+        geteld: r.geteld,
+        inHuis: r.in_huis,
+      })),
     });
     alEensGeladen.current = true;
     setLaden(false);
@@ -614,6 +633,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       .on("postgres_changes", { event: "*", schema: "public", table: "leveringen" }, () => void herlaad())
       .on("postgres_changes", { event: "*", schema: "public", table: "leveringregels" }, () => void herlaad())
       .on("postgres_changes", { event: "*", schema: "public", table: "emballage_retouren" }, () => void herlaad())
+      .on("postgres_changes", { event: "*", schema: "public", table: "emballage_mutaties" }, () => void herlaad())
       .subscribe();
 
     return () => {
@@ -856,6 +876,8 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
             barcode: product.barcode ?? null,
             barcode_verpakking: product.barcodeVerpakking ?? null,
             leverancier: product.leverancier ?? null,
+            emballage_id: product.emballageId ?? null,
+            emballage_per: product.emballagePer,
           })
           .select(productKolommen)
           .single();
@@ -902,6 +924,8 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
             barcode_verpakking: changes.barcodeVerpakking ?? null,
           }),
           ...(changes.leverancier !== undefined && { leverancier: changes.leverancier ?? null }),
+          ...("emballageId" in changes && { emballage_id: changes.emballageId ?? null }),
+          ...(changes.emballagePer !== undefined && { emballage_per: changes.emballagePer }),
         };
         if (Object.keys(velden).length > 0) {
           const { error } = await supabase.from("producten").update(velden).eq("id", id);
@@ -1269,6 +1293,17 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
         if (error) throw error;
         await herlaad();
         return data;
+      },
+
+      async telEmballage(regels) {
+        /* Geen wachtrij, net als een drankentelling: het verschil wordt
+           afgerekend tegen de stand van dát moment. */
+        const { data, error } = await supabase.rpc("tel_emballage", {
+          p_regels: regels.map((r) => ({ emballage_id: r.emballageId, geteld: r.geteld })),
+        });
+        if (error) throw error;
+        await herlaad();
+        return data ?? 0;
       },
 
       wachtrij,

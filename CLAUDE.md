@@ -106,15 +106,26 @@ Er is geen backend van onszelf: de browser praat rechtstreeks met Supabase,
 afgeschermd door RLS-policies. Serverlogica zit in Postgres, aangeroepen via
 RPC's: `start_telling`, `rond_telling_af`, `annuleer_telling`, `maak_pakbon`,
 `stel_min_voorraad`, `boek_meting`, `boek_levering`, `handel_verschil_af`,
-`gebruikers_overzicht`, `boek_emballage_retour`, en de
-bedragfuncties uit migratie 019.
+`gebruikers_overzicht`, `boek_emballage_retour`, `emballage_stand`,
+`tel_emballage`, en de bedragfuncties uit migratie 019.
 
 Lege emballage die terug gaat naar de leverancier wordt vastgelegd op de
 tabellen `emballage` (soorten met borg en het artikelnummer van de
 retourbon), `emballage_retouren` (de bon) en `emballage_mutaties` (de regels).
 Dat raakt de drankvoorraad niet; het is de controle op de creditnota. In de
-app is het de tweede kop onder Magazijn. De retourbon wordt met de hand
+app is de retourbon de tweede kop onder Leveringen (`/leveringen/emballage`),
+want hij gaat met dezelfde vrachtwagen mee. De retourbon wordt met de hand
 overgenomen van het papier.
+
+Hoeveel emballage er in huis staat — vol en leeg samen — is de tweede kop
+onder Magazijn (`/magazijn/emballage`). Die stand wordt niet apart geboekt
+maar afgeleid in `emballage_stand()` (migratie 029): elke `inkoop` van een
+product met `emballage_id` telt erbij (één per krat of één per stuk, volgens
+`emballage_per`), de regels van de retourbon gaan eraf, en een telling
+(`tel_emballage`, type `telling-plus`/`telling-min` in `emballage_mutaties`)
+zet het verschil recht. Uitgifte naar een evenement verandert de stand niet:
+de emballage blijft van ons tot de leverancier hem ophaalt. De koppeling
+product → emballage zet de beheerder in het productformulier.
 
 De tabel `leverancier_artikelen` en de RPC `koppel_artikel` (migratie 027)
 staan nog in de database, maar de app gebruikt ze niet meer: ze hoorden bij
@@ -133,8 +144,8 @@ zonder dat er aan de app of de database iets verandert.
 
 `app/src/context/AppStateContext.tsx` is de enige datalaag. Die laadt alles bij
 het opstarten en abonneert zich op een realtime-kanaal (`drankvoorraad`) dat bij
-elke wijziging in `mutaties`, `evenementen`, `producten`, `voorraad`, `locaties`
-of `pakbonnen` een stille herlaad doet.
+elke wijziging in `mutaties`, `evenementen`, `producten`, `voorraad`, `locaties`,
+`pakbonnen`, de leveringen of de emballage een stille herlaad doet.
 
 Inloggen gaat uitsluitend met e-mail en wachtwoord (`signInWithPassword`). Er is
 geen magic link, geen OAuth en geen wachtwoordherstel — dus ook geen
@@ -210,7 +221,7 @@ afmaken ervan. Deze paragraaf mag weg zodra dat plan er ligt.
 Vier dingen die bij "van PoC naar af" waarschijnlijk terugkomen. Geen van deze is
 kapot — het zijn keuzes die passen bij een PoC en knellen zodra het menens wordt:
 
-- **Testdekking.** 106 tests over rekenlogica (`app/src/data/`), de wachtrij
+- **Testdekking.** 114 tests over rekenlogica (`app/src/data/`), de wachtrij
   (`app/src/lib/`) en de Excel-export (`app/src/utils/`). Geen enkel scherm of
   gebruikersstroom is getest, terwijl daar de meeste code zit.
 - **Databasemigraties.** Half opgelost: nieuwe wijzigingen staan genummerd in

@@ -14,6 +14,7 @@ import {
   topProducten,
   totaleBrutowinst,
   uitstaandPerEvenement,
+  voorraadInHuis,
   voorraadverschillen,
   werkelijkVerbruik,
 } from "./calculations";
@@ -31,6 +32,7 @@ function product(velden: Partial<Product> & Pick<Product, "id" | "naam">): Produ
     statiegeldPerVerpakking: 0,
     voorraadloos: false,
     voorPersoneel: false,
+    emballagePer: "verpakking",
     ...velden,
   };
 }
@@ -195,6 +197,36 @@ describe("lageVoorraad", () => {
 
   it("does not flag stock exactly at its minimum", () => {
     expect(lageVoorraad([regel({ aantal: 5, minVoorraad: 5 })])).toEqual([]);
+  });
+});
+
+describe("voorraadInHuis", () => {
+  const regel = (partial: Partial<Voorraad>): Voorraad => ({
+    locatieId: "l1", productId: bier.id, aantal: 0, minVoorraad: 0, ...partial,
+  });
+
+  it("adds up every location: stuks, distinct products and value at cost", () => {
+    const resultaat = voorraadInHuis(
+      [
+        regel({ locatieId: "magazijn", productId: bier.id, aantal: 10 }),
+        regel({ locatieId: "koelcel", productId: bier.id, aantal: 2 }),
+        regel({ locatieId: "kantine", productId: wijn.id, aantal: 6 }),
+      ],
+      producten
+    );
+    expect(resultaat).toEqual({ stuks: 18, producten: 2, waarde: 12 * 85 + 6 * 6.5 });
+  });
+
+  it("ignores empty and negative rows instead of subtracting them", () => {
+    const resultaat = voorraadInHuis(
+      [
+        regel({ productId: bier.id, aantal: 3 }),
+        regel({ locatieId: "l2", productId: wijn.id, aantal: -4 }),
+        regel({ locatieId: "l3", productId: wijn.id, aantal: 0 }),
+      ],
+      producten
+    );
+    expect(resultaat).toEqual({ stuks: 3, producten: 1, waarde: 255 });
   });
 });
 

@@ -7,8 +7,10 @@ import { EmptyState } from "../../components/ui/EmptyState";
 import { FoutMelding } from "../../components/ui/FoutMelding";
 import { KaartKop } from "../../components/ui/KaartKop";
 import { LageVoorraadMelding } from "../../components/ui/LageVoorraadMelding";
+import { TotaalBalk } from "../../components/ui/TotaalBalk";
 import { useAppState } from "../../context/AppStateContext";
 import { useAuth } from "../../context/AuthContext";
+import { voorraadInHuis } from "../../data/calculations";
 import type { Locatie, Product } from "../../data/types";
 import { exporteerNaarExcel, type ExcelKolom } from "../../utils/excel";
 import { formatCurrency, formatNumber } from "../../utils/format";
@@ -45,23 +47,18 @@ export function Magazijn() {
   /* Staat de kantine of de kroeg open, dan is "erbij" altijd: aanvullen
      vanuit het magazijn. Inkoop van buiten gaat nooit rechtstreeks daarheen. */
   const opPersoneelslocatie = actieveLocatie?.voorPersoneel ?? false;
-  const overigeLocaties = state.locaties.filter((l) => l.id !== hoofdmagazijn?.id);
+  /* Het hoofdmagazijn vooraan: daar wordt vrijwel altijd naar gekeken. */
+  const locatieVolgorde = [
+    ...(hoofdmagazijn ? [hoofdmagazijn] : []),
+    ...state.locaties.filter((l) => l.id !== hoofdmagazijn?.id),
+  ];
   const heeftPersoneelslocatie = state.locaties.some((l) => l.voorPersoneel);
 
   /**
-   * Kerncijfers van het hoofdmagazijn, ook zichtbaar wanneer er een andere
-   * locatie geselecteerd staat — het blok hoort altijd het hoofdmagazijn te
-   * beschrijven, niet de huidige selectie.
+   * Alles wat er in huis ligt, over alle locaties samen — ook wanneer er
+   * één locatie geselecteerd staat. De tabel eronder is per locatie.
    */
-  const hoofdCijfers = (() => {
-    const regels = state.voorraad.filter((v) => v.locatieId === hoofdmagazijn?.id && v.aantal > 0);
-    const prijsVan = new Map(state.producten.map((p) => [p.id, p.inkoopprijs]));
-    return {
-      stuks: regels.reduce((som, v) => som + v.aantal, 0),
-      producten: regels.length,
-      waarde: regels.reduce((som, v) => som + v.aantal * (prijsVan.get(v.productId) ?? 0), 0),
-    };
-  })();
+  const inHuis = voorraadInHuis(state.voorraad, state.producten);
 
   async function handleExport() {
     const locatie = state.locaties.find((l) => l.id === actieveLocatieId);
@@ -194,71 +191,39 @@ export function Magazijn() {
         />
       ) : (
         <>
-          {/* Het hoofdmagazijn is de bron waar alle andere locaties uit
-              gevuld worden, en het is waar vrijwel altijd naar gekeken wordt.
-              Daarom een eigen blok met de cijfers erin, in plaats van een
-              gelijkwaardige pil tussen de koelcellen en bars. */}
-          {hoofdmagazijn ? (
-            <button
-              type="button"
-              className={[
-                "magazijn-hoofd",
-                hoofdmagazijn.id === actieveLocatieId && "magazijn-hoofd--actief",
-              ].filter(Boolean).join(" ")}
-              aria-pressed={hoofdmagazijn.id === actieveLocatieId}
-              onClick={() => setActieveLocatieId(hoofdmagazijn.id)}
-            >
-              <span>
-                <span className="magazijn-hoofd__kop">
-                  <span className="magazijn-hoofd__naam">{hoofdmagazijn.naam}</span>
-                  <Badge variant="op-donker">gedeeld</Badge>
-                </span>
-                <span className="magazijn-hoofd__sub">bron voor NBC en Green Village</span>
-              </span>
-              <span className="magazijn-hoofd__cijfers">
-                <span className="magazijn-hoofd__cijfer">
-                  <strong>{formatNumber(hoofdCijfers.stuks)}</strong>
-                  <span>stuks</span>
-                </span>
-                <span className="magazijn-hoofd__cijfer">
-                  <strong>{formatNumber(hoofdCijfers.producten)}</strong>
-                  <span>producten</span>
-                </span>
-                {zietBedragen ? (
-                  <span className="magazijn-hoofd__cijfer">
-                    <strong>{formatCurrency(hoofdCijfers.waarde)}</strong>
-                    <span>voorraadwaarde</span>
-                  </span>
-                ) : null}
-              </span>
-            </button>
-          ) : null}
+          <TotaalBalk
+            titel="Totaal in huis"
+            sub="alle locaties samen: magazijn, koelcellen, kantine en kroeg"
+            cijfers={[
+              { waarde: formatNumber(inHuis.stuks), label: "stuks" },
+              { waarde: formatNumber(inHuis.producten), label: "producten" },
+              // Bedragen alleen voor de beheerder (migratie 019).
+              ...(zietBedragen ? [{ waarde: formatCurrency(inHuis.waarde), label: "voorraadwaarde" }] : []),
+            ]}
+          />
 
-          {overigeLocaties.length > 0 ? (
-            <div className="locatie-groep">
-              <span className="locatie-groep__label">
-                {hoofdmagazijn ? "Andere locaties" : "Locaties"}
-              </span>
-              <div className="locatie-balk">
-                {overigeLocaties.map((locatie) => (
-                  <button
-                    key={locatie.id}
-                    type="button"
-                    className={[
-                      "locatie-tab",
-                      locatie.id === actieveLocatieId && "locatie-tab--actief",
-                    ].filter(Boolean).join(" ")}
-                    onClick={() => setActieveLocatieId(locatie.id)}
-                  >
-                    {locatie.naam}
-                    <Badge variant={locatie.id === actieveLocatieId ? "op-donker" : "neutral"}>
-                      {locatie.voorPersoneel ? "personeel" : locatie.merk ?? "gedeeld"}
-                    </Badge>
-                  </button>
-                ))}
-              </div>
+          <div className="locatie-groep">
+            <span className="locatie-groep__label">Locaties</span>
+            <div className="locatie-balk">
+              {locatieVolgorde.map((locatie) => (
+                <button
+                  key={locatie.id}
+                  type="button"
+                  className={[
+                    "locatie-tab",
+                    locatie.id === actieveLocatieId && "locatie-tab--actief",
+                  ].filter(Boolean).join(" ")}
+                  aria-pressed={locatie.id === actieveLocatieId}
+                  onClick={() => setActieveLocatieId(locatie.id)}
+                >
+                  {locatie.naam}
+                  <Badge variant={locatie.id === actieveLocatieId ? "op-donker" : "neutral"}>
+                    {locatie.voorPersoneel ? "personeel" : locatie.merk ?? "gedeeld"}
+                  </Badge>
+                </button>
+              ))}
             </div>
-          ) : null}
+          </div>
 
           {actieveLocatie ? (
             <>

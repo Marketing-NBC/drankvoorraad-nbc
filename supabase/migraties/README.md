@@ -53,6 +53,7 @@ trigger en de functie zijn weg. De migraties hieronder gaan daarvan uit.
 | `026_rollen_medewerker_housekeeping.sql` | Magazijnmedewerker en evenementmanager worden samen `medewerker`; nieuwe rol `housekeeping` (alleen kantine en kroeg). **Daarna `gebruikers` opnieuw neerzetten.** |
 | `027_uitkomsten_robin.sql` | Aantal personen bij een evenement; afronden alleen door de beheerder; leveringen alleen naar magazijn of koelcel; artikelnummers van de leverancier; reden bij een tekort; producten voor personeel; emballage volgens de retourbon van Swinkels; Coca-Cola weer bij Swinkels. Draai na 026. |
 | `028_antwoorden_robin_checklist.sql` | Antwoorden van Robin: Swinkels levert alles (Spa en blikje erbij), Chaudfontaine is Spa blauw, de Spa-krat vervalt, geen Prosecco in de kantine en de kroeg. |
+| `029_emballage_in_huis.sql` | Hoeveel emballage er in huis staat: product gekoppeld aan een soort emballage, de stand uit inkoop min retour, en een emballagetelling. **Draaien vóórdat de app-versie erbij live gaat** — die leest de nieuwe kolommen en `emballage_stand()`, en laadt anders niet. De oude app heeft er geen last van. |
 
 ## Waarom `010` en niet `1`
 

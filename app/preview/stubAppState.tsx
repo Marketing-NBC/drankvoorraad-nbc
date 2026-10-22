@@ -42,16 +42,17 @@ function p(velden: Partial<Product> & Pick<Product, "id" | "naam">): Product {
     statiegeldPerVerpakking: 0,
     voorraadloos: false,
     voorPersoneel: false,
+    emballagePer: "verpakking",
     ...velden,
   };
 }
 
 const producten: Product[] = [
-  p({ id: "p1", naam: "Fust Swinckels 20 L", categorie: "bier", inhoud: "20 L", eenheid: "fust", inkoopprijs: 40.7, statiegeldPerStuk: 30, barcode: "8712000012345", leverancier: "Swinkels" }),
-  p({ id: "p2", naam: "Swinckels 0,3 L", categorie: "bier", inhoud: "0,3 L", inkoopprijs: 0.53, verpakking: "krat", stuksPerVerpakking: 24, alleenPerVerpakking: true, statiegeldPerVerpakking: 3.9, barcode: "8712000098765", leverancier: "Swinkels" }),
-  p({ id: "p3", naam: "Spa blauw 1 L", inhoud: "1 L", inkoopprijs: 0.95, verpakking: "krat", stuksPerVerpakking: 12, statiegeldPerVerpakking: 5, barcode: "8712000055512", leverancier: "Swinkels" }),
-  p({ id: "p4", naam: "Coca Cola 0,2 L", inhoud: "0,2 L", inkoopprijs: 0.46, verpakking: "krat", stuksPerVerpakking: 24, alleenPerVerpakking: true, statiegeldPerVerpakking: 5, barcode: "8712000044421", leverancier: "Swinkels" }),
-  p({ id: "p5", naam: "Coca Cola 1,25 L", inhoud: "1,25 L", inkoopprijs: 2.05, statiegeldPerStuk: 0.25, leverancier: "Swinkels", voorPersoneel: true }),
+  p({ id: "p1", naam: "Fust Swinckels 20 L", categorie: "bier", inhoud: "20 L", eenheid: "fust", inkoopprijs: 40.7, statiegeldPerStuk: 30, barcode: "8712000012345", leverancier: "Swinkels", emballageId: "e5", emballagePer: "stuk" }),
+  p({ id: "p2", naam: "Swinckels 0,3 L", categorie: "bier", inhoud: "0,3 L", inkoopprijs: 0.53, verpakking: "krat", stuksPerVerpakking: 24, alleenPerVerpakking: true, statiegeldPerVerpakking: 3.9, barcode: "8712000098765", leverancier: "Swinkels", emballageId: "e4" }),
+  p({ id: "p3", naam: "Spa blauw 1 L", inhoud: "1 L", inkoopprijs: 0.95, verpakking: "krat", stuksPerVerpakking: 12, statiegeldPerVerpakking: 5, barcode: "8712000055512", leverancier: "Swinkels", emballageId: "e1" }),
+  p({ id: "p4", naam: "Coca Cola 0,2 L", inhoud: "0,2 L", inkoopprijs: 0.46, verpakking: "krat", stuksPerVerpakking: 24, alleenPerVerpakking: true, statiegeldPerVerpakking: 5, barcode: "8712000044421", leverancier: "Swinkels", emballageId: "e1" }),
+  p({ id: "p5", naam: "Coca Cola 1,25 L", inhoud: "1,25 L", inkoopprijs: 2.05, statiegeldPerStuk: 0.25, leverancier: "Swinkels", voorPersoneel: true, emballageId: "e2", emballagePer: "stuk" }),
   p({ id: "p6", naam: "Witte wijn 0,7 L", categorie: "wijn", inhoud: "0,7 L", inkoopprijs: 4.15, voorPersoneel: true, barcode: "8712000033310" }),
   p({ id: "p7", naam: "Prosecco 0,7 L", categorie: "wijn", inhoud: "0,7 L", inkoopprijs: 7.15, barcode: "8712000022209" }),
   p({ id: "p8", naam: "Koffie", categorie: "koffie", eenheid: "kop", inkoopprijs: 0.12, voorraadloos: true, leverancier: "Franke" }),
@@ -229,6 +230,16 @@ const emballageRetourregels = [
   { id: "em3", retourId: "er2", emballageId: "e5", aantal: 12 },
   { id: "em4", retourId: "er2", emballageId: "e4", aantal: 6 },
 ];
+/* Zoals emballage_stand() (migratie 029): binnen − retour ± telling. Eén
+   soort negatief, zodat de melding "tellen" te beoordelen is. */
+const emballageStand = [
+  { emballageId: "e1", binnen: 96, retour: 18, geteld: 62, inHuis: 140 },
+  { emballageId: "e2", binnen: 120, retour: 40, geteld: -8, inHuis: 72 },
+  { emballageId: "e4", binnen: 30, retour: 6, geteld: 0, inHuis: 24 },
+  { emballageId: "e5", binnen: 40, retour: 12, geteld: 3, inHuis: 31 },
+  { emballageId: "e7", binnen: 0, retour: 2, geteld: 0, inHuis: -2 },
+  { emballageId: "e8", binnen: 0, retour: 0, geteld: 4, inHuis: 4 },
+];
 
 /* Zoals de database: bedragen alleen voor de beheerder, anders 0. */
 const zietBedragen = (new URLSearchParams(window.location.search).get("rol") ?? "beheerder") === "beheerder";
@@ -241,7 +252,7 @@ const state = {
   zalen, evenementZalen, vulplekken, standaardvulling, koppelingen, machines, metingen,
   leveringen, leveringregels,
   emballage: zietBedragen ? emballage : emballage.map((e) => ({ ...e, borg: 0 })),
-  emballageRetouren, emballageRetourregels,
+  emballageRetouren, emballageRetourregels, emballageStand,
 };
 
 /* Eén wachtende boeking, zodat de balk in de preview te beoordelen is. */
@@ -309,6 +320,7 @@ const waarde: Record<string, unknown> = {
   boekLevering: async () => ({ inWachtrij: false }),
   handelVerschilAf: niets,
   boekEmballageRetour: async () => "er1",
+  telEmballage: async () => 0,
   wachtrij,
   verstuurWachtrij: niets,
   verwijderUitWachtrij: () => {},

@@ -86,6 +86,10 @@ export type ProductRow = {
   voorraadloos: boolean;
   /** Mag in de kantine en de kroeg. Zie migratie 027. */
   voor_personeel: boolean;
+  /** Welke emballage er met dit product binnenkomt. Zie migratie 029. */
+  emballage_id: string | null;
+  /** Eén emballage per stuk (fust, PET-fles) of per verpakking (krat). */
+  emballage_per: "stuk" | "verpakking";
   aangemaakt_op: string;
 };
 
@@ -211,7 +215,8 @@ export type EmballageMutatieRow = {
   id: string;
   emballage_id: string;
   aantal: number;
-  type: "uit" | "retour" | "naar-leverancier" | "vermist";
+  /** `telling-plus` en `telling-min` komen uit tel_emballage() (migratie 029). */
+  type: "uit" | "retour" | "naar-leverancier" | "vermist" | "telling-plus" | "telling-min";
   evenement_id: string | null;
   mutatie_id: string | null;
   retour_id: string | null;
@@ -304,7 +309,7 @@ export type Database = {
           | "inkoopprijs" | "eenheid" | "inhoud" | "verpakking"
           | "stuks_per_verpakking" | "alleen_per_verpakking"
           | "statiegeld_per_stuk" | "statiegeld_per_verpakking"
-          | "voorraadloos" | "voor_personeel" | "aangemaakt_op"
+          | "voorraadloos" | "voor_personeel" | "emballage_id" | "emballage_per" | "aangemaakt_op"
         >;
         Update: Partial<ProductRow>;
         Relationships: [];
@@ -569,6 +574,21 @@ export type Database = {
           p_client_id?: string | null;
         };
         Returns: string;
+      };
+      /* ─── Emballage in huis (migratie 029) ─── */
+      emballage_stand: {
+        Args: Record<string, never>;
+        Returns: {
+          emballage_id: string;
+          binnen: number;
+          retour: number;
+          geteld: number;
+          in_huis: number;
+        }[];
+      };
+      tel_emballage: {
+        Args: { p_regels: { emballage_id: string; geteld: number }[] };
+        Returns: number;
       };
       maak_pakbon: {
         Args: {
