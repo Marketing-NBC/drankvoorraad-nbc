@@ -2,9 +2,9 @@ import { NavLink } from "react-router-dom";
 import { ROUTES } from "../../routes/routes";
 
 /**
- * Magazijn heeft twee koppen: de voorraad drank en de lege emballage.
- * Emballage hoort bij het magazijn — daar staan de kratten en fusten tot
- * Swinkels ze meeneemt — en niet bij Leveringen, waar hij eerst zat.
+ * Magazijn heeft twee koppen: de voorraad drank en de emballage die in huis
+ * staat. Wat er aan emballage terug naar de leverancier gaat — de retourbon —
+ * staat bij Leveringen; zie LeveringTabs.
  */
 export function MagazijnTabs() {
   const klasse = ({ isActive }: { isActive: boolean }) =>

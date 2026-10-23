@@ -49,7 +49,7 @@ export function PakbonWeergave() {
   if (!pakbon) return <Navigate to={ROUTES.overzicht} replace />;
 
   const evenement = state.evenementen.find((e) => e.id === pakbon.evenementId);
-  const locatie = state.locaties.find((l) => l.id === pakbon.vanLocatieId);
+  const locatie = state.alleLocaties.find((l) => l.id === pakbon.vanLocatieId);
   const uitgegevenDoor = state.profielen.find((p) => p.id === pakbon.gebruikerId);
   const productenById = new Map(state.producten.map((p) => [p.id, p]));
 

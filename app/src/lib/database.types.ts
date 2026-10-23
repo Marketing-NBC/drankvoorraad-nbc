@@ -63,6 +63,8 @@ export type LocatieRow = {
   type: LocatieType;
   merk: Merk | null;
   voor_personeel: boolean;
+  /** false = niet meer in gebruik (de kroeg na 031). Alleen nog voor oude boekingen. */
+  actief: boolean;
   aangemaakt_op: string;
 };
 
@@ -86,6 +88,10 @@ export type ProductRow = {
   voorraadloos: boolean;
   /** Mag in de kantine en de kroeg. Zie migratie 027. */
   voor_personeel: boolean;
+  /** Welke emballage er met dit product binnenkomt. Zie migratie 030. */
+  emballage_id: string | null;
+  /** Eén emballage per stuk (fust, PET-fles) of per verpakking (krat). */
+  emballage_per: "stuk" | "verpakking";
   aangemaakt_op: string;
 };
 
@@ -211,7 +217,8 @@ export type EmballageMutatieRow = {
   id: string;
   emballage_id: string;
   aantal: number;
-  type: "uit" | "retour" | "naar-leverancier" | "vermist";
+  /** `erbij` en `eraf`: beginstand, telling of met de hand (migratie 029 en 030). */
+  type: "uit" | "retour" | "naar-leverancier" | "vermist" | "erbij" | "eraf";
   evenement_id: string | null;
   mutatie_id: string | null;
   retour_id: string | null;
@@ -292,7 +299,7 @@ export type Database = {
       };
       locaties: {
         Row: LocatieRow;
-        Insert: MetDefaults<LocatieRow, "id" | "merk" | "voor_personeel" | "aangemaakt_op">;
+        Insert: MetDefaults<LocatieRow, "id" | "merk" | "voor_personeel" | "actief" | "aangemaakt_op">;
         Update: Partial<LocatieRow>;
         Relationships: [];
       };
@@ -304,7 +311,7 @@ export type Database = {
           | "inkoopprijs" | "eenheid" | "inhoud" | "verpakking"
           | "stuks_per_verpakking" | "alleen_per_verpakking"
           | "statiegeld_per_stuk" | "statiegeld_per_verpakking"
-          | "voorraadloos" | "voor_personeel" | "aangemaakt_op"
+          | "voorraadloos" | "voor_personeel" | "emballage_id" | "emballage_per" | "aangemaakt_op"
         >;
         Update: Partial<ProductRow>;
         Relationships: [];
@@ -569,6 +576,25 @@ export type Database = {
           p_client_id?: string | null;
         };
         Returns: string;
+      };
+      /* ─── Emballage in huis (migratie 030) ─── */
+      emballage_stand: {
+        Args: Record<string, never>;
+        Returns: {
+          emballage_id: string;
+          binnen: number;
+          handmatig: number;
+          retour: number;
+          in_huis: number;
+        }[];
+      };
+      boek_emballage_handmatig: {
+        Args: { p_regels: { emballage_id: string; aantal: number }[]; p_reden: string };
+        Returns: number;
+      };
+      tel_emballage: {
+        Args: { p_regels: { emballage_id: string; geteld: number }[] };
+        Returns: number;
       };
       maak_pakbon: {
         Args: {

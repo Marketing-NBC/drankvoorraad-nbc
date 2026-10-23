@@ -17,7 +17,10 @@ export const ROUTES = {
   koppelingen: "/koppelingen",
   leveringen: "/leveringen",
   leveringNieuw: "/leveringen/nieuw",
+  /** Wat er aan emballage in huis staat — onder Magazijn. */
   emballage: "/magazijn/emballage",
+  /** De retourbon invullen — onder Leveringen. */
+  emballageRetour: "/leveringen/emballage",
   personeel: "/personeel",
   dashboard: "/dashboard",
 } as const;

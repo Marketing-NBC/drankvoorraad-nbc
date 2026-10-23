@@ -19,6 +19,7 @@ import { Koppelingen } from "./screens/Koppelingen/Koppelingen";
 import { Leveringen } from "./screens/Leveringen/Leveringen";
 import { LeveringNieuw } from "./screens/Leveringen/LeveringNieuw";
 import { EmballageRetour } from "./screens/Emballage/EmballageRetour";
+import { EmballageVoorraad } from "./screens/Emballage/EmballageVoorraad";
 import { Personeelsverbruik } from "./screens/Personeel/Personeelsverbruik";
 
 /** Housekeeping komt alleen bij het personeelsverbruik en de tellingen daarvan. */
@@ -69,7 +70,8 @@ export function App() {
                     </RequireAuth>
                   }
                 />
-                <Route path={ROUTES.emballage} element={<RequireAuth rollen={WERK}><EmballageRetour /></RequireAuth>} />
+                <Route path={ROUTES.emballage} element={<RequireAuth rollen={WERK}><EmballageVoorraad /></RequireAuth>} />
+                <Route path={ROUTES.emballageRetour} element={<RequireAuth rollen={WERK}><EmballageRetour /></RequireAuth>} />
                 <Route
                   path={ROUTES.koppelingen}
                   element={

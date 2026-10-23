@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { Badge, Button, Card, Input } from "../../design-system";
-import { MagazijnTabs } from "../../components/layout/MagazijnTabs";
+import { LeveringTabs } from "../../components/layout/LeveringTabs";
 import { PageHeader } from "../../components/layout/PageHeader";
 import { AantalStepper } from "../../components/ui/AantalStepper";
 import { EmptyState } from "../../components/ui/EmptyState";
@@ -16,10 +16,11 @@ import { foutBericht } from "../../utils/fouten";
 import { formatCurrency, formatDateTimeKort, formatNumber } from "../../utils/format";
 
 /**
- * Emballage — de tweede kop onder Magazijn.
+ * Emballage retour — de tweede kop onder Leveringen.
  *
- * Hier staat alles over lege emballage: de retourbon invullen, wat er per
- * soort al terug is gegaan, en de bonnen van eerder. De retourbon wordt met
+ * Hier staat alles over lege emballage die teruggaat: de retourbon invullen,
+ * wat er per soort al terug is gegaan, en de bonnen van eerder. Hoeveel er
+ * nog in huis staat, staat onder Magazijn → Emballage. De retourbon wordt met
  * de hand overgenomen van het papier van de leverancier; de soorten staan in
  * dezelfde volgorde als op de bon van Swinkels, met hun artikelnummer.
  *
@@ -134,11 +135,11 @@ export function EmballageRetour() {
   return (
     <>
       <PageHeader
-        eyebrow="magazijn"
-        title="Emballage"
-        toelichting="Lege kratten, fusten, rolcontainers en koolzuur die mee teruggaan naar de leverancier. Neem per ophaling de retourbon over, zodat je de creditnota kunt controleren. De drankvoorraad verandert hier niet door."
+        eyebrow="leveringen"
+        title="Emballage retour"
+        toelichting="Lege kratten, fusten, rolcontainers en koolzuur die mee teruggaan naar de leverancier. Neem per ophaling de retourbon over, zodat je de creditnota kunt controleren. Wat je hier vastlegt gaat van de emballage in huis af; de drankvoorraad verandert er niet door."
       />
-      <MagazijnTabs />
+      <LeveringTabs />
 
       {fout ? <FoutMelding melding={fout} onOpnieuw={() => void herlaad()} /> : null}
 

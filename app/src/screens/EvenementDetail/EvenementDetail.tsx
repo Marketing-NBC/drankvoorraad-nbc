@@ -313,7 +313,7 @@ export function EvenementDetail() {
               compact
               mutaties={mutaties}
               producten={state.producten}
-              locaties={state.locaties}
+              locaties={state.alleLocaties}
               profielen={state.profielen}
               legeMelding="Nog geen mutaties voor dit evenement."
             />

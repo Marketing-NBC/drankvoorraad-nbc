@@ -22,11 +22,16 @@ const gebruikers: Gebruiker[] = profielen.map((p, i) => ({
 
 const locaties: Locatie[] = [
   { id: "l0", naam: "Hoofdmagazijn", type: "magazijn", merk: null, voorPersoneel: false },
-  { id: "l1", naam: "Koelcel NBC", type: "koelcel", merk: "NBC", voorPersoneel: false },
-  { id: "l2", naam: "Bar Green Village", type: "bar", merk: "Green Village", voorPersoneel: false },
+  { id: "l1", naam: "Koelcellen NBC", type: "koelcel", merk: "NBC", voorPersoneel: false },
+  { id: "l2", naam: "Koelkasten buffetten en bekkens NBC", type: "bar", merk: "NBC", voorPersoneel: false },
   { id: "l3", naam: "Koelcel Green Village", type: "koelcel", merk: "Green Village", voorPersoneel: false },
-  { id: "l4", naam: "Bar Foyer", type: "bar", merk: null, voorPersoneel: false },
-  { id: "l5", naam: "Kantine", type: "kantine", merk: "NBC", voorPersoneel: true },
+  { id: "l4", naam: "Bar NBC", type: "bar", merk: "NBC", voorPersoneel: false },
+  { id: "l5", naam: "Kantine en kroeg", type: "kantine", merk: "NBC", voorPersoneel: true },
+];
+/* Na 031 is de kroeg samengevoegd met de kantine: niet meer te kiezen, wel
+   nog de naam bij oude boekingen. */
+const alleLocaties: Locatie[] = [
+  ...locaties,
   { id: "l6", naam: "Kroeg", type: "kroeg", merk: "NBC", voorPersoneel: true },
 ];
 
@@ -42,16 +47,17 @@ function p(velden: Partial<Product> & Pick<Product, "id" | "naam">): Product {
     statiegeldPerVerpakking: 0,
     voorraadloos: false,
     voorPersoneel: false,
+    emballagePer: "verpakking",
     ...velden,
   };
 }
 
 const producten: Product[] = [
-  p({ id: "p1", naam: "Fust Swinckels 20 L", categorie: "bier", inhoud: "20 L", eenheid: "fust", inkoopprijs: 40.7, statiegeldPerStuk: 30, barcode: "8712000012345", leverancier: "Swinkels" }),
-  p({ id: "p2", naam: "Swinckels 0,3 L", categorie: "bier", inhoud: "0,3 L", inkoopprijs: 0.53, verpakking: "krat", stuksPerVerpakking: 24, alleenPerVerpakking: true, statiegeldPerVerpakking: 3.9, barcode: "8712000098765", leverancier: "Swinkels" }),
-  p({ id: "p3", naam: "Spa blauw 1 L", inhoud: "1 L", inkoopprijs: 0.95, verpakking: "krat", stuksPerVerpakking: 12, statiegeldPerVerpakking: 5, barcode: "8712000055512", leverancier: "Swinkels" }),
-  p({ id: "p4", naam: "Coca Cola 0,2 L", inhoud: "0,2 L", inkoopprijs: 0.46, verpakking: "krat", stuksPerVerpakking: 24, alleenPerVerpakking: true, statiegeldPerVerpakking: 5, barcode: "8712000044421", leverancier: "Swinkels" }),
-  p({ id: "p5", naam: "Coca Cola 1,25 L", inhoud: "1,25 L", inkoopprijs: 2.05, statiegeldPerStuk: 0.25, leverancier: "Swinkels", voorPersoneel: true }),
+  p({ id: "p1", naam: "Fust Swinckels 20 L", categorie: "bier", inhoud: "20 L", eenheid: "fust", inkoopprijs: 40.7, statiegeldPerStuk: 30, barcode: "8712000012345", leverancier: "Swinkels", emballageId: "e5", emballagePer: "stuk" }),
+  p({ id: "p2", naam: "Swinckels 0,3 L", categorie: "bier", inhoud: "0,3 L", inkoopprijs: 0.53, verpakking: "krat", stuksPerVerpakking: 24, alleenPerVerpakking: true, statiegeldPerVerpakking: 3.9, barcode: "8712000098765", leverancier: "Swinkels", emballageId: "e4" }),
+  p({ id: "p3", naam: "Spa blauw 1 L", inhoud: "1 L", inkoopprijs: 0.95, verpakking: "krat", stuksPerVerpakking: 12, statiegeldPerVerpakking: 5, barcode: "8712000055512", leverancier: "Swinkels", emballageId: "e1" }),
+  p({ id: "p4", naam: "Coca Cola 0,2 L", inhoud: "0,2 L", inkoopprijs: 0.46, verpakking: "krat", stuksPerVerpakking: 24, alleenPerVerpakking: true, statiegeldPerVerpakking: 5, barcode: "8712000044421", leverancier: "Swinkels", emballageId: "e1" }),
+  p({ id: "p5", naam: "Coca Cola 1,25 L", inhoud: "1,25 L", inkoopprijs: 2.05, statiegeldPerStuk: 0.25, leverancier: "Swinkels", voorPersoneel: true, emballageId: "e2", emballagePer: "stuk" }),
   p({ id: "p6", naam: "Witte wijn 0,7 L", categorie: "wijn", inhoud: "0,7 L", inkoopprijs: 4.15, voorPersoneel: true, barcode: "8712000033310" }),
   p({ id: "p7", naam: "Prosecco 0,7 L", categorie: "wijn", inhoud: "0,7 L", inkoopprijs: 7.15, barcode: "8712000022209" }),
   p({ id: "p8", naam: "Koffie", categorie: "koffie", eenheid: "kop", inkoopprijs: 0.12, voorraadloos: true, leverancier: "Franke" }),
@@ -64,7 +70,7 @@ const voorraadRuw: [string, string, number, number][] = [
   ["l1", "p1", 38, 12], ["l1", "p3", 1240, 400], ["l1", "p4", 860, 400],
   ["l1", "p6", 96, 120], ["l1", "p7", 54, 60], ["l1", "p2", 16, 8], ["l1", "p5", 180, 60],
   ["l2", "p3", 220, 100], ["l4", "p1", 6, 4],
-  ["l5", "p4", 96, 48], ["l5", "p3", 36, 24], ["l6", "p2", 72, 48], ["l6", "p6", 9, 6],
+  ["l5", "p4", 96, 48], ["l5", "p3", 36, 24], ["l5", "p2", 72, 48], ["l5", "p6", 9, 6],
 ];
 const voorraad: Voorraad[] = voorraadRuw.map(([locatieId, productId, aantal, minVoorraad]) => ({
   locatieId, productId, aantal, minVoorraad,
@@ -229,6 +235,16 @@ const emballageRetourregels = [
   { id: "em3", retourId: "er2", emballageId: "e5", aantal: 12 },
   { id: "em4", retourId: "er2", emballageId: "e4", aantal: 6 },
 ];
+/* Zoals emballage_stand() (migratie 030): binnen ± handmatig − retour. Eén
+   soort negatief, zodat de melding "tellen" te beoordelen is. */
+const emballageStand = [
+  { emballageId: "e1", binnen: 24, handmatig: 134, retour: 18, inHuis: 140 },
+  { emballageId: "e2", binnen: 60, handmatig: 52, retour: 40, inHuis: 72 },
+  { emballageId: "e4", binnen: 10, handmatig: 20, retour: 6, inHuis: 24 },
+  { emballageId: "e5", binnen: 8, handmatig: 35, retour: 12, inHuis: 31 },
+  { emballageId: "e7", binnen: 0, handmatig: 0, retour: 2, inHuis: -2 },
+  { emballageId: "e8", binnen: 0, handmatig: 4, retour: 0, inHuis: 4 },
+];
 
 /* Zoals de database: bedragen alleen voor de beheerder, anders 0. */
 const zietBedragen = (new URLSearchParams(window.location.search).get("rol") ?? "beheerder") === "beheerder";
@@ -237,11 +253,11 @@ const state = {
     ? producten
     : producten.map((x) => ({ ...x, inkoopprijs: 0, statiegeldPerStuk: 0, statiegeldPerVerpakking: 0 })),
   evenementen: zietBedragen ? evenementen : evenementen.map((e) => ({ ...e, omzet: 0 })),
-  mutaties, locaties, voorraad, profielen, tellingen, pakbonnen,
+  mutaties, locaties, alleLocaties, voorraad, profielen, tellingen, pakbonnen,
   zalen, evenementZalen, vulplekken, standaardvulling, koppelingen, machines, metingen,
   leveringen, leveringregels,
   emballage: zietBedragen ? emballage : emballage.map((e) => ({ ...e, borg: 0 })),
-  emballageRetouren, emballageRetourregels,
+  emballageRetouren, emballageRetourregels, emballageStand,
 };
 
 /* Eén wachtende boeking, zodat de balk in de preview te beoordelen is. */
@@ -309,6 +325,8 @@ const waarde: Record<string, unknown> = {
   boekLevering: async () => ({ inWachtrij: false }),
   handelVerschilAf: niets,
   boekEmballageRetour: async () => "er1",
+  telEmballage: async () => 0,
+  boekEmballageHandmatig: async () => 0,
   wachtrij,
   verstuurWachtrij: niets,
   verwijderUitWachtrij: () => {},

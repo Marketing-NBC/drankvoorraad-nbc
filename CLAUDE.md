@@ -29,9 +29,10 @@ voorraadstand op rust:
   daarna nog wijzigen of erop boeken, mag alleen de beheerder: na afloop
   controleert die alles en sluit het af. Zie `controleer_evenement` en
   `controleer_mutatie_rol` in migratie 027.
-- **Uitgifte voor een evenement komt altijd uit Koelcel NBC**, ook bij Green
-  Village. De app kiest die locatie zelf (`uitgiftelocatie` in
-  `AppStateContext`); er is geen keuze meer.
+- **Uitgifte voor een evenement komt altijd uit Koelcellen NBC**, ook bij
+  Green Village. De app kiest die locatie zelf (`uitgiftelocatie` in
+  `AppStateContext`, op type `koelcel` en merk NBC, niet op naam); er is geen
+  keuze meer. Daarom mag er maar één koelcel van NBC zijn.
 - **Bedragen en marges zijn alleen voor de beheerder.** Inkoopprijs,
   statiegeld, omzet en borg zijn voor andere rollen ingetrokken en alleen te
   lezen of te zetten via `productbedragen`, `evenementomzet`,
@@ -47,11 +48,14 @@ voorraadstand op rust:
   koelkast wordt met 12 flesjes gevuld, niet met een halve krat, dus het
   product kán geen krat zijn. Raakt een boeking of telling de kantine of de
   kroeg, dan gaat het altijd per flesje (`losOpLocatie`).
-- **De kantine en de kroeg zijn voor personeel.** Wat daar opgaat telt nooit
-  mee bij een evenement. Een trigger weigert elke boeking die die twee mengt;
-  zie `supabase/migraties/011_personeelslocaties.sql`. Er komen alleen
-  producten met `voor_personeel` in: de grote flessen fris (1,25 en 1,5 L),
-  radler, alcoholvrij bier en wijn (migratie 027).
+- **De kantine en de kroeg zijn voor personeel.** Sinds migratie 031 zijn ze
+  één locatie, "Kantine en kroeg"; de oude kroeg staat op `actief = false`.
+  Wat daar opgaat telt nooit mee bij een evenement. Een trigger weigert elke
+  boeking die die twee mengt; zie
+  `supabase/migraties/011_personeelslocaties.sql`. Er komen alleen producten
+  met `voor_personeel` in: de grote flessen fris (1,25 en 1,5 L), radler,
+  alcoholvrij bier, wijn (migratie 027) en Swinkels 0,3 L en het fust
+  (migratie 031).
 - **In de kantine en de kroeg meet de telling het verbruik.** Een tekort wordt
   daar geboekt als `personeelsverbruik` en niet als `correctie` — niemand houdt
   achter de bar bij wie wat pakt. Een overschot blijft wél een correctie: meer
@@ -106,15 +110,34 @@ Er is geen backend van onszelf: de browser praat rechtstreeks met Supabase,
 afgeschermd door RLS-policies. Serverlogica zit in Postgres, aangeroepen via
 RPC's: `start_telling`, `rond_telling_af`, `annuleer_telling`, `maak_pakbon`,
 `stel_min_voorraad`, `boek_meting`, `boek_levering`, `handel_verschil_af`,
-`gebruikers_overzicht`, `boek_emballage_retour`, en de
-bedragfuncties uit migratie 019.
+`gebruikers_overzicht`, `boek_emballage_retour`, `emballage_stand`,
+`boek_emballage_handmatig`, `tel_emballage`, en de bedragfuncties uit
+migratie 019.
 
 Lege emballage die terug gaat naar de leverancier wordt vastgelegd op de
 tabellen `emballage` (soorten met borg en het artikelnummer van de
 retourbon), `emballage_retouren` (de bon) en `emballage_mutaties` (de regels).
 Dat raakt de drankvoorraad niet; het is de controle op de creditnota. In de
-app is het de tweede kop onder Magazijn. De retourbon wordt met de hand
+app is de retourbon de tweede kop onder Leveringen (`/leveringen/emballage`),
+want hij gaat met dezelfde vrachtwagen mee. De retourbon wordt met de hand
 overgenomen van het papier.
+
+Hoeveel emballage er in huis staat — vol en leeg samen — is de tweede kop
+onder Magazijn (`/magazijn/emballage`). Die stand wordt afgeleid in
+`emballage_stand()` (migratie 030): de beginstand is de emballage van de
+drankvoorraad op het moment dat 030 draaide (Robin voerde de voorraad met een
+telling in, niet als inkoop); daarna telt elke `inkoop` van een product met
+`emballage_id` erbij (één per krat of één per stuk, volgens `emballage_per`),
+gaan de regels van de retourbon eraf, en komt erbij of gaat eraf wat iemand
+met de hand invoert (`boek_emballage_handmatig`, met reden) of telt
+(`tel_emballage`). Die drie zijn type `erbij`/`eraf` in `emballage_mutaties`;
+de notitie zegt welke. Uitgifte naar een evenement verandert de stand niet:
+de emballage blijft van ons tot de leverancier hem ophaalt. De koppeling
+product → emballage zet de beheerder in het productformulier.
+
+Magazijn heeft naast de locaties een keuze **Totaal**: per product de
+voorraad van alle locaties bij elkaar en waar het ligt
+(`totaleVoorraadPerProduct` in `app/src/data/calculations.ts`).
 
 De tabel `leverancier_artikelen` en de RPC `koppel_artikel` (migratie 027)
 staan nog in de database, maar de app gebruikt ze niet meer: ze hoorden bij
@@ -131,10 +154,13 @@ Function haalt hun dagtotalen op en gooit ze daarin. De vorm ligt vast en is
 idempotent, dus die functie kan geschreven worden zodra de koppeling er is,
 zonder dat er aan de app of de database iets verandert.
 
-`app/src/context/AppStateContext.tsx` is de enige datalaag. Die laadt alles bij
+`app/src/context/AppStateContext.tsx` is de enige datalaag. `state.locaties`
+bevat alleen locaties die in gebruik zijn — alles wat je kunt kiezen;
+`state.alleLocaties` ook de uitgezette, en is er alleen om de naam bij een
+oude boeking of telling te vinden. Die laadt alles bij
 het opstarten en abonneert zich op een realtime-kanaal (`drankvoorraad`) dat bij
-elke wijziging in `mutaties`, `evenementen`, `producten`, `voorraad`, `locaties`
-of `pakbonnen` een stille herlaad doet.
+elke wijziging in `mutaties`, `evenementen`, `producten`, `voorraad`, `locaties`,
+`pakbonnen`, de leveringen of de emballage een stille herlaad doet.
 
 Inloggen gaat uitsluitend met e-mail en wachtwoord (`signInWithPassword`). Er is
 geen magic link, geen OAuth en geen wachtwoordherstel — dus ook geen
@@ -210,7 +236,7 @@ afmaken ervan. Deze paragraaf mag weg zodra dat plan er ligt.
 Vier dingen die bij "van PoC naar af" waarschijnlijk terugkomen. Geen van deze is
 kapot — het zijn keuzes die passen bij een PoC en knellen zodra het menens wordt:
 
-- **Testdekking.** 106 tests over rekenlogica (`app/src/data/`), de wachtrij
+- **Testdekking.** 118 tests over rekenlogica (`app/src/data/`), de wachtrij
   (`app/src/lib/`) en de Excel-export (`app/src/utils/`). Geen enkel scherm of
   gebruikersstroom is getest, terwijl daar de meeste code zit.
 - **Databasemigraties.** Half opgelost: nieuwe wijzigingen staan genummerd in

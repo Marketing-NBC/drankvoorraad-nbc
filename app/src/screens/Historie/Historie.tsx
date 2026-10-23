@@ -58,7 +58,7 @@ export function Historie() {
   const [exporteert, setExporteert] = useState(false);
 
   async function exporteer() {
-    const locatieNaam = new Map(state.locaties.map((l) => [l.id, l.naam]));
+    const locatieNaam = new Map(state.alleLocaties.map((l) => [l.id, l.naam]));
     const gebruikerNaam = new Map(state.profielen.map((p) => [p.id, p.naam]));
     const filterOmschrijving = [
       type ? `soort: ${mutatieLabels[type]}` : null,
@@ -147,7 +147,7 @@ export function Historie() {
             placeholder="Alle locaties"
             value={locatieId}
             onChange={(e) => setLocatieId(e.target.value)}
-            options={state.locaties.map((l) => ({ value: l.id, label: l.naam }))}
+            options={state.alleLocaties.map((l) => ({ value: l.id, label: l.naam }))}
           />
         </div>
       </div>
@@ -170,7 +170,7 @@ export function Historie() {
         <MutatieTabel
           mutaties={mutaties}
           producten={state.producten}
-          locaties={state.locaties}
+          locaties={state.alleLocaties}
           profielen={state.profielen}
           toonEvenement
           evenementNaam={(id) => evenementNaam.get(id) ?? id}

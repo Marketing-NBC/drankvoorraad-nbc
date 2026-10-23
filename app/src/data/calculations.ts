@@ -278,7 +278,9 @@ export function personeelsverbruik(
       continue;
     }
 
-    if (m.naarLocatieId && isPersoneel.has(m.naarLocatieId)) {
+    /* Van de ene personeelslocatie naar de andere is geen aanvulling uit
+       het magazijn: zo zijn de kantine en de kroeg samengevoegd (031). */
+    if (m.naarLocatieId && isPersoneel.has(m.naarLocatieId) && !(m.vanLocatieId && isPersoneel.has(m.vanLocatieId))) {
       const perProduct = aanvulPer.get(m.naarLocatieId) ?? new Map<string, number>();
       perProduct.set(m.productId, (perProduct.get(m.productId) ?? 0) + m.aantal);
       aanvulPer.set(m.naarLocatieId, perProduct);
@@ -356,6 +358,65 @@ export function lageVoorraad(voorraad: Voorraad[]): LageVoorraadRegel[] {
       tekort: v.minVoorraad - v.aantal,
     }))
     .sort((a, b) => b.tekort - a.tekort);
+}
+
+export interface VoorraadInHuis {
+  stuks: number;
+  /** Aantal verschillende producten waar ergens iets van ligt. */
+  producten: number;
+  /** Tegen inkoopprijs. Alleen zinvol voor de beheerder; voor anderen 0. */
+  waarde: number;
+}
+
+/**
+ * Alles wat er in huis ligt, over alle locaties bij elkaar: het
+ * hoofdmagazijn, de koelcellen, de kantine en de kroeg. Wat op een
+ * evenement staat is geen locatie en telt dus niet mee.
+ *
+ * Een negatieve stand (iets uitgegeven dat nooit is ingeboekt) trekt het
+ * totaal niet omlaag: die regel telt als 0, net als in de tabel.
+ */
+export function voorraadInHuis(voorraad: Voorraad[], producten: Product[]): VoorraadInHuis {
+  const prijsVan = new Map(producten.map((p) => [p.id, p.inkoopprijs]));
+  const metVoorraad = voorraad.filter((v) => v.aantal > 0);
+  return {
+    stuks: metVoorraad.reduce((som, v) => som + v.aantal, 0),
+    producten: new Set(metVoorraad.map((v) => v.productId)).size,
+    waarde: metVoorraad.reduce((som, v) => som + v.aantal * (prijsVan.get(v.productId) ?? 0), 0),
+  };
+}
+
+export interface TotaleVoorraadRegel {
+  product: Product;
+  /** Stuks per locatie-id; alleen locaties waar iets ligt (of een tekort staat). */
+  perLocatie: Map<string, number>;
+  /** Over alle locaties samen, in stuks. Een negatieve stand telt als 0. */
+  totaal: number;
+  /** Totaal tegen inkoopprijs. Voor anderen dan de beheerder 0. */
+  waarde: number;
+}
+
+/**
+ * Per product de voorraad van alle locaties bij elkaar: het hoofdmagazijn,
+ * de koelcellen, de bars en de kantine. Producten zonder voorraad (koffie en
+ * water) vallen weg; een product dat nergens ligt blijft staan met 0, zodat
+ * zichtbaar is dát het op is.
+ */
+export function totaleVoorraadPerProduct(voorraad: Voorraad[], producten: Product[]): TotaleVoorraadRegel[] {
+  const perProduct = new Map<string, Map<string, number>>();
+  for (const v of voorraad) {
+    if (v.aantal === 0) continue;
+    const per = perProduct.get(v.productId) ?? new Map<string, number>();
+    per.set(v.locatieId, (per.get(v.locatieId) ?? 0) + v.aantal);
+    perProduct.set(v.productId, per);
+  }
+  return producten
+    .filter((p) => !p.voorraadloos)
+    .map((product) => {
+      const perLocatie = perProduct.get(product.id) ?? new Map<string, number>();
+      const totaal = Array.from(perLocatie.values()).reduce((som, n) => som + Math.max(n, 0), 0);
+      return { product, perLocatie, totaal, waarde: totaal * product.inkoopprijs };
+    });
 }
 
 export interface EvenementUitstaand {

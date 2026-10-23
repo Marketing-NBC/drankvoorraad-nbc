@@ -99,6 +99,10 @@ export interface Product {
    * alcoholvrij bier en wijn. Zie migratie 027.
    */
   voorPersoneel: boolean;
+  /** Welke emballage er met dit product binnenkomt; leeg bij wijn en mocktails. */
+  emballageId?: string;
+  /** Eén emballage per krat ("verpakking") of per stuk (fust, PET-fles). */
+  emballagePer: "stuk" | "verpakking";
 }
 
 /** Voorraadstand van één product op één locatie. */
@@ -139,6 +143,20 @@ export interface EmballageSoort {
   actief: boolean;
   /** Borg per stuk emballage. Alleen voor de beheerder; anders 0. */
   borg: number;
+}
+
+/**
+ * Hoeveel van één soort emballage er in huis staat, vol of leeg. Komt uit
+ * emballage_stand() (migratie 030): wat er met de inkoop binnenkwam, plus of
+ * min wat er met de hand is ingevoerd (de beginstand, tellingen en losse
+ * invoer), min wat er retour ging.
+ */
+export interface EmballageStand {
+  emballageId: string;
+  binnen: number;
+  handmatig: number;
+  retour: number;
+  inHuis: number;
 }
 
 /** Eén keer lege emballage mee terug naar de leverancier. */

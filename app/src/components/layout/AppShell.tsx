@@ -71,6 +71,7 @@ function schermNaam(pad: string): { label: string; terug: boolean } {
   if (pad.startsWith("/tellingen/")) return { label: "Telling", terug: true };
   if (pad === ROUTES.leveringNieuw) return { label: "Levering aannemen", terug: true };
   if (pad === ROUTES.emballage) return { label: "Emballage", terug: false };
+  if (pad === ROUTES.emballageRetour) return { label: "Emballage retour", terug: false };
   const item = navItems.find((n) => n.to === pad);
   return { label: item?.label ?? "Drankvoorraad", terug: false };
 }

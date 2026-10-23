@@ -75,7 +75,7 @@ export function LocatieForm({
             id="locatie-naam"
             value={naam}
             onChange={(e) => setNaam(e.target.value)}
-            placeholder="bijv. Koelcel NBC"
+            placeholder="bijv. Koelcellen NBC"
           />
         </div>
         <div className="field-group">

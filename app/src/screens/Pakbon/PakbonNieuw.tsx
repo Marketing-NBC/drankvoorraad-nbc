@@ -29,7 +29,7 @@ export function PakbonNieuw() {
   const [fout, setFout] = useState<string | null>(null);
   const [bezig, setBezig] = useState(false);
 
-  /* Alles voor een evenement komt uit Koelcel NBC, ook bij Green Village. */
+  /* Alles voor een evenement komt uit Koelcellen NBC, ook bij Green Village. */
   const gekozenLocatie = uitgiftelocatie?.id ?? "";
   const productenById = useMemo(
     () => new Map(state.producten.map((p) => [p.id, p])),
@@ -127,7 +127,7 @@ export function PakbonNieuw() {
       <PageHeader
         eyebrow={`${evenement.id} · ${formatDate(evenement.datum)}`}
         title={`Pakbon voor ${evenement.naam}`}
-        toelichting="Zet de producten op de pakbon die daadwerkelijk meegaan, laat de ontvanger tekenen en leg de pakbon vast. De voorraad wordt dan in één keer afgeboekt van Koelcel NBC."
+        toelichting="Zet de producten op de pakbon die daadwerkelijk meegaan, laat de ontvanger tekenen en leg de pakbon vast. De voorraad wordt dan in één keer afgeboekt van Koelcellen NBC."
       />
 
       {fout ? <FoutMelding melding={fout} /> : null}
@@ -135,7 +135,7 @@ export function PakbonNieuw() {
       <Card>
         <KaartKop titel="Wat gaat er mee" sub="scan of kies een product en zet het aantal erbij" />
         <div className="product-form">
-        <p className="veld-toelichting">Uitgifte vanuit {uitgiftelocatie?.naam ?? "Koelcel NBC"}.</p>
+        <p className="veld-toelichting">Uitgifte vanuit {uitgiftelocatie?.naam ?? "Koelcellen NBC"}.</p>
 
         <ProductKiezer
           producten={state.producten}

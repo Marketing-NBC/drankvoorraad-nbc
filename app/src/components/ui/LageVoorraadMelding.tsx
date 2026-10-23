@@ -17,7 +17,7 @@ export function LageVoorraadMelding({
   onBijbestellen,
 }: {
   locatieId?: string;
-  /** Alleen voor de kop: "… onder de minimumvoorraad in Koelcel NBC". */
+  /** Alleen voor de kop: "… onder de minimumvoorraad in Koelcellen NBC". */
   locatieNaam?: string;
   /** Directe actie; zonder deze wijst de knop naar het magazijn. */
   onBijbestellen?: () => void;
@@ -30,7 +30,7 @@ export function LageVoorraadMelding({
   if (regels.length === 0) return null;
 
   const productById = new Map(state.producten.map((p) => [p.id, p]));
-  const locatieById = new Map(state.locaties.map((l) => [l.id, l]));
+  const locatieById = new Map(state.alleLocaties.map((l) => [l.id, l]));
 
   // Meer dan een handvol namen leest niemand meer; dan is het aantal het bericht.
   const toon = regels.slice(0, 3);

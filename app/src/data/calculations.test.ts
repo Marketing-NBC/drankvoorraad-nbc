@@ -14,6 +14,8 @@ import {
   topProducten,
   totaleBrutowinst,
   uitstaandPerEvenement,
+  totaleVoorraadPerProduct,
+  voorraadInHuis,
   voorraadverschillen,
   werkelijkVerbruik,
 } from "./calculations";
@@ -31,6 +33,7 @@ function product(velden: Partial<Product> & Pick<Product, "id" | "naam">): Produ
     statiegeldPerVerpakking: 0,
     voorraadloos: false,
     voorPersoneel: false,
+    emballagePer: "verpakking",
     ...velden,
   };
 }
@@ -195,6 +198,73 @@ describe("lageVoorraad", () => {
 
   it("does not flag stock exactly at its minimum", () => {
     expect(lageVoorraad([regel({ aantal: 5, minVoorraad: 5 })])).toEqual([]);
+  });
+});
+
+describe("voorraadInHuis", () => {
+  const regel = (partial: Partial<Voorraad>): Voorraad => ({
+    locatieId: "l1", productId: bier.id, aantal: 0, minVoorraad: 0, ...partial,
+  });
+
+  it("adds up every location: stuks, distinct products and value at cost", () => {
+    const resultaat = voorraadInHuis(
+      [
+        regel({ locatieId: "magazijn", productId: bier.id, aantal: 10 }),
+        regel({ locatieId: "koelcel", productId: bier.id, aantal: 2 }),
+        regel({ locatieId: "kantine", productId: wijn.id, aantal: 6 }),
+      ],
+      producten
+    );
+    expect(resultaat).toEqual({ stuks: 18, producten: 2, waarde: 12 * 85 + 6 * 6.5 });
+  });
+
+  it("ignores empty and negative rows instead of subtracting them", () => {
+    const resultaat = voorraadInHuis(
+      [
+        regel({ productId: bier.id, aantal: 3 }),
+        regel({ locatieId: "l2", productId: wijn.id, aantal: -4 }),
+        regel({ locatieId: "l3", productId: wijn.id, aantal: 0 }),
+      ],
+      producten
+    );
+    expect(resultaat).toEqual({ stuks: 3, producten: 1, waarde: 255 });
+  });
+});
+
+describe("totaleVoorraadPerProduct", () => {
+  const regel = (partial: Partial<Voorraad>): Voorraad => ({
+    locatieId: "l1", productId: bier.id, aantal: 0, minVoorraad: 0, ...partial,
+  });
+  const koffie = product({ id: "p3", naam: "Koffie", voorraadloos: true });
+
+  it("adds every location per product and keeps the split", () => {
+    const [b, w] = totaleVoorraadPerProduct(
+      [
+        regel({ locatieId: "magazijn", productId: bier.id, aantal: 10 }),
+        regel({ locatieId: "koelcel", productId: bier.id, aantal: 2 }),
+        regel({ locatieId: "kantine", productId: wijn.id, aantal: 6 }),
+      ],
+      producten
+    );
+    expect(b.totaal).toBe(12);
+    expect(b.waarde).toBe(12 * 85);
+    expect(Array.from(b.perLocatie.entries())).toEqual([["magazijn", 10], ["koelcel", 2]]);
+    expect(w.totaal).toBe(6);
+  });
+
+  it("keeps a product that is nowhere, drops products without stock keeping", () => {
+    const regels = totaleVoorraadPerProduct([], [...producten, koffie]);
+    expect(regels.map((r) => r.product.id)).toEqual([bier.id, wijn.id]);
+    expect(regels[0].totaal).toBe(0);
+  });
+
+  it("shows a negative location but does not subtract it from the total", () => {
+    const [b] = totaleVoorraadPerProduct(
+      [regel({ locatieId: "a", aantal: 5 }), regel({ locatieId: "b", aantal: -2 })],
+      producten
+    );
+    expect(b.perLocatie.get("b")).toBe(-2);
+    expect(b.totaal).toBe(5);
   });
 });
 
@@ -410,6 +480,14 @@ describe("personeelsverbruik", () => {
       tot: "2026-09-05",
     });
     expect(opDeDagZelf.verbruik).toEqual([{ productId: wijn.id, aantal: 6, waarde: 39 }]);
+  });
+
+  it("telt verplaatsen van de kroeg naar de kantine niet als aanvulling", () => {
+    const kroeg: Locatie = { id: "l8", naam: "Kroeg", type: "kroeg", merk: "NBC", voorPersoneel: true };
+    const samenvoegen = mutatie({ id: "s1", type: "magazijn-naar-magazijn", productId: wijn.id, aantal: 5, vanLocatieId: kroeg.id, naarLocatieId: kantine.id, evenementId: undefined });
+    const regels = personeelsverbruik([...mutaties, samenvoegen], producten, [magazijn, kantine, kroeg]);
+    const kantineRegel = regels.find((r) => r.locatie.id === kantine.id)!;
+    expect(kantineRegel.aangevuld).toEqual([{ productId: wijn.id, aantal: 24, waarde: 156 }]);
   });
 
   it("geeft een locatie zonder boekingen terug met nullen in plaats van weg te laten", () => {

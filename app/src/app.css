@@ -1089,32 +1089,33 @@ body { background: var(--canvas); }
 /* ══════════════════════════════════════════════════════════════════
    Magazijn
    ══════════════════════════════════════════════════════════════════ */
-.magazijn-hoofd {
-  display: flex; flex-direction: column; gap: 10px; width: 100%; text-align: left;
-  border: 0; border-radius: var(--r-kaart-mob); padding: 16px 18px;
+.totaal-balk {
+  display: flex; flex-direction: column; gap: 10px; width: 100%;
+  border-radius: var(--r-kaart-mob); padding: 16px 18px;
   background: var(--grad-petrol); color: var(--nbc-paper);
-  transition: filter var(--dur-fast) var(--ease);
 }
-.magazijn-hoofd:hover { filter: brightness(1.06); }
-.magazijn-hoofd--actief { box-shadow: 0 0 0 2px var(--canvas), 0 0 0 4px var(--nbc-blue-deep); }
-.magazijn-hoofd__kop { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-.magazijn-hoofd__naam { font: 800 14px/1.4 var(--font-body); }
-.magazijn-hoofd__sub { display: block; font: var(--t-ui-sm); color: var(--nbc-blue-tint); }
-.magazijn-hoofd__cijfers { display: flex; gap: 18px; flex-wrap: wrap; }
-.magazijn-hoofd__cijfer { display: flex; flex-direction: column; }
-.magazijn-hoofd__cijfer strong { font: 300 24px/1.05 var(--font-display); font-weight: 300; font-variant-numeric: tabular-nums; }
-.magazijn-hoofd__cijfer span { font: 400 11px/1.3 var(--font-body); color: var(--nbc-blue-tint); }
+.totaal-balk__titel { margin: 0; font: 800 14px/1.4 var(--font-body); color: inherit; }
+.totaal-balk__sub { display: block; font: var(--t-ui-sm); color: var(--nbc-blue-tint); }
+.totaal-balk__cijfers { display: flex; gap: 18px; flex-wrap: wrap; margin: 0; }
+/* Label onder het getal, maar in de HTML erboven: zo hoort een <dl>. */
+.totaal-balk__cijfer { display: flex; flex-direction: column-reverse; }
+.totaal-balk__cijfer dd { margin: 0; font: 300 24px/1.05 var(--font-display); font-variant-numeric: tabular-nums; }
+.totaal-balk__cijfer dt { font: 400 11px/1.3 var(--font-body); color: var(--nbc-blue-tint); }
 
 @media (min-width: 1100px) {
-  .magazijn-hoofd {
+  .totaal-balk {
     flex-direction: row; align-items: center; gap: 24px;
     border-radius: var(--r-kaart); padding: 22px 24px;
   }
-  .magazijn-hoofd__naam { font: var(--t-kop3); }
-  .magazijn-hoofd__cijfers { margin-left: auto; gap: 28px; text-align: right; flex: none; }
-  .magazijn-hoofd__cijfer strong { font-size: 34px; }
-  .magazijn-hoofd__cijfer span { font-size: 12px; }
+  .totaal-balk__titel { font: var(--t-kop3); }
+  .totaal-balk__cijfers { margin-left: auto; gap: 28px; text-align: right; flex: none; }
+  .totaal-balk__cijfer dd { font-size: 34px; }
+  .totaal-balk__cijfer dt { font-size: 12px; }
 }
+
+/* Totaaloverzicht: per product de locaties waar iets ligt, als regel. */
+.totaal-waar { display: flex; flex-wrap: wrap; gap: 2px 14px; font: var(--t-ui-sm); color: var(--nbc-stone-600); }
+.totaal-waar strong { color: var(--nbc-stone-800); font-weight: 700; }
 
 /* Locatiekeuze schuift horizontaal — past altijd, ongeacht het aantal. */
 .locatie-groep { display: flex; align-items: center; gap: 10px; min-width: 0; }

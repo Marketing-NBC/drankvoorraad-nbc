@@ -73,7 +73,7 @@ export function BookingModal({
   useEffect(() => {
     if (!open) return;
     setProductId(standaardProductId ?? producten[0]?.id ?? "");
-    /* Uitgifte komt altijd uit Koelcel NBC (Robin: "nooit wat anders"), ook
+    /* Uitgifte komt altijd uit Koelcellen NBC (Robin: "nooit wat anders"), ook
        bij Green Village. Retour gaat daar ook standaard heen, maar mag naar
        een andere koelcel of het hoofdmagazijn. */
     setLocatieId(uitgiftelocatie?.id ?? magazijnen[0]?.id ?? "");
@@ -105,7 +105,7 @@ export function BookingModal({
     if (!locatie) {
       setFout(
         richting === "uitgifte"
-          ? "Koelcel NBC is niet gevonden. Vraag de beheerder om de locaties na te kijken."
+          ? "Koelcellen NBC is niet gevonden. Vraag de beheerder om de locaties na te kijken."
           : "Kies een magazijnlocatie."
       );
       return;
@@ -145,7 +145,7 @@ export function BookingModal({
         />
         {richting === "uitgifte" ? (
           <p className="veld-toelichting">
-            Uit {uitgiftelocatie?.naam ?? "Koelcel NBC"} — daar komt alles voor een evenement vandaan.
+            Uit {uitgiftelocatie?.naam ?? "Koelcellen NBC"} — daar komt alles voor een evenement vandaan.
           </p>
         ) : (
           <div className="field-group">

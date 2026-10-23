@@ -29,7 +29,7 @@ export function ProductForm({
   product: Product | null;
   barcodeVooraf?: string;
 }) {
-  const { voegProductToe, wijzigProduct } = useAppState();
+  const { state, voegProductToe, wijzigProduct } = useAppState();
   /* Prijzen en statiegeld zijn alleen voor de beheerder. Wie een gescand
      product aanmaakt zonder beheerder te zijn, laat ze leeg; de beheerder
      vult ze later aan. */
@@ -49,6 +49,8 @@ export function ProductForm({
   const [barcode, setBarcode] = useState("");
   const [barcodeVerpakking, setBarcodeVerpakking] = useState("");
   const [leverancier, setLeverancier] = useState("");
+  const [emballageId, setEmballageId] = useState("");
+  const [emballagePer, setEmballagePer] = useState<Product["emballagePer"]>("verpakking");
   const [fout, setFout] = useState<string | null>(null);
   const [bezig, setBezig] = useState(false);
   /** Welk barcodeveld de camera vult, of null als er niet gescand wordt. */
@@ -71,6 +73,8 @@ export function ProductForm({
     setBarcode(product?.barcode ?? barcodeVooraf ?? "");
     setBarcodeVerpakking(product?.barcodeVerpakking ?? "");
     setLeverancier(product?.leverancier ?? "");
+    setEmballageId(product?.emballageId ?? "");
+    setEmballagePer(product?.emballagePer ?? "verpakking");
     setFout(null);
     setScannen(null);
     // Bewust op product?.id en niet op product zelf: dat object krijgt bij elke
@@ -102,6 +106,11 @@ export function ProductForm({
       return;
     }
 
+    if (emballageId && emballagePer === "verpakking" && stuks < 2) {
+      setFout("Eén emballage per verpakking kan pas met meer dan één stuk erin. Kies anders per stuk.");
+      return;
+    }
+
     if (barcode.trim() && barcode.trim() === barcodeVerpakking.trim()) {
       setFout("De barcode van het stuk en die van de verpakking kunnen niet dezelfde zijn.");
       return;
@@ -123,6 +132,8 @@ export function ProductForm({
       barcode: barcode.trim() || undefined,
       barcodeVerpakking: barcodeVerpakking.trim() || undefined,
       leverancier: leverancier.trim() || undefined,
+      emballageId: emballageId || undefined,
+      emballagePer,
     };
 
     setBezig(true);
@@ -226,6 +237,42 @@ export function ProductForm({
             </div>
           </div>
           ) : null}
+        </fieldset>
+
+        {/* Welke emballage er met dit product binnenkomt. Daaruit volgt de
+            stand onder Magazijn → Emballage; zie migratie 030. */}
+        <fieldset className="veldgroep-kader">
+          <legend>Emballage</legend>
+          <div className="field-row">
+            <div className="field-group">
+              <span className="field-group__label">Soort</span>
+              <Select
+                aria-label="Emballage"
+                value={emballageId}
+                onChange={(e) => setEmballageId(e.target.value)}
+                options={[
+                  { value: "", label: "Geen" },
+                  ...state.emballage
+                    .filter((e) => e.actief || e.id === emballageId)
+                    .map((e) => ({ value: e.id, label: e.naam })),
+                ]}
+              />
+            </div>
+            {emballageId ? (
+              <div className="field-group">
+                <span className="field-group__label">Hoeveel</span>
+                <Select
+                  aria-label="Emballage per"
+                  value={emballagePer}
+                  onChange={(e) => setEmballagePer(e.target.value as Product["emballagePer"])}
+                  options={[
+                    { value: "verpakking", label: `Eén per ${verpakking.trim() || "verpakking"}` },
+                    { value: "stuk", label: `Eén per ${eenheid.trim() || "stuk"}` },
+                  ]}
+                />
+              </div>
+            ) : null}
+          </div>
         </fieldset>
 
         <label className="keuzevakje">
