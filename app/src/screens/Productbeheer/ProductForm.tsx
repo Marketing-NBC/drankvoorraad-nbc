@@ -240,7 +240,7 @@ export function ProductForm({
         </fieldset>
 
         {/* Welke emballage er met dit product binnenkomt. Daaruit volgt de
-            stand onder Magazijn → Emballage; zie migratie 029. */}
+            stand onder Magazijn → Emballage; zie migratie 030. */}
         <fieldset className="veldgroep-kader">
           <legend>Emballage</legend>
           <div className="field-row">

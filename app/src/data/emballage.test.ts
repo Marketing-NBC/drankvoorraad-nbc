@@ -12,7 +12,7 @@ const stand = (emballageId: string, inHuis: number): EmballageStand => ({
   emballageId,
   binnen: inHuis,
   retour: 0,
-  geteld: 0,
+  handmatig: 0,
   inHuis,
 });
 

@@ -22,11 +22,16 @@ const gebruikers: Gebruiker[] = profielen.map((p, i) => ({
 
 const locaties: Locatie[] = [
   { id: "l0", naam: "Hoofdmagazijn", type: "magazijn", merk: null, voorPersoneel: false },
-  { id: "l1", naam: "Koelcel NBC", type: "koelcel", merk: "NBC", voorPersoneel: false },
-  { id: "l2", naam: "Bar Green Village", type: "bar", merk: "Green Village", voorPersoneel: false },
+  { id: "l1", naam: "Koelcellen NBC", type: "koelcel", merk: "NBC", voorPersoneel: false },
+  { id: "l2", naam: "Koelkasten buffetten en bekkens NBC", type: "bar", merk: "NBC", voorPersoneel: false },
   { id: "l3", naam: "Koelcel Green Village", type: "koelcel", merk: "Green Village", voorPersoneel: false },
-  { id: "l4", naam: "Bar Foyer", type: "bar", merk: null, voorPersoneel: false },
-  { id: "l5", naam: "Kantine", type: "kantine", merk: "NBC", voorPersoneel: true },
+  { id: "l4", naam: "Bar NBC", type: "bar", merk: "NBC", voorPersoneel: false },
+  { id: "l5", naam: "Kantine en kroeg", type: "kantine", merk: "NBC", voorPersoneel: true },
+];
+/* Na 031 is de kroeg samengevoegd met de kantine: niet meer te kiezen, wel
+   nog de naam bij oude boekingen. */
+const alleLocaties: Locatie[] = [
+  ...locaties,
   { id: "l6", naam: "Kroeg", type: "kroeg", merk: "NBC", voorPersoneel: true },
 ];
 
@@ -65,7 +70,7 @@ const voorraadRuw: [string, string, number, number][] = [
   ["l1", "p1", 38, 12], ["l1", "p3", 1240, 400], ["l1", "p4", 860, 400],
   ["l1", "p6", 96, 120], ["l1", "p7", 54, 60], ["l1", "p2", 16, 8], ["l1", "p5", 180, 60],
   ["l2", "p3", 220, 100], ["l4", "p1", 6, 4],
-  ["l5", "p4", 96, 48], ["l5", "p3", 36, 24], ["l6", "p2", 72, 48], ["l6", "p6", 9, 6],
+  ["l5", "p4", 96, 48], ["l5", "p3", 36, 24], ["l5", "p2", 72, 48], ["l5", "p6", 9, 6],
 ];
 const voorraad: Voorraad[] = voorraadRuw.map(([locatieId, productId, aantal, minVoorraad]) => ({
   locatieId, productId, aantal, minVoorraad,
@@ -230,15 +235,15 @@ const emballageRetourregels = [
   { id: "em3", retourId: "er2", emballageId: "e5", aantal: 12 },
   { id: "em4", retourId: "er2", emballageId: "e4", aantal: 6 },
 ];
-/* Zoals emballage_stand() (migratie 029): binnen − retour ± telling. Eén
+/* Zoals emballage_stand() (migratie 030): binnen ± handmatig − retour. Eén
    soort negatief, zodat de melding "tellen" te beoordelen is. */
 const emballageStand = [
-  { emballageId: "e1", binnen: 96, retour: 18, geteld: 62, inHuis: 140 },
-  { emballageId: "e2", binnen: 120, retour: 40, geteld: -8, inHuis: 72 },
-  { emballageId: "e4", binnen: 30, retour: 6, geteld: 0, inHuis: 24 },
-  { emballageId: "e5", binnen: 40, retour: 12, geteld: 3, inHuis: 31 },
-  { emballageId: "e7", binnen: 0, retour: 2, geteld: 0, inHuis: -2 },
-  { emballageId: "e8", binnen: 0, retour: 0, geteld: 4, inHuis: 4 },
+  { emballageId: "e1", binnen: 24, handmatig: 134, retour: 18, inHuis: 140 },
+  { emballageId: "e2", binnen: 60, handmatig: 52, retour: 40, inHuis: 72 },
+  { emballageId: "e4", binnen: 10, handmatig: 20, retour: 6, inHuis: 24 },
+  { emballageId: "e5", binnen: 8, handmatig: 35, retour: 12, inHuis: 31 },
+  { emballageId: "e7", binnen: 0, handmatig: 0, retour: 2, inHuis: -2 },
+  { emballageId: "e8", binnen: 0, handmatig: 4, retour: 0, inHuis: 4 },
 ];
 
 /* Zoals de database: bedragen alleen voor de beheerder, anders 0. */
@@ -248,7 +253,7 @@ const state = {
     ? producten
     : producten.map((x) => ({ ...x, inkoopprijs: 0, statiegeldPerStuk: 0, statiegeldPerVerpakking: 0 })),
   evenementen: zietBedragen ? evenementen : evenementen.map((e) => ({ ...e, omzet: 0 })),
-  mutaties, locaties, voorraad, profielen, tellingen, pakbonnen,
+  mutaties, locaties, alleLocaties, voorraad, profielen, tellingen, pakbonnen,
   zalen, evenementZalen, vulplekken, standaardvulling, koppelingen, machines, metingen,
   leveringen, leveringregels,
   emballage: zietBedragen ? emballage : emballage.map((e) => ({ ...e, borg: 0 })),
@@ -321,6 +326,7 @@ const waarde: Record<string, unknown> = {
   handelVerschilAf: niets,
   boekEmballageRetour: async () => "er1",
   telEmballage: async () => 0,
+  boekEmballageHandmatig: async () => 0,
   wachtrij,
   verstuurWachtrij: niets,
   verwijderUitWachtrij: () => {},

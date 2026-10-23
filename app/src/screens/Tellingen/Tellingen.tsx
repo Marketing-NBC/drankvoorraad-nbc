@@ -31,7 +31,7 @@ export function Tellingen() {
     ? state.tellingen.filter((t) => telbareLocaties.some((l) => l.id === t.locatieId))
     : state.tellingen;
   const lopend = zichtbareTellingen.filter((t) => t.status === "open").length;
-  const locatieNaam = new Map(state.locaties.map((l) => [l.id, l.naam]));
+  const locatieNaam = new Map(state.alleLocaties.map((l) => [l.id, l.naam]));
   const gebruikerNaam = new Map(state.profielen.map((p) => [p.id, p.naam]));
 
   async function start() {

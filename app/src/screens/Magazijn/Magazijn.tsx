@@ -10,14 +10,18 @@ import { LageVoorraadMelding } from "../../components/ui/LageVoorraadMelding";
 import { TotaalBalk } from "../../components/ui/TotaalBalk";
 import { useAppState } from "../../context/AppStateContext";
 import { useAuth } from "../../context/AuthContext";
-import { voorraadInHuis } from "../../data/calculations";
+import { totaleVoorraadPerProduct, voorraadInHuis, type TotaleVoorraadRegel } from "../../data/calculations";
 import type { Locatie, Product } from "../../data/types";
 import { exporteerNaarExcel, type ExcelKolom } from "../../utils/excel";
 import { formatCurrency, formatNumber } from "../../utils/format";
 import { ProductForm } from "../Productbeheer/ProductForm";
 import { LocatieForm } from "./LocatieForm";
 import { VoorraadMutatieModal, type MagazijnActie } from "./VoorraadMutatieModal";
+import { TotaalTabel } from "./TotaalTabel";
 import { VoorraadTabel } from "./VoorraadTabel";
+
+/** Geen locatie maar het overzicht van alle locaties samen. */
+const TOTAAL = "totaal";
 
 export function Magazijn() {
   const { state, laden, fout, herlaad, verwijderLocatie, hoofdmagazijn } = useAppState();
@@ -43,7 +47,10 @@ export function Magazijn() {
     setActieveLocatieId(hoofd?.id ?? state.locaties[0].id);
   }, [state.locaties, actieveLocatieId]);
 
+  const opTotaal = actieveLocatieId === TOTAAL;
   const actieveLocatie = state.locaties.find((l) => l.id === actieveLocatieId) ?? null;
+  /* Vanuit het totaaloverzicht boek je in het hoofdmagazijn. */
+  const boekLocatieId = opTotaal ? hoofdmagazijn?.id : actieveLocatieId ?? undefined;
   /* Staat de kantine of de kroeg open, dan is "erbij" altijd: aanvullen
      vanuit het magazijn. Inkoop van buiten gaat nooit rechtstreeks daarheen. */
   const opPersoneelslocatie = actieveLocatie?.voorPersoneel ?? false;
@@ -61,6 +68,7 @@ export function Magazijn() {
   const inHuis = voorraadInHuis(state.voorraad, state.producten);
 
   async function handleExport() {
+    if (opTotaal) return exporteerTotaal();
     const locatie = state.locaties.find((l) => l.id === actieveLocatieId);
     if (!locatie) return;
     const perProduct = new Map(
@@ -101,6 +109,39 @@ export function Magazijn() {
           0: "Totale voorraadwaarde",
           6: state.producten.reduce((som, p) => som + (perProduct.get(p.id)?.aantal ?? 0) * p.inkoopprijs, 0),
         },
+      }),
+    });
+  }
+
+  /** Alle locaties samen: per product een kolom per locatie en het totaal. */
+  async function exporteerTotaal() {
+    const regels = totaleVoorraadPerProduct(state.voorraad, state.producten);
+    const waarde = regels.reduce((som, r) => som + r.waarde, 0);
+    await exporteerNaarExcel<TotaleVoorraadRegel>({
+      bestandsnaam: "voorraad-totaal",
+      titel: "Voorraad alle locaties",
+      ondertitel: locatieVolgorde.map((l) => l.naam).join(" · "),
+      rijen: regels,
+      kolommen: [
+        { header: "Product", value: (r) => r.product.naam },
+        { header: "Eenheid", value: (r) => r.product.eenheid },
+        ...locatieVolgorde.map(
+          (l): ExcelKolom<TotaleVoorraadRegel> => ({
+            header: l.naam,
+            opmaak: "getal",
+            value: (r) => r.perLocatie.get(l.id) ?? 0,
+          })
+        ),
+        { header: "Totaal", opmaak: "getal", value: (r) => r.totaal },
+        ...(zietBedragen
+          ? ([
+              { header: "Inkoopprijs", opmaak: "bedrag", value: (r) => r.product.inkoopprijs },
+              { header: "Voorraadwaarde", opmaak: "bedrag", value: (r) => r.waarde },
+            ] satisfies ExcelKolom<TotaleVoorraadRegel>[])
+          : []),
+      ],
+      ...(zietBedragen && {
+        totalen: { 0: "Totale voorraadwaarde", [locatieVolgorde.length + 4]: waarde },
       }),
     });
   }
@@ -193,7 +234,7 @@ export function Magazijn() {
         <>
           <TotaalBalk
             titel="Totaal in huis"
-            sub="alle locaties samen: magazijn, koelcellen, kantine en kroeg"
+            sub="alle locaties samen: magazijn, koelcellen, bars en de kantine"
             cijfers={[
               { waarde: formatNumber(inHuis.stuks), label: "stuks" },
               { waarde: formatNumber(inHuis.producten), label: "producten" },
@@ -205,6 +246,16 @@ export function Magazijn() {
           <div className="locatie-groep">
             <span className="locatie-groep__label">Locaties</span>
             <div className="locatie-balk">
+              {/* Eerst het overzicht van alles samen, dan per locatie. */}
+              <button
+                type="button"
+                className={["locatie-tab", opTotaal && "locatie-tab--actief"].filter(Boolean).join(" ")}
+                aria-pressed={opTotaal}
+                onClick={() => setActieveLocatieId(TOTAAL)}
+              >
+                Totaal
+                <Badge variant={opTotaal ? "op-donker" : "neutral"}>alle locaties</Badge>
+              </button>
               {locatieVolgorde.map((locatie) => (
                 <button
                   key={locatie.id}
@@ -224,6 +275,26 @@ export function Magazijn() {
               ))}
             </div>
           </div>
+
+          {opTotaal ? (
+            <>
+              <LageVoorraadMelding
+                onBijbestellen={magBoeken ? () => setActie({ soort: "inkoop" }) : undefined}
+              />
+              <Card className="card--tabel">
+                <KaartKop
+                  titel="Alle locaties samen"
+                  sub="per product het totaal, en wat er op elke locatie ligt"
+                />
+                <TotaalTabel
+                  locaties={locatieVolgorde}
+                  producten={state.producten}
+                  voorraad={state.voorraad}
+                  zietBedragen={zietBedragen}
+                />
+              </Card>
+            </>
+          ) : null}
 
           {actieveLocatie ? (
             <>
@@ -281,7 +352,7 @@ export function Magazijn() {
         actie={actie?.soort ?? "inkoop"}
         /* Aanvullen: van het hoofdmagazijn naar de kantine of kroeg die open staat. */
         standaardLocatieId={
-          actie?.soort === "aanvullen" ? hoofdmagazijn?.id : actieveLocatieId ?? undefined
+          actie?.soort === "aanvullen" ? hoofdmagazijn?.id : boekLocatieId
         }
         standaardNaarLocatieId={
           actie?.soort === "aanvullen" && opPersoneelslocatie ? actieveLocatieId ?? undefined : undefined

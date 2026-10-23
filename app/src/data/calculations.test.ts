@@ -14,6 +14,7 @@ import {
   topProducten,
   totaleBrutowinst,
   uitstaandPerEvenement,
+  totaleVoorraadPerProduct,
   voorraadInHuis,
   voorraadverschillen,
   werkelijkVerbruik,
@@ -230,6 +231,43 @@ describe("voorraadInHuis", () => {
   });
 });
 
+describe("totaleVoorraadPerProduct", () => {
+  const regel = (partial: Partial<Voorraad>): Voorraad => ({
+    locatieId: "l1", productId: bier.id, aantal: 0, minVoorraad: 0, ...partial,
+  });
+  const koffie = product({ id: "p3", naam: "Koffie", voorraadloos: true });
+
+  it("adds every location per product and keeps the split", () => {
+    const [b, w] = totaleVoorraadPerProduct(
+      [
+        regel({ locatieId: "magazijn", productId: bier.id, aantal: 10 }),
+        regel({ locatieId: "koelcel", productId: bier.id, aantal: 2 }),
+        regel({ locatieId: "kantine", productId: wijn.id, aantal: 6 }),
+      ],
+      producten
+    );
+    expect(b.totaal).toBe(12);
+    expect(b.waarde).toBe(12 * 85);
+    expect(Array.from(b.perLocatie.entries())).toEqual([["magazijn", 10], ["koelcel", 2]]);
+    expect(w.totaal).toBe(6);
+  });
+
+  it("keeps a product that is nowhere, drops products without stock keeping", () => {
+    const regels = totaleVoorraadPerProduct([], [...producten, koffie]);
+    expect(regels.map((r) => r.product.id)).toEqual([bier.id, wijn.id]);
+    expect(regels[0].totaal).toBe(0);
+  });
+
+  it("shows a negative location but does not subtract it from the total", () => {
+    const [b] = totaleVoorraadPerProduct(
+      [regel({ locatieId: "a", aantal: 5 }), regel({ locatieId: "b", aantal: -2 })],
+      producten
+    );
+    expect(b.perLocatie.get("b")).toBe(-2);
+    expect(b.totaal).toBe(5);
+  });
+});
+
 describe("uitstaandPerEvenement", () => {
   const evenement = (id: string, status: Evenement["status"] = "Actief"): Evenement => ({
     id, naam: `Event ${id}`, datum: "2026-09-15", merk: "NBC", status, omzet: 0,
@@ -442,6 +480,14 @@ describe("personeelsverbruik", () => {
       tot: "2026-09-05",
     });
     expect(opDeDagZelf.verbruik).toEqual([{ productId: wijn.id, aantal: 6, waarde: 39 }]);
+  });
+
+  it("telt verplaatsen van de kroeg naar de kantine niet als aanvulling", () => {
+    const kroeg: Locatie = { id: "l8", naam: "Kroeg", type: "kroeg", merk: "NBC", voorPersoneel: true };
+    const samenvoegen = mutatie({ id: "s1", type: "magazijn-naar-magazijn", productId: wijn.id, aantal: 5, vanLocatieId: kroeg.id, naarLocatieId: kantine.id, evenementId: undefined });
+    const regels = personeelsverbruik([...mutaties, samenvoegen], producten, [magazijn, kantine, kroeg]);
+    const kantineRegel = regels.find((r) => r.locatie.id === kantine.id)!;
+    expect(kantineRegel.aangevuld).toEqual([{ productId: wijn.id, aantal: 24, waarde: 156 }]);
   });
 
   it("geeft een locatie zonder boekingen terug met nullen in plaats van weg te laten", () => {

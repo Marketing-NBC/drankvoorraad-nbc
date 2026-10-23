@@ -5,7 +5,7 @@ export interface EmballageRegel {
   inHuis: number;
   binnen: number;
   retour: number;
-  geteld: number;
+  handmatig: number;
   /** In huis × borg. Alleen voor de beheerder; voor anderen is de borg 0. */
   waarde: number;
 }
@@ -13,7 +13,7 @@ export interface EmballageRegel {
 /**
  * Per soort hoeveel emballage er in huis staat en wat die aan borg waard is.
  *
- * De stand zelf rekent de database uit (emballage_stand(), migratie 029);
+ * De stand zelf rekent de database uit (emballage_stand(), migratie 030);
  * hier komt alleen de borg erbij. Een uitgezette soort blijft in beeld zolang
  * er nog iets van in huis staat — die borg is nog niet terug. Een negatieve
  * stand (meer retour dan er ooit binnenkwam) blijft ook zichtbaar: dat is het
@@ -33,7 +33,7 @@ export function emballageOverzicht(
         inHuis,
         binnen: s?.binnen ?? 0,
         retour: s?.retour ?? 0,
-        geteld: s?.geteld ?? 0,
+        handmatig: s?.handmatig ?? 0,
         waarde: Math.max(inHuis, 0) * soort.borg,
       };
     })

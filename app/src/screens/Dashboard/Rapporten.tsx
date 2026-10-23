@@ -49,8 +49,8 @@ export function Rapporten() {
     [state.producten]
   );
   const locatieNaam = useMemo(
-    () => new Map(state.locaties.map((l) => [l.id, l.naam])),
-    [state.locaties]
+    () => new Map(state.alleLocaties.map((l) => [l.id, l.naam])),
+    [state.alleLocaties]
   );
 
   const uitstaand = useMemo(

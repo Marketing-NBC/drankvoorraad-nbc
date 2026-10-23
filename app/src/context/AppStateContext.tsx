@@ -309,7 +309,13 @@ export interface AppState {
   producten: Product[];
   evenementen: Evenement[];
   mutaties: Mutatie[];
+  /** Locaties die in gebruik zijn: alles wat je kunt kiezen. */
   locaties: Locatie[];
+  /**
+   * Ook de locaties die niet meer in gebruik zijn (de kroeg na 031). Alleen
+   * om de naam bij een oude boeking of telling te vinden.
+   */
+  alleLocaties: Locatie[];
   voorraad: Voorraad[];
   profielen: Profiel[];
   tellingen: Telling[];
@@ -327,7 +333,7 @@ export interface AppState {
   emballage: EmballageSoort[];
   emballageRetouren: EmballageRetour[];
   emballageRetourregels: EmballageRetourregel[];
-  /** Per soort hoeveel emballage er in huis staat. Zie migratie 029. */
+  /** Per soort hoeveel emballage er in huis staat. Zie migratie 030. */
   emballageStand: EmballageStand[];
 }
 
@@ -340,7 +346,7 @@ interface AppStateContextValue {
   metingenPerEvenement: Map<string, Meting[]>;
   /** Het gedeelde hoofdmagazijn (merk === null). */
   hoofdmagazijn: Locatie | undefined;
-  /** Koelcel NBC: daar komt alle drank voor een evenement vandaan, ook bij Green Village. */
+  /** Koelcellen NBC: daar komt alle drank voor een evenement vandaan, ook bij Green Village. */
   uitgiftelocatie: Locatie | undefined;
   herlaad: () => Promise<void>;
   voegEvenementToe: (evenement: Evenement) => Promise<void>;
@@ -418,6 +424,8 @@ interface AppStateContextValue {
    * stand van dat moment; geeft het aantal soorten waar een verschil was.
    */
   telEmballage: (regels: { emballageId: string; geteld: number }[]) => Promise<number>;
+  /** Emballage met de hand erbij (positief) of eraf (negatief), met een reden. */
+  boekEmballageHandmatig: (regels: { emballageId: string; aantal: number }[], reden: string) => Promise<number>;
   /** Boekingen die op verbinding wachten, van iedereen die dit apparaat gebruikte. */
   wachtrij: WachtrijItem[];
   verstuurWachtrij: () => Promise<void>;
@@ -437,7 +445,7 @@ interface AppStateContextValue {
 const AppStateContext = createContext<AppStateContextValue | null>(null);
 
 const legeState: AppState = {
-  producten: [], evenementen: [], mutaties: [], locaties: [], voorraad: [],
+  producten: [], evenementen: [], mutaties: [], locaties: [], alleLocaties: [], voorraad: [],
   profielen: [], tellingen: [], pakbonnen: [], zalen: [], evenementZalen: [],
   vulplekken: [], standaardvulling: [], koppelingen: [], machines: [], metingen: [],
   leveringen: [], leveringregels: [], emballage: [], emballageRetouren: [], emballageRetourregels: [],
@@ -569,7 +577,8 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
         naarEvenement(r, omzetPerEvenement.get(r.id))
       ),
       mutaties: (resultaat.mutaties.data ?? []).map(naarMutatie),
-      locaties: (resultaat.locaties.data ?? []).map(naarLocatie),
+      locaties: (resultaat.locaties.data ?? []).filter((r) => r.actief !== false).map(naarLocatie),
+      alleLocaties: (resultaat.locaties.data ?? []).map(naarLocatie),
       voorraad: (resultaat.voorraad.data ?? []).map(naarVoorraad),
       profielen: (resultaat.profielen.data ?? []).map(naarProfiel),
       tellingen: (resultaat.tellingen.data ?? []).map(naarTelling),
@@ -592,8 +601,8 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       emballageStand: (resultaat.emballageStand.data ?? []).map((r) => ({
         emballageId: r.emballage_id,
         binnen: r.binnen,
+        handmatig: r.handmatig,
         retour: r.retour,
-        geteld: r.geteld,
         inHuis: r.in_huis,
       })),
     });
@@ -1300,6 +1309,16 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
            afgerekend tegen de stand van dát moment. */
         const { data, error } = await supabase.rpc("tel_emballage", {
           p_regels: regels.map((r) => ({ emballage_id: r.emballageId, geteld: r.geteld })),
+        });
+        if (error) throw error;
+        await herlaad();
+        return data ?? 0;
+      },
+
+      async boekEmballageHandmatig(regels, reden) {
+        const { data, error } = await supabase.rpc("boek_emballage_handmatig", {
+          p_regels: regels.map((r) => ({ emballage_id: r.emballageId, aantal: r.aantal })),
+          p_reden: reden,
         });
         if (error) throw error;
         await herlaad();

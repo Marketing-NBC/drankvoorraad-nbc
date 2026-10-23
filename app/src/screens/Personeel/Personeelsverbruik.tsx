@@ -81,10 +81,14 @@ export function Personeelsverbruik() {
     }
   }
 
-  const samenvattingen = useMemo(
-    () => personeelsverbruik(state.mutaties, state.producten, state.locaties, { vanaf, tot }),
-    [state.mutaties, state.producten, state.locaties, vanaf, tot]
-  );
+  /* Met alle locaties rekenen, zodat het samenvoegen van kantine en kroeg
+     (031) niet als aanvulling telt; tonen alleen wat nog in gebruik is. */
+  const samenvattingen = useMemo(() => {
+    const inGebruik = new Set(state.locaties.map((l) => l.id));
+    return personeelsverbruik(state.mutaties, state.producten, state.alleLocaties, { vanaf, tot }).filter(
+      (s) => inGebruik.has(s.locatie.id)
+    );
+  }, [state.mutaties, state.producten, state.locaties, state.alleLocaties, vanaf, tot]);
 
   const productNaam = useMemo(
     () => new Map(state.producten.map((p) => [p.id, p])),

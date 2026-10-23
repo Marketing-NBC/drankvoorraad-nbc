@@ -1113,6 +1113,10 @@ body { background: var(--canvas); }
   .totaal-balk__cijfer dt { font-size: 12px; }
 }
 
+/* Totaaloverzicht: per product de locaties waar iets ligt, als regel. */
+.totaal-waar { display: flex; flex-wrap: wrap; gap: 2px 14px; font: var(--t-ui-sm); color: var(--nbc-stone-600); }
+.totaal-waar strong { color: var(--nbc-stone-800); font-weight: 700; }
+
 /* Locatiekeuze schuift horizontaal — past altijd, ongeacht het aantal. */
 .locatie-groep { display: flex; align-items: center; gap: 10px; min-width: 0; }
 .locatie-groep__label {

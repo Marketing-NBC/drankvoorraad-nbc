@@ -45,7 +45,7 @@ export function TellingDetail() {
   const [bezig, setBezig] = useState(false);
 
   const telling = state.tellingen.find((t) => t.id === id);
-  const locatie = state.locaties.find((l) => l.id === telling?.locatieId);
+  const locatie = state.alleLocaties.find((l) => l.id === telling?.locatieId);
   /* In de kantine en de kroeg tel je flesjes, ook van wat het magazijn per
      krat telt. Zie losOpLocatie in src/data/verpakking.ts. */
   const perStuk = losOpLocatie(locatie);

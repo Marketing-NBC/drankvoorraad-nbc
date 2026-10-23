@@ -147,14 +147,15 @@ export interface EmballageSoort {
 
 /**
  * Hoeveel van één soort emballage er in huis staat, vol of leeg. Komt uit
- * emballage_stand() (migratie 029): wat er met de inkoop binnenkwam, min
- * wat er retour ging, plus of min wat een telling rechtzette.
+ * emballage_stand() (migratie 030): wat er met de inkoop binnenkwam, plus of
+ * min wat er met de hand is ingevoerd (de beginstand, tellingen en losse
+ * invoer), min wat er retour ging.
  */
 export interface EmballageStand {
   emballageId: string;
   binnen: number;
+  handmatig: number;
   retour: number;
-  geteld: number;
   inHuis: number;
 }
 

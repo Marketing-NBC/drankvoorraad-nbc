@@ -26,7 +26,7 @@ export interface WachtrijItem {
   soort: WachtrijSoort;
   /** Op wiens naam de boeking staat. Alleen die persoon kan hem versturen. */
   gebruikerId: string;
-  /** Eén regel die vertelt wat er wacht, bijvoorbeeld "4 kratten Coca Cola naar Koelcel NBC". */
+  /** Eén regel die vertelt wat er wacht, bijvoorbeeld "4 kratten Coca Cola naar Koelcellen NBC". */
   omschrijving: string;
   payload: unknown;
   aangemaaktOp: string;
