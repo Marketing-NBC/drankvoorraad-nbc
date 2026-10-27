@@ -13,6 +13,8 @@ export const ROUTES = {
   tellingDetail: (id: string) => `/tellingen/${id}`,
   tellingDetailPattern: "/tellingen/:id",
   historie: "/historie",
+  /** Mutaties, op de emballage in plaats van de drank. */
+  historieEmballage: "/historie?soort=emballage",
   gebruikers: "/gebruikers",
   koppelingen: "/koppelingen",
   leveringen: "/leveringen",
