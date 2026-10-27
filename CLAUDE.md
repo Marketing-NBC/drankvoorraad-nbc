@@ -138,6 +138,13 @@ de notitie zegt welke. Uitgifte naar een evenement verandert de stand niet:
 de emballage blijft van ons tot de leverancier hem ophaalt. De koppeling
 product → emballage zet de beheerder in het productformulier.
 
+Elke regel in `emballage_mutaties` — beginstand, invoer erbij of eraf,
+telling en retourbon — staat terug onder Mutaties, op de knop Emballage
+(`/historie?soort=emballage`). De oude soorten van fase 9 (`uit`, `retour`,
+`vermist`) laadt de app niet: die tellen nergens meer mee. Wat voor beweging
+een regel is, leidt `emballageBeweging` in `app/src/data/emballage.ts` af uit
+type en notitie; verander de notities in 030 dus niet los daarvan.
+
 Magazijn heeft naast de locaties een keuze **Totaal**: per product de
 voorraad van alle locaties bij elkaar en waar het ligt
 (`totaleVoorraadPerProduct` in `app/src/data/calculations.ts`).
@@ -239,7 +246,7 @@ afmaken ervan. Deze paragraaf mag weg zodra dat plan er ligt.
 Vier dingen die bij "van PoC naar af" waarschijnlijk terugkomen. Geen van deze is
 kapot — het zijn keuzes die passen bij een PoC en knellen zodra het menens wordt:
 
-- **Testdekking.** 118 tests over rekenlogica (`app/src/data/`), de wachtrij
+- **Testdekking.** 121 tests over rekenlogica (`app/src/data/`), de wachtrij
   (`app/src/lib/`) en de Excel-export (`app/src/utils/`). Geen enkel scherm of
   gebruikersstroom is getest, terwijl daar de meeste code zit.
 - **Databasemigraties.** Half opgelost: nieuwe wijzigingen staan genummerd in

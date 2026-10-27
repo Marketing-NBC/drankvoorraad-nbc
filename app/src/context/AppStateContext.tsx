@@ -36,6 +36,7 @@ import type {
   ZaalRow,
 } from "../lib/database.types";
 import type {
+  EmballageMutatie,
   EmballageRetour,
   EmballageRetourregel,
   EmballageSoort,
@@ -199,6 +200,26 @@ function naarEmballageRetourregel(r: EmballageMutatieRow): EmballageRetourregel 
   return { id: r.id, retourId: r.retour_id ?? "", emballageId: r.emballage_id, aantal: r.aantal };
 }
 
+/**
+ * Alleen de soorten die sinds 030 de stand in huis bepalen. `uit`, `retour`
+ * en `vermist` zijn van fase 9: die trigger is teruggedraaid en zijn regels
+ * tellen nergens meer mee.
+ */
+const emballageMutatieTypen = ["erbij", "eraf", "naar-leverancier"] as const;
+
+function naarEmballageMutatie(r: EmballageMutatieRow): EmballageMutatie {
+  return {
+    id: r.id,
+    emballageId: r.emballage_id,
+    aantal: r.aantal,
+    type: r.type as EmballageMutatie["type"],
+    retourId: r.retour_id ?? undefined,
+    gebruikerId: r.gebruiker_id,
+    notitie: r.notitie ?? undefined,
+    datumTijd: r.datum_tijd,
+  };
+}
+
 function naarMutatie(r: MutatieRow): Mutatie {
   return {
     id: r.id,
@@ -333,6 +354,8 @@ export interface AppState {
   emballage: EmballageSoort[];
   emballageRetouren: EmballageRetour[];
   emballageRetourregels: EmballageRetourregel[];
+  /** Elke beweging van emballage, nieuwste eerst: invoer, tellingen, retourbonnen. */
+  emballageMutaties: EmballageMutatie[];
   /** Per soort hoeveel emballage er in huis staat. Zie migratie 030. */
   emballageStand: EmballageStand[];
 }
@@ -449,7 +472,7 @@ const legeState: AppState = {
   profielen: [], tellingen: [], pakbonnen: [], zalen: [], evenementZalen: [],
   vulplekken: [], standaardvulling: [], koppelingen: [], machines: [], metingen: [],
   leveringen: [], leveringregels: [], emballage: [], emballageRetouren: [], emballageRetourregels: [],
-  emballageStand: [],
+  emballageMutaties: [], emballageStand: [],
 };
 
 export function AppStateProvider({ children }: { children: ReactNode }) {
@@ -482,7 +505,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       const [
         producten, evenementen, mutaties, locaties, voorraad, profielen, tellingen, pakbonnen,
         zalen, evenementZalen, vulplekken, standaardvulling, koppelingen, machines, metingen,
-        leveringen, leveringregels, emballage, emballageRetouren, emballageRetourregels, emballageStand,
+        leveringen, leveringregels, emballage, emballageRetouren, emballageMutaties, emballageStand,
       ] = await Promise.all([
         supabase.from("producten").select(productKolommen).order("naam"),
         supabase.from("evenementen").select(evenementKolommen).order("datum"),
@@ -510,7 +533,11 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
           .select("id, naam, leverancier, artikelnummer, actief, aangemaakt_op")
           .order("naam"),
         supabase.from("emballage_retouren").select("*").order("aangemaakt_op", { ascending: false }),
-        supabase.from("emballage_mutaties").select("*").not("retour_id", "is", null),
+        supabase
+          .from("emballage_mutaties")
+          .select("*")
+          .in("type", emballageMutatieTypen)
+          .order("datum_tijd", { ascending: false }),
         supabase.rpc("emballage_stand"),
       ]);
       const eersteFout =
@@ -519,7 +546,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
         zalen.error ?? evenementZalen.error ?? vulplekken.error ?? standaardvulling.error ??
         koppelingen.error ?? machines.error ?? metingen.error ??
         leveringen.error ?? leveringregels.error ?? emballage.error ??
-        emballageRetouren.error ?? emballageRetourregels.error ?? emballageStand.error;
+        emballageRetouren.error ?? emballageMutaties.error ?? emballageStand.error;
 
       /* Bedragen apart en alleen voor de beheerder: voor ieder ander weigert
          de database ze, en dan blijven ze op 0. */
@@ -535,7 +562,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       return {
         producten, evenementen, mutaties, locaties, voorraad, profielen, tellingen, pakbonnen,
         zalen, evenementZalen, vulplekken, standaardvulling, koppelingen, machines, metingen,
-        leveringen, leveringregels, emballage, emballageRetouren, emballageRetourregels, emballageStand,
+        leveringen, leveringregels, emballage, emballageRetouren, emballageMutaties, emballageStand,
         productbedragen: bedragen?.[0].data ?? [],
         evenementomzet: bedragen?.[1].data ?? [],
         emballageborg: bedragen?.[2].data ?? [],
@@ -597,7 +624,10 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       leveringregels: (resultaat.leveringregels.data ?? []).map(naarLeveringregel),
       emballage: (resultaat.emballage.data ?? []).map((r) => naarEmballage(r, borgPerSoort.get(r.id))),
       emballageRetouren: (resultaat.emballageRetouren.data ?? []).map(naarEmballageRetour),
-      emballageRetourregels: (resultaat.emballageRetourregels.data ?? []).map(naarEmballageRetourregel),
+      emballageRetourregels: (resultaat.emballageMutaties.data ?? [])
+        .filter((r) => r.retour_id !== null)
+        .map(naarEmballageRetourregel),
+      emballageMutaties: (resultaat.emballageMutaties.data ?? []).map(naarEmballageMutatie),
       emballageStand: (resultaat.emballageStand.data ?? []).map((r) => ({
         emballageId: r.emballage_id,
         binnen: r.binnen,

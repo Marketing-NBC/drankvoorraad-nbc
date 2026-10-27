@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Badge, Button, Card, Input } from "../../design-system";
+import { Badge, Button, Card, Input, Link } from "../../design-system";
 import { MagazijnTabs } from "../../components/layout/MagazijnTabs";
 import { PageHeader } from "../../components/layout/PageHeader";
 import { AantalStepper } from "../../components/ui/AantalStepper";
@@ -96,6 +96,11 @@ export function EmballageVoorraad() {
             <KaartKop
               titel="Per soort"
               sub="binnen met de drankvoorraad, met de hand (beginstand, telling, invoer), min retour"
+              rechts={
+                <Link icon={null} onClick={() => navigate(ROUTES.historieEmballage)}>
+                  Bekijk mutaties
+                </Link>
+              }
             />
             <Table<EmballageRegel>
               rowKey={(r) => r.soort.id}

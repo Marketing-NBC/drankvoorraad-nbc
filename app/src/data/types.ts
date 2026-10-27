@@ -176,6 +176,23 @@ export interface EmballageRetourregel {
   aantal: number;
 }
 
+/**
+ * Eén beweging van emballage, uit `emballage_mutaties`. Append-only, net als
+ * de drankmutaties. `erbij` en `eraf` zijn de beginstand, een telling of iets
+ * dat met de hand is ingevoerd — de notitie zegt welke (migratie 030);
+ * `naar-leverancier` is een regel van de retourbon (021).
+ */
+export interface EmballageMutatie {
+  id: string;
+  emballageId: string;
+  aantal: number;
+  type: "erbij" | "eraf" | "naar-leverancier";
+  retourId?: string;
+  gebruikerId: string;
+  notitie?: string;
+  datumTijd: string;
+}
+
 export type MutatieType =
   | "magazijn-naar-evenement"
   | "evenement-naar-magazijn"

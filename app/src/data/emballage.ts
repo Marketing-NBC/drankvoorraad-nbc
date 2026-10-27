@@ -1,4 +1,4 @@
-import type { EmballageSoort, EmballageStand } from "./types";
+import type { EmballageMutatie, EmballageRetour, EmballageSoort, EmballageStand } from "./types";
 
 export interface EmballageRegel {
   soort: EmballageSoort;
@@ -51,4 +51,47 @@ export function emballageTotaal(regels: EmballageRegel[]): { stuks: number; waar
     stuks: regels.reduce((som, r) => som + Math.max(r.inHuis, 0), 0),
     waarde: regels.reduce((som, r) => som + r.waarde, 0),
   };
+}
+
+/* De notities die de database zelf op `erbij` en `eraf` zet (migratie 030). */
+const NOTITIE_BEGINSTAND = "Beginstand uit de drankvoorraad";
+const NOTITIE_TELLING = "Emballagetelling";
+const VOORVOEGSEL_HANDMATIG = "Handmatig: ";
+
+/**
+ * Wat voor beweging een regel emballage is, zoals Magazijn → Emballage het
+ * noemt: erbij, eraf of tellen, plus de beginstand en de retourbon. De
+ * database kent alleen `erbij`, `eraf` en `naar-leverancier`; de notitie
+ * zegt of het een telling of de beginstand was.
+ */
+export type EmballageBeweging = "beginstand" | "erbij" | "eraf" | "telling" | "retourbon";
+
+export function emballageBeweging(m: EmballageMutatie): EmballageBeweging {
+  if (m.type === "naar-leverancier") return "retourbon";
+  if (m.notitie === NOTITIE_BEGINSTAND) return "beginstand";
+  if (m.notitie === NOTITIE_TELLING) return "telling";
+  return m.type;
+}
+
+/** Wat de beweging met de stand in huis deed: positief erbij, negatief eraf. */
+export function emballageVerschil(m: EmballageMutatie): number {
+  return m.type === "erbij" ? m.aantal : -m.aantal;
+}
+
+/** De reden zoals iemand hem invulde, zonder het voorvoegsel van de database. */
+export function emballageReden(m: EmballageMutatie): string | undefined {
+  const beweging = emballageBeweging(m);
+  if (beweging !== "erbij" && beweging !== "eraf") return undefined;
+  return m.notitie?.startsWith(VOORVOEGSEL_HANDMATIG)
+    ? m.notitie.slice(VOORVOEGSEL_HANDMATIG.length)
+    : m.notitie;
+}
+
+/** De reden bij erbij en eraf, de leverancier en het bonnummer bij een retourbon. */
+export function emballageNotitie(m: EmballageMutatie, retour: EmballageRetour | undefined): string {
+  if (m.type === "naar-leverancier") {
+    if (!retour) return "";
+    return retour.bonnummer ? `${retour.leverancier}, bon ${retour.bonnummer}` : retour.leverancier;
+  }
+  return emballageReden(m) ?? "";
 }

@@ -1,3 +1,4 @@
+import type { EmballageBeweging } from "./emballage";
 import type { MutatieType } from "./types";
 
 /** Leesbare namen voor de mutatietypen — één plek, zodat schermen niet uiteenlopen. */
@@ -30,3 +31,25 @@ export const mutatieTypeOpties = (Object.keys(mutatieLabels) as MutatieType[]).m
   value: type,
   label: mutatieLabels[type],
 }));
+
+/** Dezelfde woorden als in "Emballage invoeren" onder Magazijn. */
+export const emballageBewegingLabels: Record<EmballageBeweging, string> = {
+  beginstand: "Beginstand",
+  erbij: "Erbij",
+  eraf: "Eraf",
+  telling: "Telling",
+  retourbon: "Retourbon",
+};
+
+/** Zelfde betekenis als bij de drank: petrol in of uit, geel kwijt, neutraal op papier. */
+export const emballageBewegingVariant: Record<EmballageBeweging, "tint" | "neutral" | "gold" | "success"> = {
+  beginstand: "neutral",
+  erbij: "tint",
+  eraf: "gold",
+  telling: "neutral",
+  retourbon: "tint",
+};
+
+export const emballageBewegingOpties = (Object.keys(emballageBewegingLabels) as EmballageBeweging[]).map(
+  (beweging) => ({ value: beweging, label: emballageBewegingLabels[beweging] })
+);

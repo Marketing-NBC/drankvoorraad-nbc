@@ -1,6 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { emballageOverzicht, emballageTotaal } from "./emballage";
-import type { EmballageSoort, EmballageStand } from "./types";
+import {
+  emballageBeweging,
+  emballageNotitie,
+  emballageOverzicht,
+  emballageTotaal,
+  emballageVerschil,
+} from "./emballage";
+import type { EmballageMutatie, EmballageRetour, EmballageSoort, EmballageStand } from "./types";
 
 const soort = (velden: Partial<EmballageSoort> & Pick<EmballageSoort, "id" | "naam">): EmballageSoort => ({
   actief: true,
@@ -57,6 +63,49 @@ describe("emballageOverzicht", () => {
     const [fust] = emballageOverzicht([soort({ id: "e5", naam: "Fust", borg: 30 })], [stand("e5", -3)]);
     expect(fust.inHuis).toBe(-3);
     expect(fust.waarde).toBe(0);
+  });
+});
+
+const beweging = (velden: Partial<EmballageMutatie> & Pick<EmballageMutatie, "type">): EmballageMutatie => ({
+  id: "m1",
+  emballageId: "e1",
+  aantal: 5,
+  gebruikerId: "u1",
+  datumTijd: "2026-10-27T10:00:00Z",
+  ...velden,
+});
+
+describe("emballagemutaties", () => {
+  it("herkent erbij en eraf met de hand, met de reden zonder voorvoegsel", () => {
+    const erbij = beweging({ type: "erbij", notitie: "Handmatig: lege kratten achterin" });
+    expect(emballageBeweging(erbij)).toBe("erbij");
+    expect(emballageVerschil(erbij)).toBe(5);
+    expect(emballageNotitie(erbij, undefined)).toBe("lege kratten achterin");
+
+    const eraf = beweging({ type: "eraf", aantal: 3, notitie: "Handmatig: kapot" });
+    expect(emballageBeweging(eraf)).toBe("eraf");
+    expect(emballageVerschil(eraf)).toBe(-3);
+  });
+
+  it("herkent de telling en de beginstand aan de notitie van de database", () => {
+    const telling = beweging({ type: "eraf", notitie: "Emballagetelling" });
+    expect(emballageBeweging(telling)).toBe("telling");
+    expect(emballageVerschil(telling)).toBe(-5);
+    expect(emballageNotitie(telling, undefined)).toBe("");
+
+    const begin = beweging({ type: "erbij", notitie: "Beginstand uit de drankvoorraad" });
+    expect(emballageBeweging(begin)).toBe("beginstand");
+  });
+
+  it("noemt bij een retourbon de leverancier en het bonnummer", () => {
+    const regel = beweging({ type: "naar-leverancier", retourId: "r1", notitie: "Retour naar leverancier" });
+    const retour: EmballageRetour = {
+      id: "r1", leverancier: "Swinkels", bonnummer: "800758649", gebruikerId: "u1", aangemaaktOp: "",
+    };
+    expect(emballageBeweging(regel)).toBe("retourbon");
+    expect(emballageVerschil(regel)).toBe(-5);
+    expect(emballageNotitie(regel, retour)).toBe("Swinkels, bon 800758649");
+    expect(emballageNotitie(regel, { ...retour, bonnummer: undefined })).toBe("Swinkels");
   });
 });
 

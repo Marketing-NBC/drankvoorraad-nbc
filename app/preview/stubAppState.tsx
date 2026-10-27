@@ -1,7 +1,7 @@
 /* Alleen voor de visuele preview (npm run preview:ui) — niet in de app. */
 import { createContext, useContext, type ReactNode } from "react";
 import type {
-  Evenement, Gebruiker, Koppeling, Levering, Leveringregel, Locatie, Machine, Meting, Mutatie,
+  EmballageMutatie, Evenement, Gebruiker, Koppeling, Levering, Leveringregel, Locatie, Machine, Meting, Mutatie,
   Pakbon, PakbonSamenvatting, Product, Profiel, Telling, Tellingregel, Voorraad, Vulplek,
   VulplekRegel, Zaal,
 } from "../src/data/types";
@@ -235,6 +235,20 @@ const emballageRetourregels = [
   { id: "em3", retourId: "er2", emballageId: "e5", aantal: 12 },
   { id: "em4", retourId: "er2", emballageId: "e4", aantal: 6 },
 ];
+/* Alle bewegingen voor Mutaties → Emballage: de beginstand, een telling,
+   invoer erbij en eraf, en de regels van de twee retourbonnen hierboven. */
+const emballageMutaties: EmballageMutatie[] = [
+  { id: "em5", emballageId: "e1", aantal: 12, type: "erbij", gebruikerId: "u2", notitie: "Handmatig: lege kratten achter in het magazijn", datumTijd: dagenGeleden(0.2) },
+  { id: "em6", emballageId: "e5", aantal: 3, type: "eraf", gebruikerId: "u4", notitie: "Handmatig: 3 fusten lek", datumTijd: dagenGeleden(1) },
+  { id: "em1", emballageId: "e1", aantal: 18, type: "naar-leverancier", retourId: "er1", gebruikerId: "u2", notitie: "Retour naar leverancier", datumTijd: dagenGeleden(3) },
+  { id: "em2", emballageId: "e2", aantal: 40, type: "naar-leverancier", retourId: "er1", gebruikerId: "u2", notitie: "Retour naar leverancier", datumTijd: dagenGeleden(3) },
+  { id: "em7", emballageId: "e8", aantal: 4, type: "erbij", gebruikerId: "u1", notitie: "Emballagetelling", datumTijd: dagenGeleden(5) },
+  { id: "em8", emballageId: "e2", aantal: 6, type: "eraf", gebruikerId: "u1", notitie: "Emballagetelling", datumTijd: dagenGeleden(5) },
+  { id: "em3", emballageId: "e5", aantal: 12, type: "naar-leverancier", retourId: "er2", gebruikerId: "u4", notitie: "Retour naar leverancier", datumTijd: dagenGeleden(9) },
+  { id: "em4", emballageId: "e4", aantal: 6, type: "naar-leverancier", retourId: "er2", gebruikerId: "u4", notitie: "Retour naar leverancier", datumTijd: dagenGeleden(9) },
+  { id: "em9", emballageId: "e1", aantal: 122, type: "erbij", gebruikerId: "u1", notitie: "Beginstand uit de drankvoorraad", datumTijd: dagenGeleden(14) },
+  { id: "em10", emballageId: "e2", aantal: 58, type: "erbij", gebruikerId: "u1", notitie: "Beginstand uit de drankvoorraad", datumTijd: dagenGeleden(14) },
+];
 /* Zoals emballage_stand() (migratie 030): binnen ± handmatig − retour. Eén
    soort negatief, zodat de melding "tellen" te beoordelen is. */
 const emballageStand = [
@@ -257,7 +271,7 @@ const state = {
   zalen, evenementZalen, vulplekken, standaardvulling, koppelingen, machines, metingen,
   leveringen, leveringregels,
   emballage: zietBedragen ? emballage : emballage.map((e) => ({ ...e, borg: 0 })),
-  emballageRetouren, emballageRetourregels, emballageStand,
+  emballageRetouren, emballageRetourregels, emballageMutaties, emballageStand,
 };
 
 /* Eén wachtende boeking, zodat de balk in de preview te beoordelen is. */
