@@ -5,6 +5,7 @@ import {
   invoer,
   aantalTegenMinimum,
   eenheidVan,
+  invoerMetLosNaarStuks,
   invoerNaarStuks,
   isHeleVerpakkingen,
   losOpLocatie,
@@ -214,6 +215,18 @@ describe("minimum in kratten", () => {
     expect(aantalTegenMinimum(flesje, 48, 1152)).toBe("2 kratten van 48 kratten");
     expect(aantalTegenMinimum(spa, 0, 120)).toBe("0 van 120");
     expect(aantalTegenMinimum(flesje, 5, 24, { los: true })).toBe("5 van 24");
+  });
+});
+
+describe("kratten plus losse flessen", () => {
+  it("telt de losse flesjes op bij de kratten", () => {
+    expect(invoerMetLosNaarStuks(flesje, 2, 5)).toBe(53);
+    expect(invoerMetLosNaarStuks(flesje, 0, 7)).toBe(7);
+    expect(invoerMetLosNaarStuks(flesje, 3, 0)).toBe(72);
+  });
+
+  it("laat een product dat al per stuk gaat per stuk", () => {
+    expect(invoerMetLosNaarStuks(spa, 10, 0)).toBe(10);
   });
 });
 

@@ -29,10 +29,13 @@ voorraadstand op rust:
   daarna nog wijzigen of erop boeken, mag alleen de beheerder: na afloop
   controleert die alles en sluit het af. Zie `controleer_evenement` en
   `controleer_mutatie_rol` in migratie 027.
-- **Uitgifte voor een evenement komt altijd uit Koelcellen NBC**, ook bij
-  Green Village. De app kiest die locatie zelf (`uitgiftelocatie` in
-  `AppStateContext`, op type `koelcel` en merk NBC, niet op naam); er is geen
-  keuze meer. Daarom mag er maar één koelcel van NBC zijn.
+- **Uitgifte voor een evenement komt standaard uit Koelcellen NBC**, ook bij
+  Green Village. De app vindt die locatie zelf (`uitgiftelocatie` in
+  `AppStateContext`, op type `koelcel` en merk NBC, niet op naam) en zet hem
+  bij "Product boeken" voorop; de enige andere keus is het hoofdmagazijn
+  (`hoofdmagazijn`). Daarom mag er maar één koelcel van NBC zijn. Bij een
+  product dat per krat gaat staat onder de kratten een veld voor losse
+  flessen; beide gaan als stuks de boeking in (`invoerMetLosNaarStuks`).
 - **Bedragen en marges zijn alleen voor de beheerder.** Inkoopprijs,
   statiegeld, omzet en borg zijn voor andere rollen ingetrokken en alleen te
   lezen of te zetten via `productbedragen`, `evenementomzet`,

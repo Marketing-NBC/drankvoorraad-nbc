@@ -7,7 +7,14 @@ import { Select } from "../../components/ui/Select";
 import { useAppState } from "../../context/AppStateContext";
 import { productVerbruikPerEvenement } from "../../data/calculations";
 import type { Product } from "../../data/types";
-import { invoer, omschrijfAantal, verpakkingLabel } from "../../data/verpakking";
+import {
+  eenheidVan,
+  invoer,
+  invoerMetLosNaarStuks,
+  meervoudVan,
+  omschrijfAantal,
+  verpakkingLabel,
+} from "../../data/verpakking";
 import { foutBericht } from "../../utils/fouten";
 import { formatNumber } from "../../utils/format";
 
@@ -29,10 +36,11 @@ export function BookingModal({
   /** Vooraf gekozen product — gezet door de snelknoppen in de boekingstabel. */
   standaardProductId?: string;
 }) {
-  const { voegMutatieToe, uitgiftelocatie, state, mutatiesPerEvenement } = useAppState();
+  const { voegMutatieToe, uitgiftelocatie, hoofdmagazijn, state, mutatiesPerEvenement } = useAppState();
   const [productId, setProductId] = useState("");
   const [locatieId, setLocatieId] = useState("");
   const [aantal, setAantal] = useState(0);
+  const [losAantal, setLosAantal] = useState(0);
   const [fout, setFout] = useState<string | null>(null);
   const [bezig, setBezig] = useState(false);
 
@@ -43,8 +51,20 @@ export function BookingModal({
     (l) => (l.type === "magazijn" || l.type === "koelcel") && !l.voorPersoneel
   );
 
+  /* Uitgifte komt standaard uit Koelcellen NBC; het hoofdmagazijn is de
+     tweede keus, voor wat niet in de koelcel ligt. */
+  const uitgiftelocaties = [uitgiftelocatie, hoofdmagazijn].filter(
+    (l): l is NonNullable<typeof l> => Boolean(l)
+  );
+  const keuzes = richting === "uitgifte" ? uitgiftelocaties : magazijnen;
+
   const product = boekbareProducten.find((p) => p.id === productId) ?? null;
   const invoerVorm = product ? invoer(product) : { label: "Aantal", eenheid: "", factor: 1 };
+  /* Onder de kratten een veld voor losse flessen. Alleen bij een product dat
+     per krat ingevoerd wordt; bij een ander product is het hele veld al per stuk. */
+  const metLos = product !== null && invoerVorm.factor > 1;
+  const losGetal = metLos ? losAantal : 0;
+  const stuks = product ? invoerMetLosNaarStuks(product, aantal, losGetal) : aantal;
 
   /**
    * Waarschuwing bij een retour die groter is dan wat er ooit naar dit
@@ -58,14 +78,12 @@ export function BookingModal({
    */
   const teveelRetour = (() => {
     if (richting !== "retour" || !productId) return null;
-    const aantalGetal = aantal;
-    if (!aantalGetal || aantalGetal <= 0) return null;
+    if (stuks <= 0) return null;
 
     const regels = productVerbruikPerEvenement(mutatiesPerEvenement.get(evenementId) ?? []);
     const regel = regels.find((r) => r.productId === productId);
     const nogOpenstaand = (regel?.aantalUitgegeven ?? 0) - (regel?.aantalRetour ?? 0);
-    const gebooktInStuks = aantalGetal * (product ? invoer(product).factor : 1);
-    if (gebooktInStuks <= nogOpenstaand) return null;
+    if (stuks <= nogOpenstaand) return null;
 
     return { nogOpenstaand, product };
   })();
@@ -73,11 +91,12 @@ export function BookingModal({
   useEffect(() => {
     if (!open) return;
     setProductId(standaardProductId ?? producten[0]?.id ?? "");
-    /* Uitgifte komt altijd uit Koelcellen NBC (Robin: "nooit wat anders"), ook
-       bij Green Village. Retour gaat daar ook standaard heen, maar mag naar
-       een andere koelcel of het hoofdmagazijn. */
-    setLocatieId(uitgiftelocatie?.id ?? magazijnen[0]?.id ?? "");
+    /* Uitgifte en retour staan standaard op Koelcellen NBC, ook bij Green
+       Village. Uitgifte mag ook uit het hoofdmagazijn; retour mag naar elke
+       koelcel of het hoofdmagazijn. */
+    setLocatieId(uitgiftelocatie?.id ?? keuzes[0]?.id ?? "");
     setAantal(0);
+    setLosAantal(0);
     setFout(null);
     // Alleen op `open` en het vooraf gekozen product: `producten` en
     // `uitgiftelocatie` komen uit de gedeelde state en krijgen bij elke
@@ -88,23 +107,22 @@ export function BookingModal({
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
-    const aantalGetal = aantal;
     if (!productId) {
       setFout("Kies een product.");
       return;
     }
-    if (!aantalGetal || aantalGetal <= 0) {
-      setFout("Vul een aantal groter dan 0 in.");
-      return;
-    }
-    if (!Number.isInteger(aantalGetal)) {
+    if (!Number.isInteger(aantal) || !Number.isInteger(losGetal)) {
       setFout("Vul een heel aantal in.");
       return;
     }
-    const locatie = richting === "uitgifte" ? uitgiftelocatie?.id : locatieId;
+    if (stuks <= 0) {
+      setFout("Vul een aantal groter dan 0 in.");
+      return;
+    }
+    const locatie = keuzes.find((l) => l.id === locatieId)?.id;
     if (!locatie) {
       setFout(
-        richting === "uitgifte"
+        richting === "uitgifte" && uitgiftelocaties.length === 0
           ? "Koelcellen NBC is niet gevonden. Vraag de beheerder om de locaties na te kijken."
           : "Kies een magazijnlocatie."
       );
@@ -115,8 +133,8 @@ export function BookingModal({
     try {
       await voegMutatieToe({
         productId,
-        /* Kratten in, stuks opgeslagen — zie src/data/verpakking.ts. */
-        aantal: aantalGetal * invoerVorm.factor,
+        /* Kratten en losse flessen in, stuks opgeslagen — zie src/data/verpakking.ts. */
+        aantal: stuks,
         evenementId,
         ...(richting === "uitgifte"
           ? { type: "magazijn-naar-evenement", vanLocatieId: locatie }
@@ -143,22 +161,18 @@ export function BookingModal({
             setFout("Onbekende barcode. Koppel de code eerst aan een product via Producten.")
           }
         />
-        {richting === "uitgifte" ? (
-          <p className="veld-toelichting">
-            Uit {uitgiftelocatie?.naam ?? "Koelcellen NBC"} — daar komt alles voor een evenement vandaan.
-          </p>
-        ) : (
-          <div className="field-group">
-            <label className="field-group__label" htmlFor="boeking-locatie">Terug naar locatie</label>
-            <Select
-              id="boeking-locatie"
-              aria-label="Locatie"
-              value={locatieId}
-              onChange={(e) => setLocatieId(e.target.value)}
-              options={magazijnen.map((l) => ({ value: l.id, label: l.naam }))}
-            />
-          </div>
-        )}
+        <div className="field-group">
+          <label className="field-group__label" htmlFor="boeking-locatie">
+            {richting === "uitgifte" ? "Vanuit locatie" : "Terug naar locatie"}
+          </label>
+          <Select
+            id="boeking-locatie"
+            aria-label="Locatie"
+            value={locatieId}
+            onChange={(e) => setLocatieId(e.target.value)}
+            options={keuzes.map((l) => ({ value: l.id, label: l.naam }))}
+          />
+        </div>
         <div className="field-group">
           <label className="field-group__label" htmlFor="boeking-aantal">
             {invoerVorm.label}
@@ -173,6 +187,20 @@ export function BookingModal({
             onChange={setAantal}
           />
         </div>
+        {metLos && product ? (
+          <div className="field-group">
+            <label className="field-group__label" htmlFor="boeking-los">
+              Losse {eenheidVan(product, 2)}
+              <span className="field-group__hint">bovenop de {meervoudVan(product.verpakking ?? "", 2)}</span>
+            </label>
+            <AantalStepper
+              id="boeking-los"
+              ariaLabel={`Losse ${eenheidVan(product, 2)}`}
+              waarde={losAantal}
+              onChange={setLosAantal}
+            />
+          </div>
+        ) : null}
         {teveelRetour ? (
           <p className="melding-waarschuwing">
             Er staat nog{" "}
