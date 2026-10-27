@@ -158,6 +158,15 @@ export function invoerNaarStuks(product: Product, ingevoerd: number, opties: { l
   return Math.round(ingevoerd * invoer(product, opties).factor);
 }
 
+/**
+ * Kratten plus losse flesjes naar stuks, voor een boeking waar beide velden
+ * staan: "2 kratten en 5 los" is 53 bij een krat van 24. De losse flesjes
+ * gaan er als stuks bij, los van of het product per krat ingevoerd wordt.
+ */
+export function invoerMetLosNaarStuks(product: Product, ingevoerd: number, los: number): number {
+  return invoerNaarStuks(product, ingevoerd) + los;
+}
+
 /** Omgekeerd: stuks zoals ze in het invoerveld horen te staan. */
 export function stuksNaarInvoer(product: Product, stuks: number, opties: { los?: boolean } = {}): number {
   const factor = invoer(product, opties).factor;
