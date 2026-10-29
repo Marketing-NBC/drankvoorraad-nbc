@@ -56,6 +56,7 @@ trigger en de functie zijn weg. De migraties hieronder gaan daarvan uit.
 | `029_emballage_typen.sql` | De emballagebewegingen `erbij` en `eraf`. Apart van 030, omdat een nieuwe enumwaarde pas na de transactie bruikbaar is. **Eerst draaien, los.** |
 | `030_emballage_in_huis.sql` | Hoeveel emballage er in huis staat: product gekoppeld aan een soort emballage, de beginstand uit de huidige drankvoorraad, daarna inkoop min retour, plus invoer met de hand en tellen. **Draaien vóórdat de app-versie erbij live gaat** — die leest de nieuwe kolommen en `emballage_stand()`, en laadt anders niet. De oude app heeft er geen last van. |
 | `031_locaties_robin.sql` | "Bar Green Village" wordt "Koelkasten buffetten en bekkens NBC", "Koelcel NBC" wordt "Koelcellen NBC", kantine en kroeg worden één locatie (de voorraad van de kroeg verhuist met een verplaatsing, de kroeg gaat op `actief = false`), Swinkels 0,3 L en het fust mogen in de kantine. Mag vóór of na de app; de app vangt beide op. |
+| `032_inkoopprijs_koffie_water.sql` | Inkoopprijs van koffie en thee € 0,17 per kopje, water van Aquablu € 0,23 per glas, zodat het machineverbruik meetelt in de brutomarge. Mag vóór of na de app; er verandert niets aan de app. |
 
 ## Waarom `010` en niet `1`
 
