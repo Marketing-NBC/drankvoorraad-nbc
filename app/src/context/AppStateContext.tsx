@@ -1154,6 +1154,9 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
           pakbonnen: data.pakbonnen,
           tellingen: data.tellingen,
           leveringen: data.leveringen,
+          // Zonder migratie 033 ontbreken deze twee; dan is het nul.
+          emballage: data.emballage ?? 0,
+          retourbonnen: data.retourbonnen ?? 0,
           evenementen: data.evenementen,
           uitgezetMetVoorraad: data.uitgezet_met_voorraad,
         };
@@ -1185,6 +1188,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
           aantalEvenementen: r.aantal_evenementen,
           aantalPakbonnen: r.aantal_pakbonnen,
           aantalTellingen: r.aantal_tellingen,
+          aantalEmballage: r.aantal_emballage ?? 0,
         }));
       },
 

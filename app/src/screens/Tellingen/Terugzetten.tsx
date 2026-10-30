@@ -72,7 +72,7 @@ export function Terugzetten() {
       await zetTerug(moment, metEvenementen, reden.trim());
       navigate(ROUTES.tellingen, {
         state: {
-          melding: `De voorraad staat weer zoals hij was op ${formatDateTime(moment.toISOString())}. Tel nu elke locatie opnieuw.`,
+          melding: `De voorraad staat weer zoals hij was op ${formatDateTime(moment.toISOString())}. Tel nu elke locatie en de emballage opnieuw.`,
         },
       });
     } catch (err) {
@@ -86,7 +86,7 @@ export function Terugzetten() {
       <PageHeader
         eyebrow="beheer"
         title="Voorraad terugzetten"
-        toelichting="Is er op de vloer niet of verkeerd geboekt? Kies het moment waarop het misging. Alles wat er vanaf dan geboekt is gaat eruit en de voorraad staat weer zoals hij toen was. Tel daarna elke locatie opnieuw, dan klopt alles weer."
+        toelichting="Is er op de vloer niet of verkeerd geboekt? Kies het moment waarop het misging. Alles wat er vanaf dan geboekt is gaat eruit, ook bij de emballage, en de voorraad staat weer zoals hij toen was. Tel daarna elke locatie en de emballage opnieuw, dan klopt alles weer."
       />
 
       <Card>
@@ -142,6 +142,13 @@ export function Terugzetten() {
               <li><strong>{formatNumber(overzicht.mutaties)}</strong> {overzicht.mutaties === 1 ? "boeking gaat" : "boekingen gaan"} eruit</li>
               <li><strong>{formatNumber(overzicht.pakbonnen)}</strong> {overzicht.pakbonnen === 1 ? "pakbon" : "pakbonnen"}</li>
               <li><strong>{formatNumber(overzicht.tellingen)}</strong> {overzicht.tellingen === 1 ? "telling" : "tellingen"} (afgerond na dit moment, of nog open)</li>
+              <li>
+                <strong>{formatNumber(overzicht.emballage)}</strong>{" "}
+                {overzicht.emballage === 1 ? "emballageregel" : "emballageregels"}
+                {overzicht.retourbonnen > 0
+                  ? `, waarvan ${overzicht.retourbonnen === 1 ? "één retourbon" : `${formatNumber(overzicht.retourbonnen)} retourbonnen`}`
+                  : null}
+              </li>
               <li>
                 <strong>{formatNumber(overzicht.evenementen.length)}</strong>{" "}
                 {overzicht.evenementen.length === 1 ? "evenement" : "evenementen"}
@@ -212,7 +219,7 @@ export function Terugzetten() {
           </p>
           <label className="keuzevakje">
             <input type="checkbox" checked={begrepen} onChange={(e) => setBegrepen(e.target.checked)} />
-            <span>Ik begrijp het, en ik ga daarna elke locatie opnieuw tellen</span>
+            <span>Ik begrijp het, en ik ga daarna elke locatie en de emballage opnieuw tellen</span>
           </label>
           {fout ? <p className="form-error">{fout}</p> : null}
           <div className="modal-actions">

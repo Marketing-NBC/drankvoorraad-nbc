@@ -274,6 +274,7 @@ export interface Terugzetting {
   aantalEvenementen: number;
   aantalPakbonnen: number;
   aantalTellingen: number;
+  aantalEmballage: number;
 }
 
 /** Wat er bij terugzetten weg zou gaan — vooraf, zonder iets te veranderen. */
@@ -283,6 +284,10 @@ export interface TerugzetOverzicht {
   tellingen: number;
   /** Blijven staan; alleen wat ze in de voorraad brachten gaat eruit. */
   leveringen: number;
+  /** Regels in emballage_mutaties, de retourregels inbegrepen (migratie 033). */
+  emballage: number;
+  /** Retourbonnen die er als geheel uitgaan. */
+  retourbonnen: number;
   evenementen: { id: string; naam: string; datum: string }[];
   /** Naam van een uitgezette locatie die dan weer voorraad zou krijgen; dan kan het niet. */
   uitgezetMetVoorraad: string | null;

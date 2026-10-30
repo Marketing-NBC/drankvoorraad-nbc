@@ -264,6 +264,7 @@ export type TerugzettingRow = {
   aantal_evenementen: number;
   aantal_pakbonnen: number;
   aantal_tellingen: number;
+  aantal_emballage: number;
 };
 
 export type TellingregelRow = {
@@ -624,13 +625,15 @@ export type Database = {
           pakbonnen: number;
           tellingen: number;
           leveringen: number;
+          emballage: number;
+          retourbonnen: number;
           evenementen: { id: string; naam: string; datum: string }[];
           uitgezet_met_voorraad: string | null;
         };
       };
       zet_terug: {
         Args: { p_vanaf: string; p_evenementen: boolean; p_reden: string };
-        Returns: { mutaties: number; pakbonnen: number; tellingen: number; evenementen: number };
+        Returns: { mutaties: number; pakbonnen: number; tellingen: number; evenementen: number; emballage: number };
       };
       maak_pakbon: {
         Args: {
