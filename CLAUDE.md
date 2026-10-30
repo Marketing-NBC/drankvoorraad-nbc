@@ -15,11 +15,13 @@ voorraadstand op rust:
   het audit trail: de volledige voorraadstand is er altijd uit af te leiden.
   Eén uitzondering, op verzoek van Robin: de beheerder kan de voorraad
   **terugzetten** naar een moment (`zet_terug`, migratie 032; in de app onder
-  Tellingen → Voorraad terugzetten). Alles vanaf dat moment gaat eruit, maar
+  Tellingen → Voorraad terugzetten). Alles vanaf dat moment gaat eruit, ook
+  de emballage (`emballage_mutaties` en de retourbonnen, migratie 033), maar
   belandt in `teruggezette_mutaties` en `terugzettingen`. Echt kwijt raakt
   niets, en de trigger `mutaties_verwijderd` draait het effect op `voorraad`
   terug. Daarbuiten blijft de regel: geen delete-policy op `mutaties`, en
-  geen andere code die erin verwijdert.
+  geen andere code die erin verwijdert. Hetzelfde geldt voor
+  `emballage_mutaties`.
 - **`voorraad` wordt alleen door een databasetrigger bijgewerkt**, nooit
   rechtstreeks vanuit de app. Zie `supabase/schema.sql`.
 - **Rollen worden in de database afgedwongen**, niet alleen in het scherm. Een
