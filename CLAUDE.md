@@ -138,9 +138,13 @@ Hoeveel emballage er in huis staat — vol en leeg samen — is de tweede kop
 onder Magazijn (`/magazijn/emballage`). Die stand wordt afgeleid in
 `emballage_stand()` (migratie 030): de beginstand is de emballage van de
 drankvoorraad op het moment dat 030 draaide (Robin voerde de voorraad met een
-telling in, niet als inkoop); daarna telt elke `inkoop` van een product met
-`emballage_id` erbij (één per krat of één per stuk, volgens `emballage_per`),
-gaan de regels van de retourbon eraf, en komt erbij of gaat eraf wat iemand
+telling in, niet als inkoop); daarna telt elke `inkoop` en elke `correctie`
+(netto: een telling die drank vindt erbij, een die drank mist eraf) van een
+product met `emballage_id` mee (één per krat of één per stuk, volgens
+`emballage_per`; migratie 034). Zo volgt de emballage ook als de beginstand
+door terugzetten weg is en de voorraad opnieuw met een telling binnenkomt.
+`beschadigd` telt niet: de fles gaat weg, de krat blijft. Verder gaan de
+regels van de retourbon eraf, en komt erbij of gaat eraf wat iemand
 met de hand invoert (`boek_emballage_handmatig`, met reden) of telt
 (`tel_emballage`). Die drie zijn type `erbij`/`eraf` in `emballage_mutaties`;
 de notitie zegt welke. Uitgifte naar een evenement verandert de stand niet:

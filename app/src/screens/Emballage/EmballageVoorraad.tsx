@@ -22,10 +22,10 @@ import { formatCurrency, formatNumber } from "../../utils/format";
  *
  * Hoeveel kratten, fusten en PET-flessen er in huis staan, vol of leeg, en
  * wat daar aan borg in zit. De stand loopt vanzelf mee: de beginstand is de
- * emballage van de drankvoorraad, wat er met de inkoop binnenkomt telt
- * erbij, wat er met de retourbon teruggaat eraf. Wat de app niet kan zien —
+ * emballage van de drankvoorraad, wat er met de inkoop of een telling
+ * binnenkomt telt erbij, wat er met de retourbon teruggaat eraf. Wat de app niet kan zien —
  * lege kratten die er al stonden, een rolcontainer die los meekwam — voer je
- * met de hand in, of je telt het. Zie migratie 030.
+ * met de hand in, of je telt het. Zie migratie 030 en 034.
  *
  * De retourbon zelf staat onder Leveringen. De borg is een bedrag en dus
  * alleen voor de beheerder zichtbaar.

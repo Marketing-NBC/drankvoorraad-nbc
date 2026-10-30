@@ -58,6 +58,7 @@ trigger en de functie zijn weg. De migraties hieronder gaan daarvan uit.
 | `031_locaties_robin.sql` | "Bar Green Village" wordt "Koelkasten buffetten en bekkens NBC", "Koelcel NBC" wordt "Koelcellen NBC", kantine en kroeg worden één locatie (de voorraad van de kroeg verhuist met een verplaatsing, de kroeg gaat op `actief = false`), Swinkels 0,3 L en het fust mogen in de kantine. Mag vóór of na de app; de app vangt beide op. |
 | `032_terugzetten.sql` | De beheerder kan de voorraad terugzetten naar een moment: boekingen, pakbonnen, tellingen en (naar keuze) evenementen van daarna gaan eruit, naar een archief. De voorraad volgt via een trigger op het verwijderen. Leveringen en emballage blijven staan. **Draaien vóórdat de app-versie erbij live gaat**: anders werkt de knop niet, de rest van de app wel. |
 | `033_terugzetten_emballage.sql` | Terugzetten neemt de emballage mee: emballageregels en retourbonnen vanaf dat moment gaan er ook uit (naar het archief), en teruggezette inkoop telt niet meer mee in `emballage_stand`. Na 032. Mag vóór of na de app. |
+| `034_emballage_uit_telling.sql` | Emballage telt mee als de voorraad met een telling (of een correctie) binnenkomt, niet alleen bij inkoop. Nodig sinds terugzetten de beginstand van 030 kan weghalen. Mag vóór of na de app. |
 
 ## Waarom `010` en niet `1`
 
