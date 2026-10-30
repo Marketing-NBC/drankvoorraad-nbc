@@ -60,6 +60,8 @@ import type {
   Telling,
   TellingReden,
   Tellingregel,
+  TerugzetOverzicht,
+  Terugzetting,
   Voorraad,
   Vulplek,
   VulplekRegel,
@@ -400,6 +402,11 @@ interface AppStateContextValue {
   zetTelReden: (regelId: string, reden: TellingReden | null, toelichting: string | null) => Promise<void>;
   rondTellingAf: (tellingId: string) => Promise<number>;
   annuleerTelling: (tellingId: string) => Promise<void>;
+  /** Alleen de beheerder. Eerst kijken, dan pas `zetTerug`. */
+  terugzettenOverzicht: (vanaf: Date, evenementen: boolean) => Promise<TerugzetOverzicht>;
+  /** Alles vanaf `vanaf` eruit; de database bewaart het in een archief. Zie migratie 032. */
+  zetTerug: (vanaf: Date, evenementen: boolean, reden: string) => Promise<void>;
+  haalTerugzettingen: () => Promise<Terugzetting[]>;
   maakPakbon: (pakbon: {
     evenementId: string;
     vanLocatieId: string;
@@ -657,25 +664,34 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
   // Realtime: wijzigingen op een ander apparaat komen automatisch binnen.
   useEffect(() => {
     if (!session) return;
+    /* Eén statement kan honderden regels raken — een pakbon, of een
+       terugzetting (032) die alle boekingen sinds gisteren weghaalt. Elke
+       regel is een eigen melding; bundel ze tot één herlaad. */
+    let wacht: ReturnType<typeof setTimeout> | undefined;
+    const herlaadStil = () => {
+      clearTimeout(wacht);
+      wacht = setTimeout(() => void herlaad(), 300);
+    };
     const kanaal = supabase
       .channel("drankvoorraad")
-      .on("postgres_changes", { event: "*", schema: "public", table: "mutaties" }, () => void herlaad())
-      .on("postgres_changes", { event: "*", schema: "public", table: "evenementen" }, () => void herlaad())
-      .on("postgres_changes", { event: "*", schema: "public", table: "producten" }, () => void herlaad())
-      .on("postgres_changes", { event: "*", schema: "public", table: "voorraad" }, () => void herlaad())
-      .on("postgres_changes", { event: "*", schema: "public", table: "locaties" }, () => void herlaad())
-      .on("postgres_changes", { event: "*", schema: "public", table: "pakbonnen" }, () => void herlaad())
-      .on("postgres_changes", { event: "*", schema: "public", table: "evenement_zalen" }, () => void herlaad())
-      .on("postgres_changes", { event: "*", schema: "public", table: "machine_metingen" }, () => void herlaad())
-      .on("postgres_changes", { event: "*", schema: "public", table: "machines" }, () => void herlaad())
-      .on("postgres_changes", { event: "*", schema: "public", table: "vulplek_standaard" }, () => void herlaad())
-      .on("postgres_changes", { event: "*", schema: "public", table: "leveringen" }, () => void herlaad())
-      .on("postgres_changes", { event: "*", schema: "public", table: "leveringregels" }, () => void herlaad())
-      .on("postgres_changes", { event: "*", schema: "public", table: "emballage_retouren" }, () => void herlaad())
-      .on("postgres_changes", { event: "*", schema: "public", table: "emballage_mutaties" }, () => void herlaad())
+      .on("postgres_changes", { event: "*", schema: "public", table: "mutaties" }, herlaadStil)
+      .on("postgres_changes", { event: "*", schema: "public", table: "evenementen" }, herlaadStil)
+      .on("postgres_changes", { event: "*", schema: "public", table: "producten" }, herlaadStil)
+      .on("postgres_changes", { event: "*", schema: "public", table: "voorraad" }, herlaadStil)
+      .on("postgres_changes", { event: "*", schema: "public", table: "locaties" }, herlaadStil)
+      .on("postgres_changes", { event: "*", schema: "public", table: "pakbonnen" }, herlaadStil)
+      .on("postgres_changes", { event: "*", schema: "public", table: "evenement_zalen" }, herlaadStil)
+      .on("postgres_changes", { event: "*", schema: "public", table: "machine_metingen" }, herlaadStil)
+      .on("postgres_changes", { event: "*", schema: "public", table: "machines" }, herlaadStil)
+      .on("postgres_changes", { event: "*", schema: "public", table: "vulplek_standaard" }, herlaadStil)
+      .on("postgres_changes", { event: "*", schema: "public", table: "leveringen" }, herlaadStil)
+      .on("postgres_changes", { event: "*", schema: "public", table: "leveringregels" }, herlaadStil)
+      .on("postgres_changes", { event: "*", schema: "public", table: "emballage_retouren" }, herlaadStil)
+      .on("postgres_changes", { event: "*", schema: "public", table: "emballage_mutaties" }, herlaadStil)
       .subscribe();
 
     return () => {
+      clearTimeout(wacht);
       void supabase.removeChannel(kanaal);
     };
   }, [session, herlaad]);
@@ -1125,6 +1141,51 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
         const { error } = await supabase.rpc("annuleer_telling", { p_telling_id: tellingId });
         if (error) throw error;
         await herlaad();
+      },
+
+      async terugzettenOverzicht(vanaf, evenementen) {
+        const { data, error } = await supabase.rpc("terugzetten_overzicht", {
+          p_vanaf: vanaf.toISOString(),
+          p_evenementen: evenementen,
+        });
+        if (error) throw error;
+        return {
+          mutaties: data.mutaties,
+          pakbonnen: data.pakbonnen,
+          tellingen: data.tellingen,
+          leveringen: data.leveringen,
+          evenementen: data.evenementen,
+          uitgezetMetVoorraad: data.uitgezet_met_voorraad,
+        };
+      },
+
+      async zetTerug(vanaf, evenementen, reden) {
+        const { error } = await supabase.rpc("zet_terug", {
+          p_vanaf: vanaf.toISOString(),
+          p_evenementen: evenementen,
+          p_reden: reden,
+        });
+        if (error) throw error;
+        await herlaad();
+      },
+
+      async haalTerugzettingen() {
+        const { data, error } = await supabase
+          .from("terugzettingen")
+          .select("*")
+          .order("uitgevoerd_op", { ascending: false });
+        if (error) throw error;
+        return (data ?? []).map((r) => ({
+          id: r.id,
+          vanaf: r.vanaf,
+          reden: r.reden,
+          gebruikerId: r.gebruiker_id,
+          uitgevoerdOp: r.uitgevoerd_op,
+          aantalMutaties: r.aantal_mutaties,
+          aantalEvenementen: r.aantal_evenementen,
+          aantalPakbonnen: r.aantal_pakbonnen,
+          aantalTellingen: r.aantal_tellingen,
+        }));
       },
 
       async maakPakbon({ evenementId, vanLocatieId, ontvangerNaam, handtekening, regels }) {

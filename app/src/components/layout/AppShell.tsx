@@ -68,6 +68,7 @@ function schermNaam(pad: string): { label: string; terug: boolean } {
   if (pad.startsWith("/evenementen/") && pad.endsWith("/pakbon")) return { label: "Pakbon", terug: true };
   if (pad.startsWith("/evenementen/")) return { label: "Evenement", terug: true };
   if (pad.startsWith("/pakbonnen/")) return { label: "Pakbon", terug: true };
+  if (pad === ROUTES.terugzetten) return { label: "Terugzetten", terug: true };
   if (pad.startsWith("/tellingen/")) return { label: "Telling", terug: true };
   if (pad === ROUTES.leveringNieuw) return { label: "Levering aannemen", terug: true };
   if (pad === ROUTES.emballage) return { label: "Emballage", terug: false };

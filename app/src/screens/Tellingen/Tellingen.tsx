@@ -63,17 +63,25 @@ export function Tellingen() {
         toelichting="Tel een locatie door de producten te scannen of de aantallen in te typen. Bij het afronden worden de verschillen automatisch geboekt, zodat de voorraad klopt met wat er werkelijk staat. In de kantine en de kroeg is een tekort geen verschil maar personeelsverbruik — daar is de telling dus de meting."
         actions={
           magTellen ? (
-            <Button
-              icon="plus"
-              iconPosition="leading"
-              onClick={() => {
-                setLocatieId(telbareLocaties[0]?.id ?? "");
-                setStartFout(null);
-                setStartOpen(true);
-              }}
-            >
-              Nieuwe telling
-            </Button>
+            <>
+              <Button
+                icon="plus"
+                iconPosition="leading"
+                onClick={() => {
+                  setLocatieId(telbareLocaties[0]?.id ?? "");
+                  setStartFout(null);
+                  setStartOpen(true);
+                }}
+              >
+                Nieuwe telling
+              </Button>
+              {/* Ging het boeken mis, dan eerst terugzetten en daarna alles opnieuw tellen. */}
+              {mag("beheerder") ? (
+                <Button variant="ghost-dark" icon={null} onClick={() => navigate(ROUTES.terugzetten)}>
+                  Voorraad terugzetten
+                </Button>
+              ) : null}
+            </>
           ) : null
         }
       />

@@ -56,6 +56,7 @@ trigger en de functie zijn weg. De migraties hieronder gaan daarvan uit.
 | `029_emballage_typen.sql` | De emballagebewegingen `erbij` en `eraf`. Apart van 030, omdat een nieuwe enumwaarde pas na de transactie bruikbaar is. **Eerst draaien, los.** |
 | `030_emballage_in_huis.sql` | Hoeveel emballage er in huis staat: product gekoppeld aan een soort emballage, de beginstand uit de huidige drankvoorraad, daarna inkoop min retour, plus invoer met de hand en tellen. **Draaien vóórdat de app-versie erbij live gaat** — die leest de nieuwe kolommen en `emballage_stand()`, en laadt anders niet. De oude app heeft er geen last van. |
 | `031_locaties_robin.sql` | "Bar Green Village" wordt "Koelkasten buffetten en bekkens NBC", "Koelcel NBC" wordt "Koelcellen NBC", kantine en kroeg worden één locatie (de voorraad van de kroeg verhuist met een verplaatsing, de kroeg gaat op `actief = false`), Swinkels 0,3 L en het fust mogen in de kantine. Mag vóór of na de app; de app vangt beide op. |
+| `032_terugzetten.sql` | De beheerder kan de voorraad terugzetten naar een moment: boekingen, pakbonnen, tellingen en (naar keuze) evenementen van daarna gaan eruit, naar een archief. De voorraad volgt via een trigger op het verwijderen. Leveringen en emballage blijven staan. **Draaien vóórdat de app-versie erbij live gaat**: anders werkt de knop niet, de rest van de app wel. |
 
 ## Waarom `010` en niet `1`
 

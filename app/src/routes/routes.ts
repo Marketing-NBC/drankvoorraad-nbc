@@ -10,6 +10,8 @@ export const ROUTES = {
   producten: "/producten",
   magazijn: "/magazijn",
   tellingen: "/tellingen",
+  /** De voorraad terugzetten naar een moment — alleen de beheerder. */
+  terugzetten: "/tellingen/terugzetten",
   tellingDetail: (id: string) => `/tellingen/${id}`,
   tellingDetailPattern: "/tellingen/:id",
   historie: "/historie",

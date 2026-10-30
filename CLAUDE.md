@@ -13,6 +13,13 @@ voorraadstand op rust:
 
 - **`mutaties` is append-only.** Nooit wijzigen, nooit verwijderen. De tabel is
   het audit trail: de volledige voorraadstand is er altijd uit af te leiden.
+  Eén uitzondering, op verzoek van Robin: de beheerder kan de voorraad
+  **terugzetten** naar een moment (`zet_terug`, migratie 032; in de app onder
+  Tellingen → Voorraad terugzetten). Alles vanaf dat moment gaat eruit, maar
+  belandt in `teruggezette_mutaties` en `terugzettingen`. Echt kwijt raakt
+  niets, en de trigger `mutaties_verwijderd` draait het effect op `voorraad`
+  terug. Daarbuiten blijft de regel: geen delete-policy op `mutaties`, en
+  geen andere code die erin verwijdert.
 - **`voorraad` wordt alleen door een databasetrigger bijgewerkt**, nooit
   rechtstreeks vanuit de app. Zie `supabase/schema.sql`.
 - **Rollen worden in de database afgedwongen**, niet alleen in het scherm. Een
@@ -114,8 +121,8 @@ afgeschermd door RLS-policies. Serverlogica zit in Postgres, aangeroepen via
 RPC's: `start_telling`, `rond_telling_af`, `annuleer_telling`, `maak_pakbon`,
 `stel_min_voorraad`, `boek_meting`, `boek_levering`, `handel_verschil_af`,
 `gebruikers_overzicht`, `boek_emballage_retour`, `emballage_stand`,
-`boek_emballage_handmatig`, `tel_emballage`, en de bedragfuncties uit
-migratie 019.
+`boek_emballage_handmatig`, `tel_emballage`, `terugzetten_overzicht`,
+`zet_terug`, en de bedragfuncties uit migratie 019.
 
 Lege emballage die terug gaat naar de leverancier wordt vastgelegd op de
 tabellen `emballage` (soorten met borg en het artikelnummer van de

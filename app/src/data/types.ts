@@ -263,6 +263,31 @@ export interface Telling {
   afgerondOp?: string;
 }
 
+/** Een keer dat de beheerder de voorraad terugzette naar een moment (migratie 032). */
+export interface Terugzetting {
+  id: string;
+  vanaf: string;
+  reden: string;
+  gebruikerId: string;
+  uitgevoerdOp: string;
+  aantalMutaties: number;
+  aantalEvenementen: number;
+  aantalPakbonnen: number;
+  aantalTellingen: number;
+}
+
+/** Wat er bij terugzetten weg zou gaan — vooraf, zonder iets te veranderen. */
+export interface TerugzetOverzicht {
+  mutaties: number;
+  pakbonnen: number;
+  tellingen: number;
+  /** Blijven staan; alleen wat ze in de voorraad brachten gaat eruit. */
+  leveringen: number;
+  evenementen: { id: string; naam: string; datum: string }[];
+  /** Naam van een uitgezette locatie die dan weer voorraad zou krijgen; dan kan het niet. */
+  uitgezetMetVoorraad: string | null;
+}
+
 export interface Tellingregel {
   id: string;
   tellingId: string;
