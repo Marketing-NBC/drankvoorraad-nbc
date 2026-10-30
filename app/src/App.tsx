@@ -12,6 +12,7 @@ import { Productbeheer } from "./screens/Productbeheer/Productbeheer";
 import { Magazijn } from "./screens/Magazijn/Magazijn";
 import { Tellingen } from "./screens/Tellingen/Tellingen";
 import { TellingDetail } from "./screens/Tellingen/TellingDetail";
+import { Terugzetten } from "./screens/Tellingen/Terugzetten";
 import { Historie } from "./screens/Historie/Historie";
 import { Gebruikers } from "./screens/Gebruikers/Gebruikers";
 import { Dashboard } from "./screens/Dashboard/Dashboard";
@@ -42,6 +43,14 @@ export function App() {
                 <Route path={ROUTES.producten} element={<RequireAuth rollen={WERK}><Productbeheer /></RequireAuth>} />
                 <Route path={ROUTES.magazijn} element={<RequireAuth rollen={WERK}><Magazijn /></RequireAuth>} />
                 <Route path={ROUTES.tellingen} element={<Tellingen />} />
+                <Route
+                  path={ROUTES.terugzetten}
+                  element={
+                    <RequireAuth rollen={["beheerder"]}>
+                      <Terugzetten />
+                    </RequireAuth>
+                  }
+                />
                 <Route path={ROUTES.tellingDetailPattern} element={<TellingDetail />} />
                 <Route path={ROUTES.historie} element={<RequireAuth rollen={WERK}><Historie /></RequireAuth>} />
                 <Route

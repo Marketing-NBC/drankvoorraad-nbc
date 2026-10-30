@@ -253,6 +253,19 @@ export type TellingRow = {
   afgerond_op: string | null;
 };
 
+/** Een keer dat de beheerder de voorraad terugzette (migratie 032). */
+export type TerugzettingRow = {
+  id: string;
+  vanaf: string;
+  reden: string;
+  gebruiker_id: string;
+  uitgevoerd_op: string;
+  aantal_mutaties: number;
+  aantal_evenementen: number;
+  aantal_pakbonnen: number;
+  aantal_tellingen: number;
+};
+
 export type TellingregelRow = {
   id: string;
   telling_id: string;
@@ -443,6 +456,13 @@ export type Database = {
         Update: Partial<EmballageMutatieRow>;
         Relationships: [];
       };
+      /* Alleen te lezen, en alleen door de beheerder; schrijven doet zet_terug. */
+      terugzettingen: {
+        Row: TerugzettingRow;
+        Insert: Partial<TerugzettingRow>;
+        Update: Partial<TerugzettingRow>;
+        Relationships: [];
+      };
       machine_metingen: {
         Row: MetingRow;
         Insert: MetDefaults<
@@ -595,6 +615,22 @@ export type Database = {
       tel_emballage: {
         Args: { p_regels: { emballage_id: string; geteld: number }[] };
         Returns: number;
+      };
+      /* ─── Terugzetten (migratie 032) ─── */
+      terugzetten_overzicht: {
+        Args: { p_vanaf: string; p_evenementen: boolean };
+        Returns: {
+          mutaties: number;
+          pakbonnen: number;
+          tellingen: number;
+          leveringen: number;
+          evenementen: { id: string; naam: string; datum: string }[];
+          uitgezet_met_voorraad: string | null;
+        };
+      };
+      zet_terug: {
+        Args: { p_vanaf: string; p_evenementen: boolean; p_reden: string };
+        Returns: { mutaties: number; pakbonnen: number; tellingen: number; evenementen: number };
       };
       maak_pakbon: {
         Args: {

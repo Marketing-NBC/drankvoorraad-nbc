@@ -1198,6 +1198,13 @@ body { background: var(--canvas); }
   background: var(--tint-geel-bg); border-radius: var(--r-rij); padding: 14px 18px;
 }
 
+.terugzet-lijst {
+  margin: 0; padding: 0; list-style: none;
+  display: flex; flex-direction: column; gap: 8px;
+  font: var(--t-ui); color: var(--nbc-stone-800);
+}
+.terugzet-lijst strong { font: 800 16px/1 var(--font-body); }
+
 .telling-voortgang { display: flex; flex-direction: column; gap: 10px; }
 .telling-voortgang__regel { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 .telling-voortgang__tekst { font: var(--t-ui); color: var(--nbc-stone-800); }
